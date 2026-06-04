@@ -9,8 +9,9 @@ Canvas**, no game engine, no art assets — every sprite is code-defined pixel a
 > Ashen Banner from the border wilds to the tyrant Maldrath's shattered throne,
 > across a five-chapter campaign. Full story → **[STORY.md](STORY.md)**.
 
-Five classes, five playable phases, a charge-time turn system, and an enemy AI
-that heals, focuses, and pursues.
+Seven classes across five races, five playable phases, a charge-time turn
+system, and an enemy AI that heals, focuses, and pursues. At the start you
+**choose a party of four** from a roster of seven named heroes.
 
 ## Run it
 
@@ -28,7 +29,8 @@ npm test           # run the Vitest suite
 
 ## How to play
 
-- **New Game** from the title screen drops you into Chapter I.
+- **New Game** opens the **party select** — pick four of the seven heroes (each a
+  fixed class and race) to carry the banner, then march into Chapter I.
 - On your unit's turn, use the action menu (it pops up next to the active unit):
   - **Move** — click a highlighted tile (blue). The path preview (yellow) shows
     the route; movement respects range, terrain height, and your unit's Jump.
@@ -58,6 +60,18 @@ npm test           # run the Vitest suite
 | Black Mage | Offensive magic | Fire, Bolt, Fireball (AoE) |
 | White Mage | Support / heal | Cure, Cura (AoE), Raise |
 | Monk | Melee bruiser | Palm Strike, Chakra (heal), Earth Shake (AoE) |
+| Thief | Fast skirmisher | Backstab, Hamstring (slow), Fan of Knives (AoE) |
+| Druid | Nature hybrid | Regrowth (heal), Thorn Lash, Entangle (slow) |
+
+### Races
+
+Each hero also has a race, applying a small flat stat modifier: **Human**
+(balanced), **Elf** (+MAG/RES/SPD, −HP), **Dwarf** (+HP/DEF, −SPD), **Halfling**
+(+SPD/MOVE/JUMP, −HP/ATK), **Orc** (+ATK/HP, −MAG/RES).
+
+The seven heroes: Garan (Knight, Dwarf), Lyra (Archer, Elf), Vex (Black Mage,
+Human), Mira (White Mage, Human), Bron (Monk, Orc), **Enzo** (Thief, Halfling),
+and **Penelope** (Druid, Elf).
 
 ## The campaign
 
@@ -88,10 +102,11 @@ docs/superpowers/specs/  design spec
 
 ## Tests
 
-`npm test` runs **348 tests across 12 files**: per-module unit tests (RNG,
-pathfinding, targeting, combat, turn order, AI, grid, movement/pass-through) plus
-map-data invariants and a **full battle simulation** that auto-plays all five
-phases to a decisive winner while asserting HP/stat invariants every turn.
+`npm test` runs **404 tests across 17 files**: per-module unit tests (RNG,
+pathfinding, targeting, combat, turn order, AI, grid, movement/pass-through, iso
+projection, save/load, races, hero roster) plus map-data invariants and a
+**full battle simulation** that auto-plays all five phases to a decisive winner
+while asserting HP/stat invariants every turn.
 
 ## Roadmap
 

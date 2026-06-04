@@ -51,6 +51,26 @@ export const CLASSES: Record<ClassId, ClassDef> = {
     weaponIds: ["knuckles", "fellKnuckles"],
     color: "#d68a4f",
   },
+  thief: {
+    id: "thief",
+    name: "Thief",
+    description: "Swift skirmisher. Fastest in the field, hits hard, but fragile.",
+    base: { hp: 82, mp: 28, atk: 13, def: 7, mag: 5, res: 7, spd: 14, move: 5, jump: 3 },
+    growth: { hp: 8, mp: 3, atk: 1.9, def: 0.9, mag: 0.5, res: 0.9, spd: 1.2 },
+    skillIds: ["backstab", "hamstring", "fanOfKnives"],
+    weaponIds: ["dagger", "rapier"],
+    color: "#7a5fbf",
+  },
+  druid: {
+    id: "druid",
+    name: "Druid",
+    description: "Nature hybrid. Heals, nature damage, and control — sturdier than a mage.",
+    base: { hp: 88, mp: 50, atk: 7, def: 7, mag: 13, res: 11, spd: 10, move: 4, jump: 2 },
+    growth: { hp: 9, mp: 6, atk: 0.6, def: 0.8, mag: 1.8, res: 1.2, spd: 0.8 },
+    skillIds: ["regrowth", "thornLash", "entangle"],
+    weaponIds: ["heartwood"],
+    color: "#5fa86f",
+  },
 };
 
 export function getClass(id: ClassId): ClassDef {

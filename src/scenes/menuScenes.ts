@@ -65,7 +65,7 @@ export class TitleScene extends BannerScene {
     };
 
     const buttons: Array<{ label: string; onClick: () => void }> = [
-      { label: "New Game", onClick: () => startAtPhase(0) },
+      { label: "New Game", onClick: () => this.ctx.nav.toPartySelect() },
     ];
     const save = loadGame();
     if (save) {
@@ -96,7 +96,7 @@ export class TitleScene extends BannerScene {
 
     this.showCard(
       "TACTICS",
-      "An isometric, turn-based tactics campaign. Lead five heroes — knight, archer, black mage, white mage, and monk — through five battles of rising peril. Move, strike, cast, and grow.",
+      "An isometric, turn-based tactics campaign. Choose four heroes from seven — knight, archer, black mage, white mage, monk, thief, and druid, each of a distinct race — and lead them through five battles of rising peril. Move, strike, cast, and grow.",
       buttons,
       selector,
     );

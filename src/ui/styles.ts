@@ -30,6 +30,7 @@ const CSS = `
 .bar.mp > span { background: linear-gradient(90deg,#4a78d6,#7fb0ff); }
 .stat-row { font-size: 11px; opacity: 0.85; display: flex; gap: 10px; flex-wrap: wrap; margin-top: 4px; }
 .statuses { font-size: 11px; color: #ffd34d; margin-top: 4px; min-height: 14px; }
+.skills-line { font-size: 11px; opacity: 0.8; margin-top: 4px; line-height: 1.35; }
 
 .action-menu {
   left: 50%; transform: translateX(-50%); bottom: 16px;
@@ -46,6 +47,8 @@ const CSS = `
 .btn:active { transform: translateY(1px); }
 .btn[disabled] { opacity: 0.4; cursor: not-allowed; }
 .btn.small { padding: 6px 10px; font-size: 13px; }
+.btn.end-turn { margin-left: 12px; border-color: rgba(210,170,120,0.55); }
+.btn.end-turn:hover { background: rgba(150,110,70,0.9); }
 
 .submenu {
   left: 50%; transform: translateX(-50%); bottom: 70px;
@@ -112,6 +115,10 @@ const CSS = `
 .party-screen .sub { text-align: center; opacity: 0.7; margin-bottom: 20px; }
 .party-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 14px; max-width: 1100px; margin: 0 auto; }
 .unit-card { background: rgba(22,26,42,0.95); border: 1px solid rgba(120,140,200,0.3); border-radius: 10px; padding: 14px; }
+.unit-card.selectable { cursor: pointer; transition: border-color 0.12s, box-shadow 0.12s, transform 0.05s; }
+.unit-card.selectable:hover { border-color: rgba(160,180,230,0.7); transform: translateY(-1px); }
+.unit-card.selected { border-color: #ffd34d; box-shadow: 0 0 0 1px #ffd34d, 0 6px 20px rgba(0,0,0,0.5); }
+.pick-badge { margin-left: auto; width: 24px; height: 24px; border-radius: 50%; background: #ffd34d; color: #1a1a2e; font-weight: 800; display: flex; align-items: center; justify-content: center; }
 .unit-card h3 { font-size: 17px; margin-bottom: 2px; }
 .unit-card .role { font-size: 12px; opacity: 0.7; margin-bottom: 8px; }
 .card-head { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; }

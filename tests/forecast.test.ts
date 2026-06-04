@@ -9,6 +9,7 @@ function mkUnit(over: Partial<Unit["stats"]> = {}): Unit {
     name: "U",
     team: "player",
     classId: "knight",
+    raceId: "human",
     level: 1,
     xp: 0,
     jp: 0,

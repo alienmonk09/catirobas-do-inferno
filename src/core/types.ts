@@ -22,7 +22,20 @@ export interface Stats {
   jump: number;
 }
 
-export type ClassId = "knight" | "archer" | "blackMage" | "whiteMage" | "monk";
+export type ClassId = "knight" | "archer" | "blackMage" | "whiteMage" | "monk" | "thief" | "druid";
+
+export type RaceId = "human" | "elf" | "dwarf" | "halfling" | "orc";
+
+/** Flat stat deltas a race applies on top of class stats (omitted = 0). */
+export type RaceMod = Partial<Pick<Stats, "hp" | "mp" | "atk" | "def" | "mag" | "res" | "spd" | "move" | "jump">>;
+
+export interface RaceDef {
+  id: RaceId;
+  name: string;
+  description: string;
+  /** Additive modifiers applied to every level's stat block. */
+  mod: RaceMod;
+}
 
 /** Per-level stat growth applied on level up. */
 export interface StatGrowth {
@@ -62,7 +75,7 @@ export interface ClassDef {
   color: string;
 }
 
-export type Element = "none" | "fire" | "ice" | "bolt" | "holy";
+export type Element = "none" | "fire" | "ice" | "bolt" | "holy" | "nature";
 
 export type AoeShape = "single" | "cross" | "square3";
 
@@ -119,6 +132,7 @@ export interface Unit {
   name: string;
   team: Team;
   classId: ClassId;
+  raceId: RaceId;
   level: number;
   xp: number;
   jp: number;
@@ -137,12 +151,6 @@ export interface Tile {
   y: number;
   z: number;
   walkable: boolean;
-}
-
-export interface SpawnPoint {
-  pos: Point;
-  /** Reference into a roster for enemies; player units come from party. */
-  template?: string;
 }
 
 export interface MapDef {

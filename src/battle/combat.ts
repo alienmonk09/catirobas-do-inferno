@@ -113,8 +113,11 @@ export function resolveSkillOnTarget(
       if (!target.alive) return null;
       const base = (power * skill.power) / 10;
       const value = Math.max(1, Math.round(base));
+      const before = target.stats.hp;
       healHp(target, value);
-      return { unitId: target.id, kind: "heal", amount: value, crit: false, killed: false, revived: false };
+      // Report the real HP restored (clamped at maxHp), matching resolveItem, so
+      // the floating popup is honest instead of showing the full rolled value.
+      return { unitId: target.id, kind: "heal", amount: target.stats.hp - before, crit: false, killed: false, revived: false };
     }
     case "revive": {
       if (target.alive) return null;

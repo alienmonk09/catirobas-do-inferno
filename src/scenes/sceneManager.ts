@@ -13,6 +13,7 @@ export interface Scene {
 /** Navigation callbacks wired up in main.ts to avoid circular scene imports. */
 export interface Navigation {
   toTitle(): void;
+  toPartySelect(): void;
   toBattle(phaseIndex: number): void;
   toParty(): void;
   toVictory(): void;

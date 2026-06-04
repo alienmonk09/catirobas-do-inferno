@@ -110,6 +110,10 @@ export class Renderer {
     this.canvas.style.width = `${cssWidth}px`;
     this.canvas.style.height = `${cssHeight}px`;
     this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    // Assigning canvas.width/height above resets the context, re-enabling image
+    // smoothing (default true) — which bilinearly blurs the baked pixel-art on
+    // HiDPI/retina blits. Disable it here, not just on the offscreen bake canvas.
+    this.ctx.imageSmoothingEnabled = false;
     this.width = cssWidth;
     this.height = cssHeight;
   }
@@ -269,8 +273,8 @@ export class Renderer {
 
   private drawUnitsAndCursor(view: BattleView): void {
     // Sort by depth so nearer units draw on top. Use animated pos when present.
+    // Dead units stay in the list; drawUnit renders them faded.
     const drawList = view.units
-      .filter((u) => u.alive || true) // dead drawn faded
       .map((u) => {
         const ap = view.animPos.get(u.id) ?? u.pos;
         return { unit: u, dx: ap.x, dy: ap.y };
