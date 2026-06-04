@@ -14,11 +14,12 @@ import {
 import { advanceToNextActor, battleWinner, endTurn, previewOrder } from "../battle/turnManager";
 import { planEnemyTurn } from "../battle/ai";
 import { screenToTile, type ScreenPoint } from "../engine/iso";
-import type { BattleView, FloatingText, OverlaySet } from "../engine/renderer";
+import type { ActiveEffect, BattleView, FloatingText, OverlaySet } from "../engine/renderer";
 import { getWeapon } from "../data/weapons";
 import { getSkill } from "../data/skills";
 import { getItem } from "../data/items";
 import { getClass } from "../data/classes";
+import { getVfx, vfxKeyForSkill, vfxKeyForWeapon } from "../data/sprites";
 import { PHASES } from "../data/maps";
 import { BattleUI } from "../ui/battleUI";
 import type { GameContext, Scene } from "./sceneManager";
@@ -60,6 +61,7 @@ export class BattleScene implements Scene {
   private selectedSkill: SkillDef | null = null;
   private selectedItemId: string | null = null;
   private popups: FloatingText[] = [];
+  private effects: ActiveEffect[] = [];
   private time = 0;
 
   constructor(
@@ -374,6 +376,7 @@ export class BattleScene implements Scene {
     if (!target || target.team === this.active.team) return;
     const weapon = getWeapon(this.active.weaponId);
     const res = resolveWeaponAttack(this.active, target, weapon, this.rng);
+    this.pushEffect(target.pos, vfxKeyForWeapon(weapon));
     this.pushPopup(res);
     this.awardForAction(this.active, { offensive: true, killed: res.killed });
     this.afterAction();
@@ -413,7 +416,12 @@ export class BattleScene implements Scene {
       return;
     }
     this.active.stats.mp = Math.max(0, this.active.stats.mp - skill.mpCost);
-    for (const r of results) this.pushPopup(r);
+    const skillVfx = vfxKeyForSkill(skill);
+    for (const r of results) {
+      this.pushPopup(r);
+      const u = this.units.find((x) => x.id === r.unitId);
+      if (u) this.pushEffect(u.pos, skillVfx);
+    }
     this.awardForAction(this.active, { offensive: skill.effect === "damage", killed: anyKilled, support });
     this.afterAction();
   }
@@ -483,11 +491,14 @@ export class BattleScene implements Scene {
     if (plan.action.kind === "attack" && plan.action.targetTile) {
       const target = this.unitAt(plan.action.targetTile);
       if (target && target.team !== unit.team) {
-        const res = resolveWeaponAttack(unit, target, getWeapon(unit.weaponId), this.rng);
+        const weapon = getWeapon(unit.weaponId);
+        const res = resolveWeaponAttack(unit, target, weapon, this.rng);
+        this.pushEffect(target.pos, vfxKeyForWeapon(weapon));
         this.pushPopup(res);
       }
     } else if (plan.action.kind === "skill" && plan.action.skillId && plan.action.targetTile) {
       const skill = getSkill(plan.action.skillId);
+      const skillVfx = vfxKeyForSkill(skill);
       const affected = aoeTiles(this.grid, plan.action.targetTile, skill.aoe).flatMap((t) =>
         this.units.filter((u) => samePoint(u.pos, t)),
       );
@@ -498,6 +509,7 @@ export class BattleScene implements Scene {
         if (!isOffensive && target.team !== unit.team) continue;
         const r = resolveSkillOnTarget(unit, target, skill, this.rng);
         if (r) {
+          this.pushEffect(target.pos, skillVfx);
           this.pushPopup(r);
           cast = true;
         }
@@ -512,6 +524,12 @@ export class BattleScene implements Scene {
   }
 
   // --- Popups ---
+
+  private pushEffect(tile: Point, vfxKey: string): void {
+    const anim = getVfx(vfxKey);
+    if (!anim) return;
+    this.effects.push({ tile: { ...tile }, anim, age: 0 });
+  }
 
   private pushPopup(res: HitResult): void {
     const target = this.units.find((u) => u.id === res.unitId);
@@ -563,6 +581,13 @@ export class BattleScene implements Scene {
       if (this.popups[i].age >= this.popups[i].ttl) this.popups.splice(i, 1);
     }
 
+    // Age spell/skill effects; cull when the animation has fully played.
+    for (let i = this.effects.length - 1; i >= 0; i--) {
+      const e = this.effects[i];
+      e.age += dt;
+      if (e.age >= e.anim.frames.length * e.anim.frameDur) this.effects.splice(i, 1);
+    }
+
     // Hover + target info.
     const origin = this.origin;
     if (this.ctx.input.pointer && this.phase !== "over" && this.phase !== "intro") {
@@ -606,6 +631,7 @@ export class BattleScene implements Scene {
       overlays,
       popups: this.popups,
       animPos: this.ctx.animator.animPos,
+      effects: this.effects,
       time: this.time,
     };
   }

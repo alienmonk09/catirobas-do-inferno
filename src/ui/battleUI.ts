@@ -1,7 +1,9 @@
 import type { ItemDef, SkillDef, Unit } from "../core/types";
 import { getClass } from "../data/classes";
 import { getWeapon } from "../data/weapons";
+import { getCharacterSprite, getItemSprite, getSkillSprite, getWeaponSprite } from "../data/sprites";
 import { el, clear } from "./dom";
+import { iconImg, portraitImg } from "./icons";
 
 export interface ActionState {
   canMove: boolean;
@@ -85,7 +87,13 @@ export class BattleUI {
         className: "stat-row",
         text: `ATK ${unit.stats.atk}  DEF ${unit.stats.def}  MAG ${unit.stats.mag}  RES ${unit.stats.res}  SPD ${unit.stats.spd}  MOV ${unit.stats.move}`,
       }),
-      el("div", { className: "sub", text: `Weapon: ${weapon.name} (pow ${weapon.power}, rng ${weapon.range})` }),
+      el("div", {
+        className: "sub weapon-line",
+        children: [
+          iconImg(getWeaponSprite(unit.weaponId), 16),
+          el("span", { text: `${weapon.name} (pow ${weapon.power}, rng ${weapon.range})` }),
+        ],
+      }),
       el("div", { className: "statuses", text: unit.statuses.map((s) => `${s.kind}(${s.turnsLeft})`).join(" ") }),
     ];
   }
@@ -119,8 +127,8 @@ export class BattleUI {
       const cls = getClass(u.classId);
       const chip = el("div", {
         className: `turn-chip${i === 0 ? " first" : ""}${u.team === "enemy" ? " enemy" : ""}`,
-        text: u.name[0].toUpperCase(),
         attrs: { style: `background:${cls.color}`, title: `${u.name} (${cls.name})` },
+        children: [portraitImg(getCharacterSprite(u.classId))],
       });
       this.turnBar.appendChild(chip);
     });
@@ -161,7 +169,9 @@ export class BattleUI {
     for (const s of skills) {
       const affordable = unit.stats.mp >= s.mpCost;
       const row = el("div", { className: "row" });
-      row.appendChild(
+      const left = el("div", { className: "row-left" });
+      left.appendChild(iconImg(getSkillSprite(s.id), 22));
+      left.appendChild(
         el("button", {
           className: "btn small",
           text: s.name,
@@ -169,6 +179,7 @@ export class BattleUI {
           onClick: affordable ? () => onPick(s) : undefined,
         }),
       );
+      row.appendChild(left);
       row.appendChild(el("span", { className: "cost", text: `MP ${s.mpCost} · ${describeSkill(s)}` }));
       this.submenu.appendChild(row);
     }
@@ -184,7 +195,12 @@ export class BattleUI {
     }
     for (const e of usable) {
       const row = el("div", { className: "row" });
-      row.appendChild(el("button", { className: "btn small", text: `${e.item.name} ×${e.count}`, onClick: () => onPick(e.item.id) }));
+      const left = el("div", { className: "row-left" });
+      left.appendChild(iconImg(getItemSprite(e.item.id), 22));
+      left.appendChild(
+        el("button", { className: "btn small", text: `${e.item.name} ×${e.count}`, onClick: () => onPick(e.item.id) }),
+      );
+      row.appendChild(left);
       row.appendChild(el("span", { className: "cost", text: e.item.description }));
       this.submenu.appendChild(row);
     }

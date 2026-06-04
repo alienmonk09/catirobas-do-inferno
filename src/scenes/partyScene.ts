@@ -5,7 +5,9 @@ import { getSkill } from "../data/skills";
 import { statsForLevel, nextLearnableSkill, learnNextSkill, xpForLevel } from "../core/unit";
 import { saveGame } from "../core/state";
 import { PHASES } from "../data/maps";
+import { getCharacterSprite, getSkillSprite, getWeaponSprite } from "../data/sprites";
 import { el, clear } from "../ui/dom";
+import { iconImg } from "../ui/icons";
 import type { GameContext, Scene } from "./sceneManager";
 
 /** Between-phase screen: class change, equipment, and spending JP on skills. */
@@ -48,9 +50,15 @@ export class PartyScene implements Scene {
   private unitCard(unit: Unit): HTMLElement {
     const cls = getClass(unit.classId);
     const card = el("div", { className: "unit-card" });
-    card.appendChild(el("h3", { text: unit.name }));
+    const head = el("div", { className: "card-head" });
+    head.appendChild(iconImg(getCharacterSprite(unit.classId), 44));
+    const headText = el("div");
+    headText.appendChild(el("h3", { text: unit.name }));
+    headText.appendChild(el("div", { className: "role", text: `${cls.name} · Lv ${unit.level}` }));
+    head.appendChild(headText);
+    card.appendChild(head);
     card.appendChild(
-      el("div", { className: "role", text: `${cls.name} · Lv ${unit.level} · ${cls.description}` }),
+      el("div", { className: "role", attrs: { style: "opacity:0.6;margin-bottom:4px" }, text: cls.description }),
     );
     card.appendChild(
       el("div", {
@@ -77,7 +85,12 @@ export class PartyScene implements Scene {
     card.appendChild(classSel);
 
     // Equipment.
-    card.appendChild(el("label", { text: "Weapon" }));
+    card.appendChild(
+      el("label", {
+        className: "wlabel",
+        children: [el("span", { text: "Weapon" }), iconImg(getWeaponSprite(unit.weaponId), 18)],
+      }),
+    );
     const wSel = el("select");
     for (const wid of cls.weaponIds) {
       const w = getWeapon(wid);
@@ -89,10 +102,14 @@ export class PartyScene implements Scene {
     card.appendChild(wSel);
 
     // Skills.
-    const known = unit.learnedSkillIds
-      .filter((id) => cls.skillIds.includes(id))
-      .map((id) => getSkill(id).name);
+    const knownIds = unit.learnedSkillIds.filter((id) => cls.skillIds.includes(id));
+    const known = knownIds.map((id) => getSkill(id).name);
     card.appendChild(el("div", { className: "skills", text: `Skills: ${known.length ? known.join(", ") : "—"}` }));
+    if (knownIds.length) {
+      const srow = el("div", { className: "skill-icons" });
+      for (const id of knownIds) srow.appendChild(iconImg(getSkillSprite(id), 20));
+      card.appendChild(srow);
+    }
 
     const next = nextLearnableSkill(unit);
     const jpLine = el("div", { className: "jpline" });

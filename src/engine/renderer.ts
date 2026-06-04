@@ -1,6 +1,7 @@
 import type { Point, Unit } from "../core/types";
 import type { Grid } from "../battle/grid";
-import { getClass } from "../data/classes";
+import { bakeSprite, type AnimDef } from "./sprite";
+import { getCharacterSprite } from "../data/sprites";
 import {
   TILE_W,
   TILE_H,
@@ -10,6 +11,10 @@ import {
   depthKey,
   type ScreenPoint,
 } from "./iso";
+
+/** Integer upscale for baked sprites in the battle scene. */
+const CHAR_SCALE = 3;
+const VFX_SCALE = 3;
 
 export interface FloatingText {
   /** Anchor tile. */
@@ -28,6 +33,14 @@ export interface OverlaySet {
   path: Point[];
 }
 
+/** A transient spell/skill effect animation playing over a tile. */
+export interface ActiveEffect {
+  tile: Point;
+  anim: AnimDef;
+  /** Seconds elapsed. */
+  age: number;
+}
+
 export interface BattleView {
   grid: Grid;
   units: Unit[];
@@ -38,6 +51,8 @@ export interface BattleView {
   popups: FloatingText[];
   /** Override drawn position (fractional tile coords) for animating units. */
   animPos: Map<string, Point>;
+  /** Active spell/skill effect animations. */
+  effects: ActiveEffect[];
   /** Bob phase for the active-unit indicator (seconds accumulator). */
   time: number;
 }
@@ -94,7 +109,25 @@ export class Renderer {
     this.drawTiles(view);
     this.drawOverlays(view);
     this.drawUnitsAndCursor(view);
+    this.drawEffects(view);
     this.drawPopups(view);
+  }
+
+  private drawEffects(view: BattleView): void {
+    const ctx = this.ctx;
+    for (const e of view.effects) {
+      const frames = e.anim.frames;
+      const idx = Math.min(Math.floor(e.age / e.anim.frameDur), frames.length - 1);
+      if (idx < 0) continue;
+      const canvas = bakeSprite(frames[idx], VFX_SCALE);
+      const z = view.grid.heightAt(e.tile.x, e.tile.y);
+      const center = worldToScreen(e.tile.x, e.tile.y, z, view.origin);
+      ctx.drawImage(
+        canvas,
+        Math.round(center.sx - canvas.width / 2),
+        Math.round(center.sy - 26 - canvas.height / 2),
+      );
+    }
   }
 
   private drawTiles(view: BattleView): void {
@@ -198,49 +231,41 @@ export class Renderer {
 
   private drawUnit(unit: Unit, center: ScreenPoint, active: boolean, time: number): void {
     const ctx = this.ctx;
-    const cls = getClass(unit.classId);
+    const canvas = bakeSprite(getCharacterSprite(unit.classId), CHAR_SCALE);
+    const w = canvas.width;
+    const h = canvas.height;
+    const bob = active ? Math.sin(time * 6) * 2 : 0;
+    const drawX = Math.round(center.sx - w / 2);
+    const feetY = center.sy + 4; // a touch below the tile-top center
+    const drawY = Math.round(feetY - h + bob);
+
     // Shadow.
     ctx.fillStyle = "rgba(0,0,0,0.30)";
     ctx.beginPath();
-    ctx.ellipse(center.sx, center.sy, TILE_W * 0.28, TILE_H * 0.28, 0, 0, Math.PI * 2);
+    ctx.ellipse(center.sx, center.sy + 2, TILE_W * 0.26, TILE_H * 0.26, 0, 0, Math.PI * 2);
     ctx.fill();
 
     if (!unit.alive) {
-      ctx.fillStyle = "rgba(120,120,130,0.55)";
-      ctx.font = "bold 18px system-ui";
-      ctx.textAlign = "center";
-      ctx.textBaseline = "middle";
-      ctx.fillText("✗", center.sx, center.sy - 6);
+      ctx.globalAlpha = 0.3;
+      ctx.drawImage(canvas, drawX, drawY);
+      ctx.globalAlpha = 1;
       return;
     }
 
-    const bodyH = 34;
-    const bodyW = 22;
-    const topY = center.sy - bodyH;
-    // Body (rounded gem).
-    ctx.fillStyle = cls.color;
-    roundRect(ctx, center.sx - bodyW / 2, topY, bodyW, bodyH, 6);
-    ctx.fill();
-    // Team-colored outline.
-    ctx.lineWidth = 2.5;
+    // Team-colored ground ring.
     ctx.strokeStyle = unit.team === "player" ? "#5fe3ff" : "#ff5a5a";
-    ctx.stroke();
-    // Head.
-    ctx.fillStyle = "rgba(255,255,255,0.9)";
+    ctx.lineWidth = 2;
     ctx.beginPath();
-    ctx.arc(center.sx, topY + 6, 5, 0, Math.PI * 2);
-    ctx.fill();
-    // Class initial.
-    ctx.fillStyle = "rgba(0,0,0,0.65)";
-    ctx.font = "bold 11px system-ui";
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-    ctx.fillText(unit.name[0].toUpperCase(), center.sx, topY + bodyH / 2 + 3);
+    ctx.ellipse(center.sx, center.sy + 2, TILE_W * 0.28, TILE_H * 0.28, 0, 0, Math.PI * 2);
+    ctx.stroke();
 
+    ctx.drawImage(canvas, drawX, drawY);
+
+    const topY = drawY;
     // HP bar.
-    const barW = 26;
+    const barW = 28;
     const barX = center.sx - barW / 2;
-    const barY = topY - 9;
+    const barY = topY - 8;
     ctx.fillStyle = "rgba(0,0,0,0.6)";
     ctx.fillRect(barX - 1, barY - 1, barW + 2, 5);
     const hpFrac = unit.stats.hp / unit.stats.maxHp;
@@ -251,17 +276,19 @@ export class Renderer {
     if (unit.statuses.length > 0) {
       ctx.font = "9px system-ui";
       ctx.fillStyle = "#fff";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
       ctx.fillText(unit.statuses.map((s) => s.kind[0].toUpperCase()).join(""), center.sx, barY - 6);
     }
 
-    // Active indicator: bobbing arrow.
+    // Active indicator: bobbing arrow above the sprite.
     if (active) {
-      const bob = Math.sin(time * 6) * 3;
+      const ab = Math.sin(time * 6) * 3;
       ctx.fillStyle = "#ffd34d";
       ctx.beginPath();
-      ctx.moveTo(center.sx, topY - 16 + bob);
-      ctx.lineTo(center.sx - 6, topY - 24 + bob);
-      ctx.lineTo(center.sx + 6, topY - 24 + bob);
+      ctx.moveTo(center.sx, topY - 10 + ab);
+      ctx.lineTo(center.sx - 6, topY - 18 + ab);
+      ctx.lineTo(center.sx + 6, topY - 18 + ab);
       ctx.closePath();
       ctx.fill();
     }
@@ -286,23 +313,6 @@ export class Renderer {
       ctx.globalAlpha = 1;
     }
   }
-}
-
-function roundRect(
-  ctx: CanvasRenderingContext2D,
-  x: number,
-  y: number,
-  w: number,
-  h: number,
-  r: number,
-): void {
-  ctx.beginPath();
-  ctx.moveTo(x + r, y);
-  ctx.arcTo(x + w, y, x + w, y + h, r);
-  ctx.arcTo(x + w, y + h, x, y + h, r);
-  ctx.arcTo(x, y + h, x, y, r);
-  ctx.arcTo(x, y, x + w, y, r);
-  ctx.closePath();
 }
 
 export { key as tileKey };

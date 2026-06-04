@@ -53,7 +53,11 @@ const CSS = `
   min-width: 240px;
 }
 .submenu .row { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.submenu .row-left { display: flex; align-items: center; gap: 8px; }
 .submenu .cost { font-size: 12px; opacity: 0.8; }
+
+.icon { image-rendering: pixelated; image-rendering: crisp-edges; vertical-align: middle; flex: none; }
+.weapon-line { display: flex; align-items: center; gap: 6px; }
 
 .turn-bar {
   left: 50%; transform: translateX(-50%); top: 12px;
@@ -61,12 +65,13 @@ const CSS = `
 }
 .turn-bar .label { font-size: 11px; opacity: 0.7; margin-right: 4px; }
 .turn-chip {
-  width: 30px; height: 30px; border-radius: 6px; display: flex;
+  width: 30px; height: 30px; border-radius: 6px; display: flex; overflow: hidden;
   align-items: center; justify-content: center; font-weight: 700; font-size: 13px;
   border: 2px solid transparent; color: #10121c;
 }
 .turn-chip.first { border-color: #ffd34d; box-shadow: 0 0 8px rgba(255,211,77,0.7); }
 .turn-chip.enemy { outline: 2px solid #ff5a5a; outline-offset: -2px; }
+.chip-portrait { width: 100%; height: 100%; object-fit: contain; image-rendering: pixelated; image-rendering: crisp-edges; }
 
 .toast {
   left: 50%; transform: translateX(-50%); top: 58px;
@@ -100,6 +105,10 @@ const CSS = `
 .unit-card { background: rgba(22,26,42,0.95); border: 1px solid rgba(120,140,200,0.3); border-radius: 10px; padding: 14px; }
 .unit-card h3 { font-size: 17px; margin-bottom: 2px; }
 .unit-card .role { font-size: 12px; opacity: 0.7; margin-bottom: 8px; }
+.card-head { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; }
+.card-head .icon { background: rgba(0,0,0,0.25); border-radius: 6px; padding: 2px; }
+.wlabel { display: flex; align-items: center; gap: 6px; }
+.skill-icons { display: flex; gap: 4px; margin-top: 4px; }
 .unit-card label { font-size: 12px; opacity: 0.8; display: block; margin: 8px 0 3px; }
 .unit-card select { width: 100%; background: #1a1e30; color: #eee; border: 1px solid #455; border-radius: 5px; padding: 5px; }
 .unit-card .skills { font-size: 12px; opacity: 0.85; margin-top: 6px; }
