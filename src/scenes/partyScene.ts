@@ -6,7 +6,7 @@ import { getSkill } from "../data/skills";
 import { statsForLevel, nextLearnableSkill, learnNextSkill, xpForLevel } from "../core/unit";
 import { saveGame } from "../core/state";
 import { PHASES } from "../data/maps";
-import { getCharacterSprite, getSkillSprite, getWeaponSprite } from "../data/sprites";
+import { getUnitSprite, getSkillSprite, getWeaponSprite } from "../data/sprites";
 import { el, clear } from "../ui/dom";
 import { iconImg } from "../ui/icons";
 import type { GameContext, Scene } from "./sceneManager";
@@ -52,7 +52,7 @@ export class PartyScene implements Scene {
     const cls = getClass(unit.classId);
     const card = el("div", { className: "unit-card" });
     const head = el("div", { className: "card-head" });
-    head.appendChild(iconImg(getCharacterSprite(unit.classId), 44));
+    head.appendChild(iconImg(getUnitSprite(unit), 44));
     const headText = el("div");
     headText.appendChild(el("h3", { text: unit.name }));
     headText.appendChild(

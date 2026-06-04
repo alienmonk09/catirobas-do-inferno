@@ -1,6 +1,7 @@
-import type { ClassId, SkillDef, WeaponDef } from "../../core/types";
+import type { ClassId, SkillDef, Unit, WeaponDef } from "../../core/types";
 import type { AnimDef, SpriteDef } from "../../engine/sprite";
 import { CHARACTER_SPRITES } from "./characters";
+import { HERO_SPRITES } from "./heroes";
 import { WEAPON_SPRITES } from "./weapons";
 import { ITEM_SPRITES } from "./items";
 import { SKILL_SPRITES } from "./skills";
@@ -24,6 +25,21 @@ const MISSING: SpriteDef = {
 
 export function getCharacterSprite(classId: ClassId): SpriteDef {
   return CHARACTER_SPRITES[classId] ?? MISSING;
+}
+/** A roster hero's unique sprite, or undefined if none is defined for that id. */
+export function getHeroSprite(id: string): SpriteDef | undefined {
+  return HERO_SPRITES[id];
+}
+/**
+ * The sprite to draw for a unit. Player units carry their roster id, so they get
+ * their unique hero sprite; everyone else (enemies) uses the generic class art.
+ */
+export function getUnitSprite(unit: Unit): SpriteDef {
+  if (unit.team === "player") {
+    const hero = HERO_SPRITES[unit.id];
+    if (hero) return hero;
+  }
+  return getCharacterSprite(unit.classId);
 }
 export function getWeaponSprite(id: string): SpriteDef {
   return WEAPON_SPRITES[id] ?? MISSING;
@@ -67,6 +83,7 @@ export function vfxKeyForWeapon(weapon: WeaponDef): VfxKey {
 
 export {
   CHARACTER_SPRITES,
+  HERO_SPRITES,
   WEAPON_SPRITES,
   ITEM_SPRITES,
   SKILL_SPRITES,

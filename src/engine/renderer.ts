@@ -1,7 +1,8 @@
-import type { Point, Unit } from "../core/types";
+import type { Point, TerrainType, Unit } from "../core/types";
 import type { Grid } from "../battle/grid";
-import { bakeSprite, type AnimDef } from "./sprite";
-import { getCharacterSprite } from "../data/sprites";
+import { bakeSprite, spriteHeight, type AnimDef, type SpriteDef } from "./sprite";
+import { getUnitSprite } from "../data/sprites";
+import { TERRAIN } from "../data/terrain";
 import {
   TILE_W,
   TILE_H,
@@ -15,9 +16,18 @@ import {
   type ScreenPoint,
 } from "./iso";
 
-/** Integer upscale for baked sprites in the battle scene. */
-const CHAR_SCALE = 3;
+/** Target on-screen sprite height (px) — bake scale is derived per sprite so
+ *  16x20 class art and 24x30 hero art render to the same footprint. */
+const CHAR_PX_H = 60;
 const VFX_SCALE = 3;
+/** Bake scale for a sprite so it lands near CHAR_PX_H tall. */
+function charScale(def: SpriteDef): number {
+  return Math.max(1, Math.round(CHAR_PX_H / spriteHeight(def)));
+}
+/** Clamp a lightness percentage to a sane range. */
+function clampL(l: number): number {
+  return Math.max(6, Math.min(92, l));
+}
 /** Seconds for a slain unit to fade from full to ghosted. */
 const DEATH_FADE = 0.45;
 
@@ -141,9 +151,7 @@ export class Renderer {
 
   render(view: BattleView): void {
     this.clear();
-    this.drawTiles(view);
-    this.drawOverlays(view);
-    this.drawUnitsAndCursor(view);
+    this.drawScene(view);
     this.drawEffects(view);
     this.drawPopups(view);
     this.drawForecast(view);
@@ -184,75 +192,76 @@ export class Renderer {
     }
   }
 
-  private drawTiles(view: BattleView): void {
-    const { grid } = view;
-    // Painter's order: draw back-to-front in VIEW space so cliff walls occlude
-    // correctly at any rotation (a plain y-then-x loop is only correct at 0°).
-    const tiles: Point[] = [];
-    for (let y = 0; y < grid.height; y++) {
-      for (let x = 0; x < grid.width; x++) tiles.push({ x, y });
+  /** Map each tile key to the overlay colors to paint on its top, in z-order. */
+  private overlayColors(view: BattleView): Map<string, string[]> {
+    const m = new Map<string, string[]>();
+    const push = (t: Point, color: string): void => {
+      const k = `${t.x},${t.y}`;
+      const arr = m.get(k);
+      if (arr) arr.push(color);
+      else m.set(k, [color]);
+    };
+    for (const t of view.overlays.move) push(t, COLOR.move);
+    for (const t of view.overlays.attack) push(t, COLOR.attack);
+    for (const t of view.overlays.path) push(t, COLOR.path);
+    for (const t of view.overlays.aoe) push(t, COLOR.aoe);
+    if (view.hoverTile) push(view.hoverTile, COLOR.hover);
+    return m;
+  }
+
+  /**
+   * Draw tiles and units interleaved in one back-to-front pass so a taller tile
+   * in front of a unit overdraws the unit's lower body (occlusion). A unit is
+   * depth-keyed to its own tile + 0.5, so it sits just above its tile top but
+   * behind any closer/higher tile. Painter's order is computed in VIEW space so
+   * it stays correct at every rotation.
+   */
+  private drawScene(view: BattleView): void {
+    const { grid, rot } = view;
+    const w = grid.width;
+    const h = grid.height;
+    const overlays = this.overlayColors(view);
+
+    type Item =
+      | { kind: "tile"; depth: number; x: number; y: number }
+      | { kind: "unit"; depth: number; unit: Unit; dx: number; dy: number };
+    const items: Item[] = [];
+
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        items.push({ kind: "tile", depth: depthKey(x, y, grid.heightAt(x, y), rot, w, h), x, y });
+      }
     }
-    tiles.sort(
-      (a, b) =>
-        depthKey(a.x, a.y, grid.heightAt(a.x, a.y), view.rot, grid.width, grid.height) -
-        depthKey(b.x, b.y, grid.heightAt(b.x, b.y), view.rot, grid.width, grid.height),
-    );
-    for (const { x, y } of tiles) {
-      const z = grid.heightAt(x, y);
-      const blocked = grid.isBlocked(x, y);
-      const center = this.project(view, x, y, z);
-      this.drawTileWalls(center, z, blocked);
-      this.drawTileTop(center, z, blocked);
+    for (const unit of view.units) {
+      const ap = view.animPos.get(unit.id) ?? unit.pos;
+      const z = grid.heightAt(Math.round(ap.x), Math.round(ap.y));
+      items.push({ kind: "unit", depth: depthKey(ap.x, ap.y, z, rot, w, h) + 0.5, unit, dx: ap.x, dy: ap.y });
+    }
+    items.sort((a, b) => a.depth - b.depth);
+
+    for (const it of items) {
+      if (it.kind === "tile") {
+        const z = grid.heightAt(it.x, it.y);
+        const center = this.project(view, it.x, it.y, z);
+        const terrain = grid.terrainAt(it.x, it.y);
+        this.drawTileWalls(center, z, terrain);
+        this.drawTileTop(center, z, terrain, it.x, it.y);
+        const cols = overlays.get(`${it.x},${it.y}`);
+        if (cols) for (const c of cols) this.paintDiamond(center, c);
+      } else {
+        const z = grid.heightAt(Math.round(it.dx), Math.round(it.dy));
+        const center = this.project(view, it.dx, it.dy, z);
+        const off = view.unitOffsets.get(it.unit.id);
+        if (off) {
+          center.sx += off.dx;
+          center.sy += off.dy;
+        }
+        this.drawUnit(it.unit, center, it.unit.id === view.activeUnitId, view.time, view.deathFade.get(it.unit.id));
+      }
     }
   }
 
-  private drawTileWalls(center: ScreenPoint, z: number, blocked: boolean): void {
-    if (z <= 0) return;
-    const ctx = this.ctx;
-    const corners = diamondCorners(center);
-    const wallH = z * TILE_Z;
-    const baseHue = blocked ? 210 : 110;
-    // Left face (from bottom corner to left corner).
-    ctx.fillStyle = `hsl(${baseHue}, 30%, ${blocked ? 14 : 18}%)`;
-    ctx.beginPath();
-    ctx.moveTo(corners[3].sx, corners[3].sy);
-    ctx.lineTo(corners[2].sx, corners[2].sy);
-    ctx.lineTo(corners[2].sx, corners[2].sy + wallH);
-    ctx.lineTo(corners[3].sx, corners[3].sy + wallH);
-    ctx.closePath();
-    ctx.fill();
-    // Right face (from bottom corner to right corner).
-    ctx.fillStyle = `hsl(${baseHue}, 30%, ${blocked ? 22 : 27}%)`;
-    ctx.beginPath();
-    ctx.moveTo(corners[1].sx, corners[1].sy);
-    ctx.lineTo(corners[2].sx, corners[2].sy);
-    ctx.lineTo(corners[2].sx, corners[2].sy + wallH);
-    ctx.lineTo(corners[1].sx, corners[1].sy + wallH);
-    ctx.closePath();
-    ctx.fill();
-  }
-
-  private drawTileTop(center: ScreenPoint, z: number, blocked: boolean): void {
-    const ctx = this.ctx;
-    const corners = diamondCorners(center);
-    if (blocked) {
-      ctx.fillStyle = `hsl(205, 55%, ${30 + z * 6}%)`;
-    } else {
-      ctx.fillStyle = `hsl(110, 32%, ${30 + z * 9}%)`;
-    }
-    ctx.beginPath();
-    ctx.moveTo(corners[0].sx, corners[0].sy);
-    for (let i = 1; i < corners.length; i++) ctx.lineTo(corners[i].sx, corners[i].sy);
-    ctx.closePath();
-    ctx.fill();
-    ctx.strokeStyle = COLOR.gridLine;
-    ctx.lineWidth = 1;
-    ctx.stroke();
-  }
-
-  private fillTile(view: BattleView, tile: Point, color: string): void {
-    const z = view.grid.heightAt(tile.x, tile.y);
-    const center = this.project(view, tile.x, tile.y, z);
+  private paintDiamond(center: ScreenPoint, color: string): void {
     const corners = diamondCorners(center);
     const ctx = this.ctx;
     ctx.fillStyle = color;
@@ -263,40 +272,58 @@ export class Renderer {
     ctx.fill();
   }
 
-  private drawOverlays(view: BattleView): void {
-    for (const t of view.overlays.move) this.fillTile(view, t, COLOR.move);
-    for (const t of view.overlays.attack) this.fillTile(view, t, COLOR.attack);
-    for (const t of view.overlays.path) this.fillTile(view, t, COLOR.path);
-    for (const t of view.overlays.aoe) this.fillTile(view, t, COLOR.aoe);
-    if (view.hoverTile) this.fillTile(view, view.hoverTile, COLOR.hover);
+  private drawTileWalls(center: ScreenPoint, z: number, terrain: TerrainType): void {
+    if (z <= 0) return;
+    const ctx = this.ctx;
+    const corners = diamondCorners(center);
+    const wallH = z * TILE_Z;
+    const st = TERRAIN[terrain];
+    // Left face darker, right face a touch lighter — fake a directional light.
+    ctx.fillStyle = `hsl(${st.h}, ${st.s}%, ${clampL(st.l - 20)}%)`;
+    ctx.beginPath();
+    ctx.moveTo(corners[3].sx, corners[3].sy);
+    ctx.lineTo(corners[2].sx, corners[2].sy);
+    ctx.lineTo(corners[2].sx, corners[2].sy + wallH);
+    ctx.lineTo(corners[3].sx, corners[3].sy + wallH);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = `hsl(${st.h}, ${st.s}%, ${clampL(st.l - 12)}%)`;
+    ctx.beginPath();
+    ctx.moveTo(corners[1].sx, corners[1].sy);
+    ctx.lineTo(corners[2].sx, corners[2].sy);
+    ctx.lineTo(corners[2].sx, corners[2].sy + wallH);
+    ctx.lineTo(corners[1].sx, corners[1].sy + wallH);
+    ctx.closePath();
+    ctx.fill();
   }
 
-  private drawUnitsAndCursor(view: BattleView): void {
-    // Sort by depth so nearer units draw on top. Use animated pos when present.
-    // Dead units stay in the list; drawUnit renders them faded.
-    const drawList = view.units
-      .map((u) => {
-        const ap = view.animPos.get(u.id) ?? u.pos;
-        return { unit: u, dx: ap.x, dy: ap.y };
-      })
-      .sort((a, b) => {
-        const za = view.grid.heightAt(Math.round(a.dx), Math.round(a.dy));
-        const zb = view.grid.heightAt(Math.round(b.dx), Math.round(b.dy));
-        const w = view.grid.width;
-        const h = view.grid.height;
-        return depthKey(a.dx, a.dy, za, view.rot, w, h) - depthKey(b.dx, b.dy, zb, view.rot, w, h);
-      });
-
-    for (const { unit, dx, dy } of drawList) {
-      const z = view.grid.heightAt(Math.round(dx), Math.round(dy));
-      const center = this.project(view, dx, dy, z);
-      const off = view.unitOffsets.get(unit.id);
-      if (off) {
-        center.sx += off.dx;
-        center.sy += off.dy;
-      }
-      this.drawUnit(unit, center, unit.id === view.activeUnitId, view.time, view.deathFade.get(unit.id));
+  private drawTileTop(center: ScreenPoint, z: number, terrain: TerrainType, tx: number, ty: number): void {
+    const ctx = this.ctx;
+    const corners = diamondCorners(center);
+    const st = TERRAIN[terrain];
+    const lit = clampL(st.l + z * 5);
+    ctx.fillStyle = `hsl(${st.h}, ${st.s}%, ${lit}%)`;
+    ctx.beginPath();
+    ctx.moveTo(corners[0].sx, corners[0].sy);
+    for (let i = 1; i < corners.length; i++) ctx.lineTo(corners[i].sx, corners[i].sy);
+    ctx.closePath();
+    ctx.fill();
+    // Cheap deterministic speckle so flat ground isn't a single dead color.
+    const seed = ((tx * 73856093) ^ (ty * 19349663)) >>> 0;
+    for (let i = 0; i < 3; i++) {
+      const r = (seed >> (i * 5)) & 31;
+      const dx = ((r & 3) - 1.5) * (TILE_W * 0.16);
+      const dy = (((r >> 2) & 3) - 1.5) * (TILE_H * 0.16);
+      ctx.fillStyle = `hsl(${st.h}, ${st.s}%, ${clampL(lit + (r & 1 ? 7 : -7))}%)`;
+      ctx.fillRect(Math.round(center.sx + dx), Math.round(center.sy + dy), 2, 2);
     }
+    ctx.strokeStyle = COLOR.gridLine;
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(corners[0].sx, corners[0].sy);
+    for (let i = 1; i < corners.length; i++) ctx.lineTo(corners[i].sx, corners[i].sy);
+    ctx.closePath();
+    ctx.stroke();
   }
 
   private drawUnit(
@@ -307,7 +334,8 @@ export class Renderer {
     deathAge: number | undefined,
   ): void {
     const ctx = this.ctx;
-    const canvas = bakeSprite(getCharacterSprite(unit.classId), CHAR_SCALE);
+    const def = getUnitSprite(unit);
+    const canvas = bakeSprite(def, charScale(def));
     const w = canvas.width;
     const h = canvas.height;
     const bob = active ? Math.sin(time * 6) * 2 : 0;
