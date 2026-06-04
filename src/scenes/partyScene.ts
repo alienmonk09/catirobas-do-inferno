@@ -1,5 +1,6 @@
 import type { ClassId, Unit } from "../core/types";
 import { CLASSES, getClass } from "../data/classes";
+import { getRace } from "../data/races";
 import { getWeapon } from "../data/weapons";
 import { getSkill } from "../data/skills";
 import { statsForLevel, nextLearnableSkill, learnNextSkill, xpForLevel } from "../core/unit";
@@ -54,7 +55,9 @@ export class PartyScene implements Scene {
     head.appendChild(iconImg(getCharacterSprite(unit.classId), 44));
     const headText = el("div");
     headText.appendChild(el("h3", { text: unit.name }));
-    headText.appendChild(el("div", { className: "role", text: `${cls.name} · Lv ${unit.level}` }));
+    headText.appendChild(
+      el("div", { className: "role", text: `${cls.name} · ${getRace(unit.raceId).name} · Lv ${unit.level}` }),
+    );
     head.appendChild(headText);
     card.appendChild(head);
     card.appendChild(

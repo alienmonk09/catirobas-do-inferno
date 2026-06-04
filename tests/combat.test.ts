@@ -245,6 +245,16 @@ describe("resolveSkillOnTarget - heal", () => {
     expect(target.stats.hp).toBeLessThanOrEqual(target.stats.maxHp);
   });
 
+  it("reports the real HP restored (clamped), not the full rolled amount", () => {
+    const caster = whiteMage();
+    const target = knight();
+    target.stats.maxHp = 100;
+    target.stats.hp = 99; // only 1 HP missing — a big cure must report +1, not its roll
+    const res = resolveSkillOnTarget(caster, target, getSkill("cure"), new RNG(4));
+    expect(res!.amount).toBe(1);
+    expect(target.stats.hp).toBe(100);
+  });
+
   it("restores HP when below max without exceeding it", () => {
     const caster = whiteMage();
     const target = knight();

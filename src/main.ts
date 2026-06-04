@@ -9,6 +9,7 @@ import { SceneManager, type GameContext } from "./scenes/sceneManager";
 import { TitleScene, VictoryScene } from "./scenes/menuScenes";
 import { BattleScene } from "./scenes/battleScene";
 import { PartyScene } from "./scenes/partyScene";
+import { PartySelectScene } from "./scenes/partySelectScene";
 
 function boot(): void {
   const app = document.getElementById("app");
@@ -30,6 +31,7 @@ function boot(): void {
     state,
     nav: {
       toTitle: () => manager.change(new TitleScene(ctx)),
+      toPartySelect: () => manager.change(new PartySelectScene(ctx)),
       toBattle: (i: number) => manager.change(new BattleScene(ctx, PHASES[i], i)),
       toParty: () => manager.change(new PartyScene(ctx)),
       toVictory: () => manager.change(new VictoryScene(ctx)),
@@ -49,4 +51,16 @@ function boot(): void {
   loop.start();
 }
 
-boot();
+try {
+  boot();
+} catch (err) {
+  // A throw during boot would otherwise leave the player on a blank dark canvas
+  // with the error buried in devtools. Surface a minimal visible fallback.
+  console.error("Ashen Banner failed to start:", err);
+  const app = document.getElementById("app");
+  if (app) {
+    app.textContent = "Failed to start. Open the browser console for details.";
+    app.style.cssText =
+      "display:flex;align-items:center;justify-content:center;height:100%;color:#e8e8f2;font:16px system-ui,sans-serif;text-align:center;padding:24px;";
+  }
+}

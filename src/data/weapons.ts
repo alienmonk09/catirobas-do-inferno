@@ -65,6 +65,30 @@ export const WEAPONS: Record<string, WeaponDef> = {
     kind: "physical",
     classes: ["monk"],
   },
+  dagger: {
+    id: "dagger",
+    name: "Dagger",
+    power: 4,
+    range: 1,
+    kind: "physical",
+    classes: ["thief"],
+  },
+  rapier: {
+    id: "rapier",
+    name: "Rapier",
+    power: 7,
+    range: 1,
+    kind: "physical",
+    classes: ["thief"],
+  },
+  heartwood: {
+    id: "heartwood",
+    name: "Heartwood Staff",
+    power: 3,
+    range: 1,
+    kind: "magical",
+    classes: ["druid"],
+  },
 };
 
 export function getWeapon(id: string): WeaponDef {

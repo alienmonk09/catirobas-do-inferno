@@ -1,5 +1,6 @@
-import type { ClassId, Point, Stats, Team, Unit } from "./types";
+import type { ClassId, Point, RaceId, Stats, Team, Unit } from "./types";
 import { getClass } from "../data/classes";
+import { getRace } from "../data/races";
 import { getWeapon } from "../data/weapons";
 
 let idCounter = 0;
@@ -13,25 +14,32 @@ export function xpForLevel(level: number): number {
   return 100 + (level - 1) * 40;
 }
 
-/** Compute the stat block for a class at a given level. */
-export function statsForLevel(classId: ClassId, level: number): Stats {
+/**
+ * Compute the stat block for a class at a given level, with optional race
+ * modifiers folded in. Race deltas are flat and applied here (not once at
+ * creation) so they survive level-ups and class changes, which recompute stats.
+ * Every stat floors at 1.
+ */
+export function statsForLevel(classId: ClassId, level: number, raceId?: RaceId): Stats {
   const c = getClass(classId);
   const lv = level - 1;
   const g = c.growth;
-  const maxHp = Math.round(c.base.hp + g.hp * lv);
-  const maxMp = Math.round(c.base.mp + g.mp * lv);
+  const m = raceId ? getRace(raceId).mod : {};
+  const f = (value: number, delta = 0) => Math.max(1, Math.round(value) + delta);
+  const maxHp = f(c.base.hp + g.hp * lv, m.hp ?? 0);
+  const maxMp = f(c.base.mp + g.mp * lv, m.mp ?? 0);
   return {
     hp: maxHp,
     maxHp,
     mp: maxMp,
     maxMp,
-    atk: Math.round(c.base.atk + g.atk * lv),
-    def: Math.round(c.base.def + g.def * lv),
-    mag: Math.round(c.base.mag + g.mag * lv),
-    res: Math.round(c.base.res + g.res * lv),
-    spd: Math.round(c.base.spd + g.spd * lv),
-    move: c.base.move,
-    jump: c.base.jump,
+    atk: f(c.base.atk + g.atk * lv, m.atk ?? 0),
+    def: f(c.base.def + g.def * lv, m.def ?? 0),
+    mag: f(c.base.mag + g.mag * lv, m.mag ?? 0),
+    res: f(c.base.res + g.res * lv, m.res ?? 0),
+    spd: f(c.base.spd + g.spd * lv, m.spd ?? 0),
+    move: f(c.base.move, m.move ?? 0),
+    jump: f(c.base.jump, m.jump ?? 0),
   };
 }
 
@@ -39,6 +47,8 @@ export interface CreateUnitOpts {
   name: string;
   team: Team;
   classId: ClassId;
+  /** Race; defaults to "human" (no stat modifiers). */
+  raceId?: RaceId;
   level?: number;
   pos: Point;
   weaponId?: string;
@@ -49,6 +59,7 @@ export interface CreateUnitOpts {
 
 export function createUnit(opts: CreateUnitOpts): Unit {
   const level = opts.level ?? 1;
+  const raceId = opts.raceId ?? "human";
   const c = getClass(opts.classId);
   const weaponId = opts.weaponId ?? c.weaponIds[0];
   // Validate weapon belongs to class; fall back to class default.
@@ -59,6 +70,7 @@ export function createUnit(opts: CreateUnitOpts): Unit {
     name: opts.name,
     team: opts.team,
     classId: opts.classId,
+    raceId,
     level,
     xp: 0,
     jp: 0,
@@ -66,7 +78,7 @@ export function createUnit(opts: CreateUnitOpts): Unit {
     weaponId: finalWeapon,
     pos: { ...opts.pos },
     ct: 0,
-    stats: statsForLevel(opts.classId, level),
+    stats: statsForLevel(opts.classId, level, raceId),
     statuses: [],
     alive: true,
   };
@@ -85,7 +97,7 @@ export function grantXp(unit: Unit, amount: number): number {
     const hpRatio = unit.stats.maxHp > 0 ? unit.stats.hp / unit.stats.maxHp : 1;
     const mpRatio = unit.stats.maxMp > 0 ? unit.stats.mp / unit.stats.maxMp : 1;
     unit.level += 1;
-    const next = statsForLevel(unit.classId, unit.level);
+    const next = statsForLevel(unit.classId, unit.level, unit.raceId);
     unit.stats = next;
     unit.stats.hp = Math.max(1, Math.round(next.maxHp * hpRatio));
     unit.stats.mp = Math.round(next.maxMp * mpRatio);

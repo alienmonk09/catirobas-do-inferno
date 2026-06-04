@@ -5,7 +5,7 @@ priorities shift. Status legend: ✅ done · 🚧 in progress · ⏳ planned · 
 
 ## v0.1 — Playable MVP ✅ *(current)*
 
-The complete core loop ships and is covered by the test suite (348 tests, 12
+The complete core loop ships and is covered by the test suite (404 tests, 17
 files), including a full AI-vs-AI battle simulation that auto-plays all five
 phases to a decisive result.
 
@@ -42,9 +42,12 @@ Make the grid fights deeper without new content pipelines.
 
 Widen the build with more to play and more ways to build a party.
 
+- ✅ **Choose your party** — pick four heroes from a roster of seven at New Game
+- ✅ **Races** — Human/Elf/Dwarf/Halfling/Orc, each with flat stat modifiers
+- ✅ **Two more classes** — Thief (Enzo) and Druid (Penelope), with skills & weapons
 - ⏳ **Secondary job / ability pool** — equip a second class's skill set (FFT-style)
 - ⏳ More classes (e.g. Lancer, Time Mage, Summoner) and the skills/weapons to match
-- ⏳ Elemental affinities — fire/ice/bolt/holy weaknesses & resistances that matter
+- ⏳ Elemental affinities — fire/ice/bolt/holy/nature weaknesses & resistances that matter
 - ⏳ More maps / chapters beyond the current five; optional skirmishes
 - 💭 Terrain hazards & special tiles (lava, water, traps, destructible cover)
 - 💭 Armor & accessory equipment slots

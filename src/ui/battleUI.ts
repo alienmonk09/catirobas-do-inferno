@@ -1,6 +1,7 @@
 import type { ItemDef, SkillDef, Unit } from "../core/types";
 import { getClass } from "../data/classes";
 import { getWeapon } from "../data/weapons";
+import { getSkill } from "../data/skills";
 import { getCharacterSprite, getItemSprite, getSkillSprite, getWeaponSprite } from "../data/sprites";
 import { el, clear } from "./dom";
 import { iconImg, portraitImg } from "./icons";
@@ -100,6 +101,18 @@ export class BattleUI {
           iconImg(getWeaponSprite(unit.weaponId), 16),
           el("span", { text: `${weapon.name} (pow ${weapon.power}, rng ${weapon.range})` }),
         ],
+      }),
+      el("div", {
+        className: "skills-line",
+        text: unit.learnedSkillIds.length
+          ? "Skills: " +
+            unit.learnedSkillIds
+              .map((id) => {
+                const s = getSkill(id);
+                return `${s.name} (${describeSkill(s)})`;
+              })
+              .join(", ")
+          : "",
       }),
       el("div", { className: "statuses", text: unit.statuses.map((s) => `${s.kind}(${s.turnsLeft})`).join(" ") }),
     ];
@@ -213,9 +226,9 @@ export class BattleUI {
   showActions(state: ActionState): void {
     this.hideSubmenu();
     clear(this.actionMenu);
-    const mk = (label: string, enabled: boolean, fn: () => void) =>
+    const mk = (label: string, enabled: boolean, fn: () => void, extra = "") =>
       el("button", {
-        className: "btn",
+        className: extra ? `btn ${extra}` : "btn",
         text: label,
         attrs: enabled ? {} : { disabled: "true" },
         onClick: enabled ? fn : undefined,
@@ -224,7 +237,9 @@ export class BattleUI {
     this.actionMenu.appendChild(mk("Attack", state.canAct, state.onAttack));
     this.actionMenu.appendChild(mk("Skill", state.canAct, state.onSkill));
     this.actionMenu.appendChild(mk("Item", state.canAct, state.onItem));
-    this.actionMenu.appendChild(mk("Wait", true, state.onWait));
+    // "End Turn" (genre-standard "Wait"), detached from the offensive actions to
+    // avoid a reflex misclick forfeiting the whole turn.
+    this.actionMenu.appendChild(mk("End Turn", true, state.onWait, "end-turn"));
     this.actionMenu.style.display = "flex";
     this.placeFloating(this.actionMenu);
   }

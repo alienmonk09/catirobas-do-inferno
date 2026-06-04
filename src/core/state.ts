@@ -1,7 +1,8 @@
-import type { ClassId, Unit } from "./types";
+import type { ClassId, RaceId, Unit } from "./types";
 import { createStartingParty } from "../data/party";
 import { startingInventory } from "../data/items";
 import { CLASSES } from "../data/classes";
+import { RACES } from "../data/races";
 import { WEAPONS } from "../data/weapons";
 
 export interface GameState {
@@ -41,6 +42,7 @@ function isValidSave(data: unknown): data is GameState {
   for (const u of s.party) {
     if (!u || typeof u !== "object") return false;
     if (!CLASSES[u.classId as ClassId]) return false;
+    if (!RACES[u.raceId as RaceId]) return false;
     if (!WEAPONS[u.weaponId]) return false;
     if (!u.stats || typeof u.stats.maxHp !== "number") return false;
     if (typeof u.level !== "number" || !Array.isArray(u.learnedSkillIds)) return false;

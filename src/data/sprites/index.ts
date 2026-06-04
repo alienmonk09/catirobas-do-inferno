@@ -47,6 +47,12 @@ export function vfxKeyForSkill(skill: SkillDef): VfxKey {
     if (skill.effect === "heal") return "heal";
     return "holy";
   }
+  if (skill.element === "nature") {
+    if (skill.effect === "revive") return "revive";
+    if (skill.effect === "heal") return "heal";
+    if (skill.effect === "buff" || skill.effect === "debuff") return "status";
+    return "arcane";
+  }
   // element "none"
   if (skill.effect === "heal") return "heal";
   if (skill.effect === "revive") return "revive";
