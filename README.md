@@ -1,8 +1,16 @@
-# Tactics MVP
+# Ashen Banner
 
-A Final Fantasy Tactics–style game: isometric, turn-based battles with class
-progression, magic, weapons, and items. Built in TypeScript + HTML5 Canvas, no
-game engine. Five classes, five playable phases.
+A Final Fantasy Tactics–style game: isometric, turn-based grid battles with
+class progression, magic, weapons, and items. Built in **TypeScript + HTML5
+Canvas**, no game engine, no art assets — every sprite is code-defined pixel art.
+
+> *The old kingdom burned. All that's left of it is a scorched banner, and five
+> who still carry it.* — Five survivors of the realm of Calenmark carry the
+> Ashen Banner from the border wilds to the tyrant Maldrath's shattered throne,
+> across a five-chapter campaign. Full story → **[STORY.md](STORY.md)**.
+
+Five classes, five playable phases, a charge-time turn system, and an enemy AI
+that heals, focuses, and pursues.
 
 ## Run it
 
@@ -20,10 +28,12 @@ npm test           # run the Vitest suite
 
 ## How to play
 
-- **New Game** from the title screen drops you into Phase 1.
-- On your unit's turn, use the bottom menu:
+- **New Game** from the title screen drops you into Chapter I.
+- On your unit's turn, use the action menu (it pops up next to the active unit):
   - **Move** — click a highlighted tile (blue). The path preview (yellow) shows
     the route; movement respects range, terrain height, and your unit's Jump.
+    You may move **through** allied units, but can't stop on an occupied tile;
+    enemy-held tiles block the path.
   - **Attack** — click an enemy inside weapon range (red).
   - **Skill** — pick a learned class skill (costs MP); click a target tile.
     Area skills show an AoE preview (orange). Support skills can target allies
@@ -46,6 +56,19 @@ npm test           # run the Vitest suite
 | White Mage | Support / heal | Cure, Cura (AoE), Raise |
 | Monk | Melee bruiser | Palm Strike, Chakra (heal), Earth Shake (AoE) |
 
+## The campaign
+
+Five phases of rising difficulty, from a border skirmish to the tyrant's keep.
+See **[STORY.md](STORY.md)** for the full narrative.
+
+| # | Chapter | Setting |
+|---|---------|---------|
+| I | Tutorial Skirmish | Grassy field, brigand camp — learn the basics |
+| II | Ambush in the Hills | Enemies on high ground, a sorcerer behind them |
+| III | The Bridge | A river chasm crossed by one narrow stone bridge |
+| IV | Sorcerer's Court | Tiered terraces, a mage cabal and a healer |
+| V | The Tyrant's Stand | Maldrath the Unbowed and his throne-guard |
+
 ## Project layout
 
 ```
@@ -53,19 +76,24 @@ src/
   core/     types, game state + save/load, RNG, unit/progression math
   battle/   grid, BFS pathfinding, targeting/AoE, combat, turn manager, AI
   engine/   isometric projection + picking, canvas renderer, input, loop, animator
-  ui/        DOM battle HUD, menus, party screen styles
-  scenes/    battle scene (turn state machine), party camp, title/victory
-  data/      classes, skills, weapons, items, party, maps/phase1..5
+  ui/       DOM battle HUD, menus, party screen styles
+  scenes/   battle scene (turn state machine), party camp, title/victory
+  data/     classes, skills, weapons, items, party, maps/phase1..5, sprites
 tests/      unit tests per module + a full AI-vs-AI battle simulation
 docs/superpowers/specs/  design spec
 ```
 
 ## Tests
 
-`npm test` runs ~290 tests: per-module unit tests (RNG, pathfinding, targeting,
-combat, turn order, AI, progression, grid) plus map-data invariants and a
-**full battle simulation** that auto-plays all five phases to a decisive winner
-while asserting HP/stat invariants every turn.
+`npm test` runs **348 tests across 12 files**: per-module unit tests (RNG,
+pathfinding, targeting, combat, turn order, AI, grid, movement/pass-through) plus
+map-data invariants and a **full battle simulation** that auto-plays all five
+phases to a decisive winner while asserting HP/stat invariants every turn.
+
+## Roadmap
+
+See **[ROADMAP.md](ROADMAP.md)**. Short version: facing/back-attacks and line of
+sight next, then a secondary-job system and more content, then narrative/audio.
 
 ## Known minor limitations
 
@@ -73,3 +101,7 @@ while asserting HP/stat invariants every turn.
   order right as a Slow/Haste status expires (cosmetic).
 - Tile picking hit-tests tile tops; clicking the vertical face of a tall cliff
   may select the tile behind it. Click the tile's top surface to be precise.
+
+## Tech stack
+
+TypeScript (strict), Vite 5, Vitest 2, Canvas 2D. No runtime dependencies.
