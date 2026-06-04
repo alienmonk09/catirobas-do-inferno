@@ -11,6 +11,33 @@ export interface ScreenPoint {
   sy: number;
 }
 
+/** Camera orientation in clockwise quarter-turns: 0=0°, 1=90°, 2=180°, 3=270°. */
+export type Rotation = 0 | 1 | 2 | 3;
+
+/**
+ * Map a logical grid tile (x, y) — possibly fractional, for animation — into
+ * view space for the given rotation, so the iso projection draws the map spun
+ * by 90° steps. `w`/`h` are the LOGICAL grid dimensions. This is the single
+ * source of truth shared by rendering, picking, and depth sorting.
+ */
+export function rotateTile(x: number, y: number, rot: Rotation, w: number, h: number): { x: number; y: number } {
+  switch (rot & 3) {
+    case 1:
+      return { x: y, y: w - 1 - x };
+    case 2:
+      return { x: w - 1 - x, y: h - 1 - y };
+    case 3:
+      return { x: h - 1 - y, y: x };
+    default:
+      return { x, y };
+  }
+}
+
+/** View-space grid dimensions after rotation (width/height swap on 90°/270°). */
+export function rotatedDims(rot: Rotation, w: number, h: number): { w: number; h: number } {
+  return rot & 1 ? { w: h, h: w } : { w, h };
+}
+
 /** World tile (x, y) at height z -> screen center of its top face. */
 export function worldToScreen(x: number, y: number, z: number, origin: ScreenPoint): ScreenPoint {
   return {
@@ -39,18 +66,26 @@ function pointInDiamond(px: number, py: number, center: ScreenPoint): boolean {
 
 /**
  * Pick the tile under a screen point. Tests every tile's top-face diamond at its
- * actual height and returns the front-most match (largest x+y, then height),
- * so taller/closer tiles win — correct with elevation.
+ * actual (rotated) screen position and returns the front-most match, so
+ * taller/closer tiles win — correct with elevation and any rotation. Returns
+ * the LOGICAL tile coordinates (what the game logic operates on).
  */
-export function screenToTile(px: number, py: number, grid: Grid, origin: ScreenPoint): Point | null {
+export function screenToTile(
+  px: number,
+  py: number,
+  grid: Grid,
+  origin: ScreenPoint,
+  rot: Rotation = 0,
+): Point | null {
   let best: Point | null = null;
   let bestRank = -Infinity;
   for (let y = 0; y < grid.height; y++) {
     for (let x = 0; x < grid.width; x++) {
       const z = grid.heightAt(x, y);
-      const center = worldToScreen(x, y, z, origin);
+      const v = rotateTile(x, y, rot, grid.width, grid.height);
+      const center = worldToScreen(v.x, v.y, z, origin);
       if (!pointInDiamond(px, py, center)) continue;
-      const rank = (x + y) * 10 + z;
+      const rank = (v.x + v.y) * 10 + z;
       if (rank > bestRank) {
         bestRank = rank;
         best = { x, y };
@@ -60,7 +95,8 @@ export function screenToTile(px: number, py: number, grid: Grid, origin: ScreenP
   return best;
 }
 
-/** Draw order key: back-to-front by depth (x+y) then height. */
-export function depthKey(x: number, y: number, z: number): number {
-  return (x + y) * 100 + z;
+/** Draw order key: back-to-front by view depth (rotated x+y) then height. */
+export function depthKey(x: number, y: number, z: number, rot: Rotation = 0, w = 0, h = 0): number {
+  const v = rotateTile(x, y, rot, w, h);
+  return (v.x + v.y) * 100 + z;
 }

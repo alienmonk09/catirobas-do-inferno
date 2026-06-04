@@ -10,6 +10,8 @@ files), including a full AI-vs-AI battle simulation that auto-plays all five
 phases to a decisive result.
 
 - ✅ Isometric Canvas 2D renderer — elevation, depth-sorting, tile picking, DPR scaling
+- ✅ **Camera rotation** — view the map from 4 angles (90° steps), via on-screen
+  buttons or `,` / `.`; rendering and tile-picking stay correct at every angle
 - ✅ Charge-time (CT) turn order driven by Speed
 - ✅ Movement: BFS pathfinding with move/jump, terrain height, blocked tiles
 - ✅ **Pass-through movement** — cross allied tiles, never finish on an occupied

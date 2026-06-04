@@ -41,6 +41,9 @@ npm test           # run the Vitest suite
   - **Item** — use a shared consumable (Potion, Hi-Potion, Ether, Phoenix Down).
   - **Wait** — end the turn.
 - **Right-click** cancels back to the menu. **Enter** / **E** ends the turn.
+- **Rotate the camera** to see the map from another angle: the **⟲ / ⟳**
+  buttons (top-right) or the **,** / **.** keys spin the board in 90° steps.
+  Works any time, including the enemy's turn.
 - Turn order (top bar) is driven by Speed (a charge-time system).
 - Win by defeating all enemies. Between phases, the **Party Camp** screen lets
   you change classes, swap weapons, and spend JP to learn new skills. Progress

@@ -33,6 +33,8 @@ export class BattleUI {
   private toastEl: HTMLDivElement;
   private hintEl: HTMLDivElement;
   private bannerEl: HTMLDivElement;
+  private rotateCtl: HTMLDivElement;
+  private rotLabel: HTMLDivElement;
   private toastTimer = 0;
   /** Screen point (CSS px) the action menu/submenu anchor to; null = docked. */
   private menuAnchor: { x: number; y: number } | null = null;
@@ -47,6 +49,8 @@ export class BattleUI {
     this.toastEl = el("div", { className: "panel toast" });
     this.hintEl = el("div", { className: "hint" });
     this.bannerEl = el("div", { className: "banner" });
+    this.rotLabel = el("div", { className: "rlabel", text: "0°" });
+    this.rotateCtl = el("div", { className: "panel rotate-ctl" });
     for (const n of [
       this.turnBar,
       this.unitPanel,
@@ -56,6 +60,7 @@ export class BattleUI {
       this.toastEl,
       this.hintEl,
       this.bannerEl,
+      this.rotateCtl,
     ]) {
       n.style.display = "none";
       this.layer.appendChild(n);
@@ -135,6 +140,30 @@ export class BattleUI {
       this.turnBar.appendChild(chip);
     });
     this.turnBar.style.display = "flex";
+  }
+
+  // --- Camera rotation control ---
+
+  /** Show the always-on rotate-camera control (two buttons + a facing label). */
+  showRotateControl(onLeft: () => void, onRight: () => void): void {
+    clear(this.rotateCtl);
+    this.rotateCtl.appendChild(
+      el("button", { className: "btn small rbtn", text: "⟲", attrs: { title: "Rotate view left (,)" }, onClick: onLeft }),
+    );
+    this.rotateCtl.appendChild(this.rotLabel);
+    this.rotateCtl.appendChild(
+      el("button", { className: "btn small rbtn", text: "⟳", attrs: { title: "Rotate view right (.)" }, onClick: onRight }),
+    );
+    this.rotateCtl.style.display = "flex";
+  }
+
+  hideRotateControl(): void {
+    this.rotateCtl.style.display = "none";
+  }
+
+  /** Update the facing readout (rot 0..3 → 0/90/180/270°). */
+  setRotationLabel(rot: number): void {
+    this.rotLabel.textContent = `${(((rot % 4) + 4) % 4) * 90}°`;
   }
 
   // --- Action menu ---

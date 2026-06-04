@@ -14,7 +14,7 @@ import {
 import { advanceToNextActor, battleWinner, endTurn, previewOrder } from "../battle/turnManager";
 import { planEnemyTurn } from "../battle/ai";
 import { forecastSkill, forecastWeapon } from "../battle/forecast";
-import { screenToTile, worldToScreen, type ScreenPoint } from "../engine/iso";
+import { screenToTile, worldToScreen, rotateTile, type Rotation, type ScreenPoint } from "../engine/iso";
 import type { ActiveEffect, BattleView, FloatingText, ForecastTag, OverlaySet } from "../engine/renderer";
 import { getWeapon } from "../data/weapons";
 import { getSkill } from "../data/skills";
@@ -56,6 +56,8 @@ export class BattleScene implements Scene {
   private active: Unit | null = null;
   private hasMoved = false;
   private hasActed = false;
+  /** Camera orientation (clockwise quarter-turns); the player can rotate freely. */
+  private rot: Rotation = 0;
 
   private hoverTile: Point | null = null;
   private rangeTiles: Point[] = [];
@@ -110,7 +112,22 @@ export class BattleScene implements Scene {
   }
 
   private get origin(): ScreenPoint {
-    return this.ctx.renderer.computeOrigin(this.grid);
+    return this.ctx.renderer.computeOrigin(this.grid, this.rot);
+  }
+
+  /** Project a logical tile to its on-screen center under the current rotation. */
+  private projectTile(x: number, y: number, z: number): ScreenPoint {
+    const v = rotateTile(x, y, this.rot, this.grid.width, this.grid.height);
+    return worldToScreen(v.x, v.y, z, this.origin);
+  }
+
+  /** Rotate the camera by one quarter-turn (dir +1 = clockwise / right). The
+   *  active unit's on-screen position shifts, so re-anchor the floating menu. */
+  private rotateView(dir: 1 | -1): void {
+    this.rot = (((this.rot + dir) % 4) + 4) % 4 as Rotation;
+    this.ui.setRotationLabel(this.rot);
+    this.anchorMenuToActive();
+    this.ui.reflowFloating();
   }
 
   private bindInput(): void {
@@ -125,6 +142,7 @@ export class BattleScene implements Scene {
   private showIntro(): void {
     this.phase = "intro";
     this.ui.hideCombatControls();
+    this.ui.hideRotateControl();
     this.ui.showBanner({
       title: `Phase ${this.phaseIndex + 1}: ${this.map.name}`,
       body: this.map.intro,
@@ -148,6 +166,8 @@ export class BattleScene implements Scene {
     this.rangeTiles = [];
     this.refreshTurnBar();
     this.ui.setActiveUnit(this.active);
+    this.ui.showRotateControl(() => this.rotateView(-1), () => this.rotateView(1));
+    this.ui.setRotationLabel(this.rot);
 
     if (this.active.team === "player") {
       this.phase = "menu";
@@ -173,6 +193,7 @@ export class BattleScene implements Scene {
     this.phase = "over";
     this.active = null;
     this.ui.hideCombatControls();
+    this.ui.hideRotateControl();
     this.ui.setActiveUnit(null);
     this.ui.setTargetInfo(null);
     if (winner === "player") {
@@ -220,7 +241,7 @@ export class BattleScene implements Scene {
       onItem: () => this.enterItemMenu(),
       onWait: () => this.endActiveTurn(),
     });
-    this.ui.setHint("Left-click to act · Right-click to cancel · Enter to end turn");
+    this.ui.setHint("Left-click to act · Right-click to cancel · Enter to end turn · , / . to rotate view");
   }
 
   /**
@@ -235,7 +256,7 @@ export class BattleScene implements Scene {
       return;
     }
     const z = this.grid.heightAt(this.active.pos.x, this.active.pos.y);
-    const p = worldToScreen(this.active.pos.x, this.active.pos.y, z, this.origin);
+    const p = this.projectTile(this.active.pos.x, this.active.pos.y, z);
     this.ui.setMenuAnchor({ x: p.sx, y: p.sy });
   }
 
@@ -341,7 +362,7 @@ export class BattleScene implements Scene {
 
   private handleClick(px: number, py: number): void {
     if (this.ctx.animator.busy) return;
-    const tile = screenToTile(px, py, this.grid, this.origin);
+    const tile = screenToTile(px, py, this.grid, this.origin, this.rot);
     if (!tile) return;
     switch (this.phase) {
       case "move":
@@ -362,9 +383,12 @@ export class BattleScene implements Scene {
   }
 
   private handleKey(key: string): void {
-    // Ignore all keyboard input unless the player is actively in control
-    // (not mid-animation/resolve, not the enemy's turn). Prevents ending a
-    // turn while a move is still animating, which would corrupt turn state.
+    // Camera rotation is a pure view operation (never mutates game state), so
+    // it's allowed any time — even mid-animation or on the enemy's turn.
+    if (key === "," || key === "<") return this.rotateView(-1);
+    if (key === "." || key === ">") return this.rotateView(1);
+    // Everything below changes turn state: ignore unless the player is actively
+    // in control (not mid-animation/resolve, not the enemy's turn).
     if (!this.playerInControl) return;
     if (key === "Escape") return this.cancelToMenu();
     if (key === "Enter" || key === "e" || key === "E") this.endActiveTurn();
@@ -640,7 +664,7 @@ export class BattleScene implements Scene {
     // Hover + target info.
     const origin = this.origin;
     if (this.ctx.input.pointer && this.phase !== "over" && this.phase !== "intro") {
-      this.hoverTile = screenToTile(this.ctx.input.pointer.x, this.ctx.input.pointer.y, this.grid, origin);
+      this.hoverTile = screenToTile(this.ctx.input.pointer.x, this.ctx.input.pointer.y, this.grid, origin, this.rot);
     } else {
       this.hoverTile = null;
     }
@@ -680,13 +704,14 @@ export class BattleScene implements Scene {
       grid: this.grid,
       units: this.units,
       origin,
+      rot: this.rot,
       activeUnitId: this.active?.id ?? null,
       hoverTile: this.hoverTile,
       overlays,
       popups: this.popups,
       animPos: this.ctx.animator.animPos,
       effects: this.effects,
-      unitOffsets: this.computeUnitOffsets(origin),
+      unitOffsets: this.computeUnitOffsets(),
       deathFade: this.deaths,
       forecast,
       time: this.time,
@@ -694,7 +719,7 @@ export class BattleScene implements Scene {
   }
 
   /** Per-unit pixel offsets for hit shake and attack lunge. */
-  private computeUnitOffsets(origin: ScreenPoint): Map<string, { dx: number; dy: number }> {
+  private computeUnitOffsets(): Map<string, { dx: number; dy: number }> {
     const offsets = new Map<string, { dx: number; dy: number }>();
     for (const [id, remaining] of this.hitShake) {
       const amp = (remaining / BattleScene.SHAKE_DUR) * 3;
@@ -704,9 +729,9 @@ export class BattleScene implements Scene {
       const att = this.units.find((u) => u.id === this.lunge!.id);
       if (att) {
         const za = this.grid.heightAt(att.pos.x, att.pos.y);
-        const a = worldToScreen(att.pos.x, att.pos.y, za, origin);
+        const a = this.projectTile(att.pos.x, att.pos.y, za);
         const zt = this.grid.heightAt(this.lunge.tx, this.lunge.ty);
-        const t = worldToScreen(this.lunge.tx, this.lunge.ty, zt, origin);
+        const t = this.projectTile(this.lunge.tx, this.lunge.ty, zt);
         let vx = t.sx - a.sx;
         let vy = t.sy - a.sy;
         const m = Math.hypot(vx, vy) || 1;

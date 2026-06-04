@@ -9,6 +9,9 @@ import {
   worldToScreen,
   diamondCorners,
   depthKey,
+  rotateTile,
+  rotatedDims,
+  type Rotation,
   type ScreenPoint,
 } from "./iso";
 
@@ -56,6 +59,8 @@ export interface BattleView {
   grid: Grid;
   units: Unit[];
   origin: ScreenPoint;
+  /** Camera orientation (clockwise quarter-turns). */
+  rot: Rotation;
   activeUnitId: string | null;
   hoverTile: Point | null;
   overlays: OverlaySet;
@@ -113,12 +118,21 @@ export class Renderer {
     this.ctx.clearRect(0, 0, this.width, this.height);
   }
 
-  /** Center the camera so the map's middle sits at the screen middle. */
-  computeOrigin(grid: Grid): ScreenPoint {
-    const midX = (grid.width - 1) / 2;
-    const midY = (grid.height - 1) / 2;
+  /** Center the camera so the map's middle sits at the screen middle. The map's
+   *  logical center maps to the center of the (possibly swapped) rotated grid,
+   *  so rotation keeps the map centered. */
+  computeOrigin(grid: Grid, rot: Rotation = 0): ScreenPoint {
+    const dims = rotatedDims(rot, grid.width, grid.height);
+    const midX = (dims.w - 1) / 2;
+    const midY = (dims.h - 1) / 2;
     const center = worldToScreen(midX, midY, 0, { sx: 0, sy: 0 });
     return { sx: this.width / 2 - center.sx, sy: this.height / 2 - center.sy - 40 };
+  }
+
+  /** Project a logical tile (x, y, z) to its screen center, honoring rotation. */
+  private project(view: BattleView, x: number, y: number, z: number): ScreenPoint {
+    const v = rotateTile(x, y, view.rot, view.grid.width, view.grid.height);
+    return worldToScreen(v.x, v.y, z, view.origin);
   }
 
   render(view: BattleView): void {
@@ -136,7 +150,7 @@ export class Renderer {
     if (!f) return;
     const ctx = this.ctx;
     const z = view.grid.heightAt(f.tile.x, f.tile.y);
-    const center = worldToScreen(f.tile.x, f.tile.y, z, view.origin);
+    const center = this.project(view, f.tile.x, f.tile.y, z);
     const x = center.sx;
     const y = center.sy - 64;
     ctx.textAlign = "center";
@@ -157,7 +171,7 @@ export class Renderer {
       if (idx < 0) continue;
       const canvas = bakeSprite(frames[idx], VFX_SCALE);
       const z = view.grid.heightAt(e.tile.x, e.tile.y);
-      const center = worldToScreen(e.tile.x, e.tile.y, z, view.origin);
+      const center = this.project(view, e.tile.x, e.tile.y, z);
       ctx.drawImage(
         canvas,
         Math.round(center.sx - canvas.width / 2),
@@ -167,15 +181,24 @@ export class Renderer {
   }
 
   private drawTiles(view: BattleView): void {
-    const { grid, origin } = view;
+    const { grid } = view;
+    // Painter's order: draw back-to-front in VIEW space so cliff walls occlude
+    // correctly at any rotation (a plain y-then-x loop is only correct at 0°).
+    const tiles: Point[] = [];
     for (let y = 0; y < grid.height; y++) {
-      for (let x = 0; x < grid.width; x++) {
-        const z = grid.heightAt(x, y);
-        const blocked = grid.isBlocked(x, y);
-        const center = worldToScreen(x, y, z, origin);
-        this.drawTileWalls(center, z, blocked);
-        this.drawTileTop(center, z, blocked);
-      }
+      for (let x = 0; x < grid.width; x++) tiles.push({ x, y });
+    }
+    tiles.sort(
+      (a, b) =>
+        depthKey(a.x, a.y, grid.heightAt(a.x, a.y), view.rot, grid.width, grid.height) -
+        depthKey(b.x, b.y, grid.heightAt(b.x, b.y), view.rot, grid.width, grid.height),
+    );
+    for (const { x, y } of tiles) {
+      const z = grid.heightAt(x, y);
+      const blocked = grid.isBlocked(x, y);
+      const center = this.project(view, x, y, z);
+      this.drawTileWalls(center, z, blocked);
+      this.drawTileTop(center, z, blocked);
     }
   }
 
@@ -225,7 +248,7 @@ export class Renderer {
 
   private fillTile(view: BattleView, tile: Point, color: string): void {
     const z = view.grid.heightAt(tile.x, tile.y);
-    const center = worldToScreen(tile.x, tile.y, z, view.origin);
+    const center = this.project(view, tile.x, tile.y, z);
     const corners = diamondCorners(center);
     const ctx = this.ctx;
     ctx.fillStyle = color;
@@ -255,12 +278,14 @@ export class Renderer {
       .sort((a, b) => {
         const za = view.grid.heightAt(Math.round(a.dx), Math.round(a.dy));
         const zb = view.grid.heightAt(Math.round(b.dx), Math.round(b.dy));
-        return depthKey(a.dx, a.dy, za) - depthKey(b.dx, b.dy, zb);
+        const w = view.grid.width;
+        const h = view.grid.height;
+        return depthKey(a.dx, a.dy, za, view.rot, w, h) - depthKey(b.dx, b.dy, zb, view.rot, w, h);
       });
 
     for (const { unit, dx, dy } of drawList) {
       const z = view.grid.heightAt(Math.round(dx), Math.round(dy));
-      const center = worldToScreen(dx, dy, z, view.origin);
+      const center = this.project(view, dx, dy, z);
       const off = view.unitOffsets.get(unit.id);
       if (off) {
         center.sx += off.dx;
@@ -348,7 +373,7 @@ export class Renderer {
     ctx.textBaseline = "middle";
     for (const p of view.popups) {
       const z = view.grid.heightAt(p.tile.x, p.tile.y);
-      const center = worldToScreen(p.tile.x, p.tile.y, z, view.origin);
+      const center = this.project(view, p.tile.x, p.tile.y, z);
       const t = p.age / p.ttl;
       const yOff = -40 - t * 24;
       ctx.globalAlpha = Math.max(0, 1 - t);
