@@ -4,7 +4,7 @@ import { clearSave } from "../core/state";
 import { getClass } from "../data/classes";
 import { getRace } from "../data/races";
 import { statsForLevel } from "../core/unit";
-import { getCharacterSprite } from "../data/sprites";
+import { getCharacterSprite, getHeroSprite } from "../data/sprites";
 import { el, clear } from "../ui/dom";
 import { iconImg } from "../ui/icons";
 import type { GameContext, Scene } from "./sceneManager";
@@ -51,7 +51,7 @@ export class PartySelectScene implements Scene {
     });
 
     const head = el("div", { className: "card-head" });
-    head.appendChild(iconImg(getCharacterSprite(hero.classId), 44));
+    head.appendChild(iconImg(getHeroSprite(hero.id) ?? getCharacterSprite(hero.classId), 44));
     const headText = el("div");
     headText.appendChild(el("h3", { text: hero.name }));
     headText.appendChild(el("div", { className: "role", text: `${cls.name} · ${race.name}` }));

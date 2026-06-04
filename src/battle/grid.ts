@@ -1,11 +1,13 @@
-import type { MapDef, Point, Unit } from "../core/types";
+import type { MapDef, Point, TerrainType, Unit } from "../core/types";
+import { defaultTerrain } from "../data/terrain";
 
-/** Runtime battle grid: tile heights, blocked mask, and unit occupancy. */
+/** Runtime battle grid: tile heights, blocked mask, terrain, and occupancy. */
 export class Grid {
   readonly width: number;
   readonly height: number;
   private readonly heights: number[][];
   private readonly blocked: boolean[][];
+  private readonly terrain: TerrainType[][];
 
   constructor(map: MapDef) {
     this.width = map.width;
@@ -14,6 +16,11 @@ export class Grid {
     this.blocked =
       map.blocked ??
       Array.from({ length: map.height }, () => Array(map.width).fill(false));
+    this.terrain = Array.from({ length: map.height }, (_, y) =>
+      Array.from({ length: map.width }, (_, x) =>
+        map.terrain?.[y]?.[x] ?? defaultTerrain(this.blocked[y]?.[x] ?? false, this.heights[y]?.[x] ?? 0),
+      ),
+    );
   }
 
   inBounds(x: number, y: number): boolean {
@@ -22,6 +29,10 @@ export class Grid {
 
   heightAt(x: number, y: number): number {
     return this.inBounds(x, y) ? this.heights[y][x] : 0;
+  }
+
+  terrainAt(x: number, y: number): TerrainType {
+    return this.inBounds(x, y) ? this.terrain[y][x] : "grass";
   }
 
   isBlocked(x: number, y: number): boolean {

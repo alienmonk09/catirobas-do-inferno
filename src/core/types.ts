@@ -79,6 +79,9 @@ export type Element = "none" | "fire" | "ice" | "bolt" | "holy" | "nature";
 
 export type AoeShape = "single" | "cross" | "square3";
 
+/** Visual terrain kind for a tile (cosmetic + derives default walkability tint). */
+export type TerrainType = "grass" | "dirt" | "rock" | "sand" | "water" | "wood";
+
 export type SkillEffect = "damage" | "heal" | "buff" | "debuff" | "revive";
 
 export interface SkillDef {
@@ -163,6 +166,8 @@ export interface MapDef {
   heights: number[][];
   /** Optional unwalkable mask [y][x]; true = blocked. */
   blocked?: boolean[][];
+  /** Optional cosmetic terrain map [y][x]. Falls back to water (blocked) / grass. */
+  terrain?: TerrainType[][];
   playerSpawns: Point[];
   enemies: EnemySpawn[];
 }

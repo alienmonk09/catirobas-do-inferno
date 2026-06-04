@@ -31,6 +31,9 @@ export function getHero(id: string): HeroDef | undefined {
 function buildHero(hero: HeroDef): Unit {
   const c = getClass(hero.classId);
   const unit = createUnit({
+    // Use the roster id as the unit id so the renderer/menus resolve the hero's
+    // unique sprite (HERO_SPRITES is keyed by roster id). Roster ids are unique.
+    id: hero.id,
     name: hero.name,
     team: "player",
     classId: hero.classId,

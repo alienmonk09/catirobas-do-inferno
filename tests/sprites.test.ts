@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
-import { validateSprite } from "../src/engine/sprite";
+import { validateSprite, spriteWidth, spriteHeight } from "../src/engine/sprite";
 import { CHARACTER_SPRITES } from "../src/data/sprites/characters";
+import { HERO_SPRITES } from "../src/data/sprites/heroes";
 import { WEAPON_SPRITES } from "../src/data/sprites/weapons";
 import { ITEM_SPRITES } from "../src/data/sprites/items";
 import { SKILL_SPRITES } from "../src/data/sprites/skills";
@@ -10,10 +11,12 @@ import { CLASSES } from "../src/data/classes";
 import { WEAPONS } from "../src/data/weapons";
 import { ITEMS } from "../src/data/items";
 import { SKILLS } from "../src/data/skills";
+import { ROSTER } from "../src/data/party";
 
 describe("sprite data", () => {
   const allStatic = {
     ...CHARACTER_SPRITES,
+    ...HERO_SPRITES,
     ...WEAPON_SPRITES,
     ...ITEM_SPRITES,
     ...SKILL_SPRITES,
@@ -44,5 +47,14 @@ describe("sprite data", () => {
   it("every skill and weapon resolves to an existing VFX family", () => {
     for (const s of Object.values(SKILLS)) expect(VFX[vfxKeyForSkill(s)]).toBeTruthy();
     for (const w of Object.values(WEAPONS)) expect(VFX[vfxKeyForWeapon(w)]).toBeTruthy();
+  });
+
+  it("every roster hero has a unique 24x30 hero sprite", () => {
+    for (const h of ROSTER) {
+      const def = HERO_SPRITES[h.id];
+      expect(def, `missing hero sprite for ${h.id}`).toBeTruthy();
+      expect(spriteWidth(def)).toBe(24);
+      expect(spriteHeight(def)).toBe(30);
+    }
   });
 });
