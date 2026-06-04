@@ -2,7 +2,7 @@ import type { Point, SkillDef, Unit } from "../core/types";
 import { Grid, manhattan, occupancy, samePoint } from "./grid";
 import { pathTo, reachable } from "./pathfinding";
 import { aoeTiles, tilesInRange } from "./targeting";
-import { effectiveDef } from "./combat";
+import { forecastSkill, forecastWeapon } from "./forecast";
 import { getWeapon } from "../data/weapons";
 import { getSkill } from "../data/skills";
 
@@ -21,15 +21,9 @@ export interface AIPlan {
   action: AIAction;
 }
 
-/**
- * Deterministic (no-variance) estimate of a basic weapon attack, mirroring
- * resolveWeaponAttack: damage = (atk or mag) + weaponPower - effectiveDef.
- * Weapon attacks always subtract DEF, even for magical weapons (rods/staves).
- */
+/** Deterministic estimate of a basic weapon attack (shared with the UI preview). */
 function estimateWeaponDamage(attacker: Unit, target: Unit): number {
-  const w = getWeapon(attacker.weaponId);
-  const stat = w.kind === "magical" ? attacker.stats.mag : attacker.stats.atk;
-  return Math.max(1, Math.round(stat + w.power - effectiveDef(target)));
+  return forecastWeapon(attacker, target, getWeapon(attacker.weaponId)).amount;
 }
 
 interface Option {
@@ -171,9 +165,7 @@ function a_isNotSelf(ally: Unit, unit: Unit): boolean {
 }
 
 function estimateSkillDamageSafe(attacker: Unit, target: Unit, skill: SkillDef): number {
-  const stat = skill.scaling === "magical" ? attacker.stats.mag : attacker.stats.atk;
-  const base = (stat * skill.power) / 10 - (skill.scaling === "magical" ? target.stats.res : effectiveDef(target));
-  return Math.max(1, Math.round(base));
+  return forecastSkill(attacker, target, skill).amount;
 }
 
 /** Lower-HP targets are worth more; lethal hits get a big bonus. */

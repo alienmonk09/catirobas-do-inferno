@@ -15,6 +15,8 @@ import {
 /** Integer upscale for baked sprites in the battle scene. */
 const CHAR_SCALE = 3;
 const VFX_SCALE = 3;
+/** Seconds for a slain unit to fade from full to ghosted. */
+const DEATH_FADE = 0.45;
 
 export interface FloatingText {
   /** Anchor tile. */
@@ -41,6 +43,15 @@ export interface ActiveEffect {
   age: number;
 }
 
+/** A damage/heal preview shown over the hovered target while choosing a target. */
+export interface ForecastTag {
+  tile: Point;
+  text: string;
+  color: string;
+  /** Emphasize (e.g. a lethal hit). */
+  strong: boolean;
+}
+
 export interface BattleView {
   grid: Grid;
   units: Unit[];
@@ -53,6 +64,12 @@ export interface BattleView {
   animPos: Map<string, Point>;
   /** Active spell/skill effect animations. */
   effects: ActiveEffect[];
+  /** Per-unit pixel offsets for juice (hit shake, attack lunge). */
+  unitOffsets: Map<string, { dx: number; dy: number }>;
+  /** Seconds since a unit died, for the death fade-out. */
+  deathFade: Map<string, number>;
+  /** Damage/heal preview over the hovered target, if any. */
+  forecast: ForecastTag | null;
   /** Bob phase for the active-unit indicator (seconds accumulator). */
   time: number;
 }
@@ -111,6 +128,25 @@ export class Renderer {
     this.drawUnitsAndCursor(view);
     this.drawEffects(view);
     this.drawPopups(view);
+    this.drawForecast(view);
+  }
+
+  private drawForecast(view: BattleView): void {
+    const f = view.forecast;
+    if (!f) return;
+    const ctx = this.ctx;
+    const z = view.grid.heightAt(f.tile.x, f.tile.y);
+    const center = worldToScreen(f.tile.x, f.tile.y, z, view.origin);
+    const x = center.sx;
+    const y = center.sy - 64;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.font = f.strong ? "bold 18px system-ui" : "bold 15px system-ui";
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = "rgba(0,0,0,0.85)";
+    ctx.strokeText(f.text, x, y);
+    ctx.fillStyle = f.color;
+    ctx.fillText(f.text, x, y);
   }
 
   private drawEffects(view: BattleView): void {
@@ -225,11 +261,22 @@ export class Renderer {
     for (const { unit, dx, dy } of drawList) {
       const z = view.grid.heightAt(Math.round(dx), Math.round(dy));
       const center = worldToScreen(dx, dy, z, view.origin);
-      this.drawUnit(unit, center, unit.id === view.activeUnitId, view.time);
+      const off = view.unitOffsets.get(unit.id);
+      if (off) {
+        center.sx += off.dx;
+        center.sy += off.dy;
+      }
+      this.drawUnit(unit, center, unit.id === view.activeUnitId, view.time, view.deathFade.get(unit.id));
     }
   }
 
-  private drawUnit(unit: Unit, center: ScreenPoint, active: boolean, time: number): void {
+  private drawUnit(
+    unit: Unit,
+    center: ScreenPoint,
+    active: boolean,
+    time: number,
+    deathAge: number | undefined,
+  ): void {
     const ctx = this.ctx;
     const canvas = bakeSprite(getCharacterSprite(unit.classId), CHAR_SCALE);
     const w = canvas.width;
@@ -246,7 +293,8 @@ export class Renderer {
     ctx.fill();
 
     if (!unit.alive) {
-      ctx.globalAlpha = 0.3;
+      const a = deathAge === undefined ? 0.3 : Math.max(0.3, 1 - (deathAge / DEATH_FADE) * 0.7);
+      ctx.globalAlpha = a;
       ctx.drawImage(canvas, drawX, drawY);
       ctx.globalAlpha = 1;
       return;
