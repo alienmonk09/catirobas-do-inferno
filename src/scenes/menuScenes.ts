@@ -1,6 +1,7 @@
 import { createStartingParty } from "../data/party";
 import { startingInventory } from "../data/items";
 import { clearSave, loadGame, type GameState } from "../core/state";
+import { PHASES } from "../data/maps";
 import { el } from "../ui/dom";
 import type { GameContext, Scene } from "./sceneManager";
 
@@ -26,7 +27,12 @@ class BannerScene implements Scene {
     ctx.uiParent.appendChild(this.root);
   }
 
-  protected showCard(title: string, body: string, buttons: Array<{ label: string; onClick: () => void }>): void {
+  protected showCard(
+    title: string,
+    body: string,
+    buttons: Array<{ label: string; onClick: () => void }>,
+    extra?: HTMLElement,
+  ): void {
     const banner = el("div", { className: "banner" });
     const card = el("div", { className: "banner-card" });
     card.appendChild(el("h1", { text: title }));
@@ -34,6 +40,7 @@ class BannerScene implements Scene {
     const row = el("div", { attrs: { style: "display:flex;gap:10px;justify-content:center;flex-wrap:wrap" } });
     for (const b of buttons) row.appendChild(el("button", { className: "btn", text: b.label, onClick: b.onClick }));
     card.appendChild(row);
+    if (extra) card.appendChild(extra);
     banner.appendChild(card);
     this.root.appendChild(banner);
   }
@@ -48,15 +55,17 @@ class BannerScene implements Scene {
 export class TitleScene extends BannerScene {
   constructor(ctx: GameContext) {
     super(ctx);
+
+    /** Fresh party, then jump straight into the chosen phase's battle. */
+    const startAtPhase = (index: number) => {
+      resetState(this.ctx.state);
+      clearSave();
+      this.ctx.state.phaseIndex = index;
+      this.ctx.nav.toBattle(index);
+    };
+
     const buttons: Array<{ label: string; onClick: () => void }> = [
-      {
-        label: "New Game",
-        onClick: () => {
-          resetState(this.ctx.state);
-          clearSave();
-          this.ctx.nav.toBattle(0);
-        },
-      },
+      { label: "New Game", onClick: () => startAtPhase(0) },
     ];
     const save = loadGame();
     if (save) {
@@ -68,10 +77,28 @@ export class TitleScene extends BannerScene {
         },
       });
     }
+
+    // Phase selector (testing): jump to any phase with a fresh level-3 party.
+    const selector = el("div", { className: "phase-select" });
+    selector.appendChild(el("span", { className: "label", text: "Jump to phase (test):" }));
+    const row = el("div", { className: "phase-row" });
+    PHASES.forEach((p, i) => {
+      row.appendChild(
+        el("button", {
+          className: "btn small",
+          text: `${i + 1}`,
+          attrs: { title: `Phase ${i + 1}: ${p.name}` },
+          onClick: () => startAtPhase(i),
+        }),
+      );
+    });
+    selector.appendChild(row);
+
     this.showCard(
       "TACTICS",
       "An isometric, turn-based tactics campaign. Lead five heroes — knight, archer, black mage, white mage, and monk — through five battles of rising peril. Move, strike, cast, and grow.",
       buttons,
+      selector,
     );
   }
 }

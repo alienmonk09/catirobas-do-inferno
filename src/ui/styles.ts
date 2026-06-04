@@ -94,6 +94,11 @@ const CSS = `
 .banner-card p { font-size: 15px; opacity: 0.88; line-height: 1.5; margin-bottom: 18px; }
 .banner-card .btn { font-size: 16px; padding: 10px 24px; }
 
+.phase-select { margin-top: 18px; padding-top: 14px; border-top: 1px solid rgba(120,140,200,0.25); }
+.phase-select .label { display: block; font-size: 12px; opacity: 0.6; margin-bottom: 8px; }
+.phase-row { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+.phase-row .btn { min-width: 40px; }
+
 .hint { position: absolute; left: 50%; transform: translateX(-50%); bottom: 78px;
   font-size: 12px; opacity: 0.65; }
 
