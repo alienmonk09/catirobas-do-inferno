@@ -1,0 +1,49 @@
+import { Renderer } from "./engine/renderer";
+import { Input } from "./engine/input";
+import { Animator } from "./engine/animator";
+import { GameLoop } from "./engine/loop";
+import { createGameState } from "./core/state";
+import { PHASES } from "./data/maps";
+import { injectStyles } from "./ui/styles";
+import { SceneManager, type GameContext } from "./scenes/sceneManager";
+import { TitleScene, VictoryScene } from "./scenes/menuScenes";
+import { BattleScene } from "./scenes/battleScene";
+import { PartyScene } from "./scenes/partyScene";
+
+function boot(): void {
+  const app = document.getElementById("app");
+  const canvas = document.getElementById("game") as HTMLCanvasElement | null;
+  if (!app || !canvas) throw new Error("Missing #app or #game canvas");
+
+  injectStyles();
+  const renderer = new Renderer(canvas);
+  const input = new Input(canvas);
+  const animator = new Animator();
+  const state = createGameState();
+  const manager = new SceneManager();
+
+  const ctx: GameContext = {
+    renderer,
+    input,
+    animator,
+    uiParent: app,
+    state,
+    nav: {
+      toTitle: () => manager.change(new TitleScene(ctx)),
+      toBattle: (i: number) => manager.change(new BattleScene(ctx, PHASES[i], i)),
+      toParty: () => manager.change(new PartyScene(ctx)),
+      toVictory: () => manager.change(new VictoryScene(ctx)),
+    },
+  };
+
+  const resize = () => renderer.resize(app.clientWidth, app.clientHeight);
+  resize();
+  window.addEventListener("resize", resize);
+
+  ctx.nav.toTitle();
+
+  const loop = new GameLoop((dt) => manager.update(dt));
+  loop.start();
+}
+
+boot();

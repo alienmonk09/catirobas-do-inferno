@@ -1,0 +1,58 @@
+import type { ClassDef, ClassId } from "../core/types";
+
+export const CLASSES: Record<ClassId, ClassDef> = {
+  knight: {
+    id: "knight",
+    name: "Knight",
+    description: "Frontline tank. High HP and defense, strong melee.",
+    base: { hp: 120, mp: 20, atk: 14, def: 12, mag: 4, res: 6, spd: 9, move: 4, jump: 2 },
+    growth: { hp: 14, mp: 2, atk: 2.2, def: 1.8, mag: 0.4, res: 0.8, spd: 0.6 },
+    skillIds: ["powerStrike", "guard"],
+    weaponIds: ["sword", "greatsword"],
+    color: "#5b8dd6",
+  },
+  archer: {
+    id: "archer",
+    name: "Archer",
+    description: "Ranged physical damage. Fast and accurate.",
+    base: { hp: 90, mp: 24, atk: 11, def: 7, mag: 5, res: 7, spd: 12, move: 5, jump: 3 },
+    growth: { hp: 9, mp: 3, atk: 1.8, def: 0.9, mag: 0.5, res: 0.9, spd: 1.0 },
+    skillIds: ["aimedShot", "cripple"],
+    weaponIds: ["bow", "longbow"],
+    color: "#5fbf72",
+  },
+  blackMage: {
+    id: "blackMage",
+    name: "Black Mage",
+    description: "Offensive magic, including area spells. Fragile.",
+    base: { hp: 70, mp: 60, atk: 5, def: 5, mag: 16, res: 10, spd: 10, move: 3, jump: 2 },
+    growth: { hp: 7, mp: 7, atk: 0.4, def: 0.6, mag: 2.4, res: 1.2, spd: 0.8 },
+    skillIds: ["fire", "bolt", "fireball"],
+    weaponIds: ["rod"],
+    color: "#a86fd6",
+  },
+  whiteMage: {
+    id: "whiteMage",
+    name: "White Mage",
+    description: "Healing and support magic. Keeps the party alive.",
+    base: { hp: 78, mp: 64, atk: 5, def: 6, mag: 14, res: 12, spd: 10, move: 3, jump: 2 },
+    growth: { hp: 8, mp: 7, atk: 0.4, def: 0.7, mag: 2.0, res: 1.4, spd: 0.8 },
+    skillIds: ["cure", "cura", "raise"],
+    weaponIds: ["staff"],
+    color: "#d6cf5f",
+  },
+  monk: {
+    id: "monk",
+    name: "Monk",
+    description: "Unarmed bruiser. High HP and damage with self-sustain.",
+    base: { hp: 110, mp: 30, atk: 15, def: 9, mag: 8, res: 8, spd: 11, move: 4, jump: 3 },
+    growth: { hp: 12, mp: 3, atk: 2.0, def: 1.2, mag: 1.0, res: 0.9, spd: 0.9 },
+    skillIds: ["palmStrike", "chakra", "earthShake"],
+    weaponIds: ["knuckles", "fellKnuckles"],
+    color: "#d68a4f",
+  },
+};
+
+export function getClass(id: ClassId): ClassDef {
+  return CLASSES[id];
+}

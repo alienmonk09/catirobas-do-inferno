@@ -1,7 +1,7 @@
 # Tactics MVP — Design Spec
 
 **Date:** 2026-06-04
-**Goal:** A Final Fantasy Tactics–like game: isometric, turn-based battles, class progression, magic, weapons & items, simple controls, up to 3 playable phases in the MVP. Not a clone — its own small thing — but isometric and fully playable.
+**Goal:** A Final Fantasy Tactics–like game: isometric, turn-based battles, class progression, magic, weapons & items, simple controls, up to 5 playable phases in the MVP, 5 classes. Not a clone — its own small thing — but isometric and fully playable.
 
 ## Stack
 
@@ -47,14 +47,15 @@
 - Healing: `heal = mag * healPower / 10`.
 - Hit: simplified — melee/ranged in-range always hits in MVP (keeps it readable); crits add variance.
 
-## Classes (4)
+## Classes (5)
 
 | Class | Role | Key stats | Skills |
 |-------|------|-----------|--------|
 | Knight | Melee tank | high HP/ATK/DEF | Power Strike (heavy dmg), Guard (def buff) |
 | Archer | Ranged physical | high SPD, range 3 | Aimed Shot (bonus dmg), Cripple (slow) |
-| Black Mage | Offensive magic | high MAG, low DEF | Fire (single), Fireball (AoE), Bolt |
+| Black Mage | Offensive magic | high MAG, low DEF | Fire (single), Bolt, Fireball (AoE) |
 | White Mage | Support/heal | high MAG/RES | Cure (heal), Cura (AoE heal), Raise (revive) |
+| Monk | Melee bruiser | high HP/ATK, self-sustain | Palm Strike (heavy dmg), Chakra (heal), Earth Shake (AoE) |
 
 ## Progression
 
@@ -73,14 +74,19 @@
 - **Weapons**: each has power + range + allowed classes. Sword(1), Bow(3), Staff(magic, range 1 but boosts MAG), etc. Equipping changes ATK and attack range.
 - **Items** (shared party inventory, consumable): Potion (+HP), Hi-Potion, Ether (+MP), Phoenix Down (revive + small HP).
 
-## Phases (3 maps)
+## Phases (5 maps)
+
+A rising difficulty curve, each map teaching/forcing a new consideration:
 
 1. **Tutorial Skirmish** — flat-ish map, 2-3 weak enemies. Teaches move/attack.
-2. **Ambush** — height variation, 4 enemies incl. one mage. Teaches terrain + magic threat.
-3. **Boss** — boss unit + adds, requires using skills/items. Win = boss dead.
+2. **Ambush** — height variation, ~4 enemies incl. one mage. Teaches terrain + magic threat.
+3. **The Bridge** — chokepoint terrain, mixed melee/ranged. Teaches positioning.
+4. **Sorcerer's Court** — enemy mages + AoE pressure, elevation. Teaches spreading out + healing.
+5. **Boss** — boss unit + adds, requires using skills/items. Win = boss dead.
 
 - Data-driven maps in `src/data/maps/`.
 - Enemy AI: each enemy turn — move toward nearest reachable target, attack if in range; mages prefer weakest/clustered targets; healers heal allies < 50% HP.
+- Party carries level/XP/JP/learned skills across phases; party screen between phases for class change, equip, and item use.
 
 ## Controls
 
