@@ -11,6 +11,9 @@ import {
   nextLearnableSkillForClass,
   learnSkillForClass,
   xpForLevel,
+  masteredClasses,
+  MASTERY_HP_BONUS,
+  MASTERY_SPD_BONUS,
 } from "../core/unit";
 import { saveGame, buyItem, buyEquipment, ownsEquipment, sellItem, sellEquipment, ownsWeapon, buyWeapon, sellWeapon } from "../core/state";
 import { PHASES } from "../data/maps";
@@ -198,6 +201,20 @@ export class PartyScene implements Scene {
         text: `XP ${unit.xp}/${xpForLevel(unit.level)}`,
       }),
     );
+
+    // Job mastery passive: show mastered classes if any.
+    const mastered = masteredClasses(unit);
+    if (mastered.length > 0) {
+      const names = mastered.map((id) => getClass(id).name).join(", ");
+      const hpGain = mastered.length * MASTERY_HP_BONUS;
+      const spdGain = mastered.length * MASTERY_SPD_BONUS;
+      card.appendChild(
+        el("div", {
+          attrs: { style: "font-size:12px;color:#f0c060;margin-top:2px" },
+          text: `Mastered: ${names} (+${hpGain} HP, +${spdGain} SPD)`,
+        }),
+      );
+    }
 
     // Class change.
     card.appendChild(el("label", { text: "Class" }));

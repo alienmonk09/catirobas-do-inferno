@@ -1,5 +1,5 @@
 import type { AIPersonality, ClassId, Direction, EquipMod, EquipSlot, Point, RaceId, Stats, Team, Unit } from "./types";
-import { getClass } from "../data/classes";
+import { CLASSES, getClass } from "../data/classes";
 import { getRace } from "../data/races";
 import { getWeapon } from "../data/weapons";
 import { getEquipment } from "../data/equipment";
@@ -57,18 +57,46 @@ export function equipmentMod(unit: Unit): EquipMod {
   return result;
 }
 
+// ── Job mastery ───────────────────────────────────────────────────────────────
+
+/** Per mastered class: +4 maxHp, +1 spd. Derived — never stored on Unit. */
+export const MASTERY_HP_BONUS = 4;
+export const MASTERY_SPD_BONUS = 1;
+
 /**
- * Compute the full stat block for a unit, including class/level/race stats
- * plus any equipment bonuses. This is the single source of truth for a unit's
- * effective stat block.
+ * Returns true when the unit has learned every skill of a given class.
+ * A class with no skills can never be "mastered".
+ */
+export function hasMasteredClass(unit: Unit, classId: ClassId): boolean {
+  const skills = getClass(classId).skillIds;
+  return skills.length > 0 && skills.every((id) => unit.learnedSkillIds.includes(id));
+}
+
+/** All ClassIds the unit has mastered (learned every skill). */
+export function masteredClasses(unit: Unit): ClassId[] {
+  return (Object.keys(CLASSES) as ClassId[]).filter((id) => hasMasteredClass(unit, id));
+}
+
+/** Number of classes the unit has mastered — used to scale the passive bonus. */
+export function masteryBonus(unit: Unit): number {
+  return masteredClasses(unit).length;
+}
+
+/**
+ * Compute the full stat block for a unit, including class/level/race stats,
+ * equipment bonuses, and a permanent mastery bonus for each class fully learned.
+ * This is the single source of truth for a unit's effective stat block.
  *
  * hp/mp deltas adjust both current AND max; every stat floors at 1.
  */
 export function statsForUnit(unit: Unit): Stats {
   const base = statsForLevel(unit.classId, unit.level, unit.raceId);
   const mod = equipmentMod(unit);
+  const mastered = masteryBonus(unit);
+  const hpBonus = mastered * MASTERY_HP_BONUS;
+  const spdBonus = mastered * MASTERY_SPD_BONUS;
   const f = (value: number, delta = 0) => Math.max(1, value + delta);
-  const maxHp = f(base.maxHp, mod.hp ?? 0);
+  const maxHp = f(base.maxHp, (mod.hp ?? 0) + hpBonus);
   const maxMp = f(base.maxMp, mod.mp ?? 0);
   return {
     hp: maxHp,
@@ -79,7 +107,7 @@ export function statsForUnit(unit: Unit): Stats {
     def: f(base.def, mod.def ?? 0),
     mag: f(base.mag, mod.mag ?? 0),
     res: f(base.res, mod.res ?? 0),
-    spd: f(base.spd, mod.spd ?? 0),
+    spd: f(base.spd, (mod.spd ?? 0) + spdBonus),
     move: f(base.move, mod.move ?? 0),
     jump: f(base.jump, mod.jump ?? 0),
   };
