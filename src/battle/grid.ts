@@ -1,4 +1,4 @@
-import type { MapDef, Point, TerrainType, Unit } from "../core/types";
+import type { MapDef, Point, Team, TerrainType, Unit } from "../core/types";
 import { defaultTerrain } from "../data/terrain";
 
 /** Runtime battle grid: tile heights, blocked mask, terrain, and occupancy. */
@@ -69,6 +69,25 @@ export interface MoveBlockers {
   solid: Set<string>;
   /** Tiles the mover may cross but not stop on (occupied by an ally). */
   passThrough: Set<string>;
+}
+
+/**
+ * Zone of control exerted against a unit of `moverTeam`.
+ * For every living unit on the opposing team, each of its 4 orthogonal
+ * neighbours is a ZoC tile. A unit may enter a ZoC tile but cannot continue
+ * moving past it (the BFS frontier stops there).
+ * Out-of-bounds keys are included harmlessly — `reachable` guards `inBounds`.
+ */
+export function zoneOfControl(units: Unit[], moverTeam: Team): Set<string> {
+  const zoc = new Set<string>();
+  for (const u of units) {
+    if (!u.alive || u.team === moverTeam) continue;
+    zoc.add(`${u.pos.x + 1},${u.pos.y}`);
+    zoc.add(`${u.pos.x - 1},${u.pos.y}`);
+    zoc.add(`${u.pos.x},${u.pos.y + 1}`);
+    zoc.add(`${u.pos.x},${u.pos.y - 1}`);
+  }
+  return zoc;
 }
 
 /**

@@ -26,6 +26,10 @@ export interface ReachResult {
  *
  * `passThrough` tiles (e.g. allied units) may be crossed for routing but are
  * never offered as stopping points — they are excluded from `destinations`.
+ *
+ * `zoc` (zone of control) tiles halt the frontier: a unit may move ONTO a ZoC
+ * tile but cannot continue expanding from it. The start tile is exempt — a unit
+ * that begins inside an enemy's zone can still move out.
  */
 export function reachable(
   grid: Grid,
@@ -34,6 +38,7 @@ export function reachable(
   jump: number,
   solid: ReadonlySet<string>,
   passThrough: ReadonlySet<string> = EMPTY,
+  zoc: ReadonlySet<string> = EMPTY,
 ): ReachResult {
   const costs = new Map<string, number>();
   const prev = new Map<string, string | null>();
@@ -58,7 +63,8 @@ export function reachable(
         if (Math.abs(grid.heightAt(nx, ny) - curH) > jump) continue;
         costs.set(k, cost + 1);
         prev.set(k, key(cur));
-        next.push({ x: nx, y: ny });
+        // ZoC tile: record it as reachable/stoppable but do not expand further.
+        if (!zoc.has(k)) next.push({ x: nx, y: ny });
       }
     }
     frontier = next;

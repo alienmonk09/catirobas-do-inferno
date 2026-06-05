@@ -2,7 +2,7 @@ import type { MapDef, Point, SkillDef, Unit } from "../core/types";
 import { RNG } from "../core/rng";
 import { grantJp, grantXp, createUnit } from "../core/unit";
 import { enemyLevelFor, refreshForBattle, GIL_PER_KILL } from "../core/state";
-import { Grid, manhattan, moveBlockers, samePoint } from "../battle/grid";
+import { Grid, manhattan, moveBlockers, samePoint, zoneOfControl } from "../battle/grid";
 import { pathTo, reachable } from "../battle/pathfinding";
 import { aoeTiles, knockbackTo, leapLanding, tilesInRange } from "../battle/targeting";
 import {
@@ -378,7 +378,8 @@ export class BattleScene implements Scene {
     this.ui.clearActions();
     this.ui.setHint("Click a highlighted tile to move there.");
     const { solid, passThrough } = moveBlockers(this.units, this.active);
-    const reach = reachable(this.grid, this.active.pos, this.active.stats.move, this.active.stats.jump, solid, passThrough);
+    const zoc = zoneOfControl(this.units, this.active.team);
+    const reach = reachable(this.grid, this.active.pos, this.active.stats.move, this.active.stats.jump, solid, passThrough, zoc);
     this.rangeTiles = [...reach.destinations].map((k) => {
       const [x, y] = k.split(",").map(Number);
       return { x, y };
@@ -507,7 +508,8 @@ export class BattleScene implements Scene {
     if (!this.active || !this.inRangeTiles(tile)) return;
     if (this.unitAt(tile)) return;
     const { solid, passThrough } = moveBlockers(this.units, this.active);
-    const reach = reachable(this.grid, this.active.pos, this.active.stats.move, this.active.stats.jump, solid, passThrough);
+    const zoc = zoneOfControl(this.units, this.active.team);
+    const reach = reachable(this.grid, this.active.pos, this.active.stats.move, this.active.stats.jump, solid, passThrough, zoc);
     const path = pathTo(reach, tile);
     if (!path) return;
     this.phase = "resolving";
@@ -972,7 +974,8 @@ export class BattleScene implements Scene {
       overlays.move = this.rangeTiles;
       if (this.hoverTile && this.inRangeTiles(this.hoverTile) && this.active) {
         const { solid, passThrough } = moveBlockers(this.units, this.active);
-        const reach = reachable(this.grid, this.active.pos, this.active.stats.move, this.active.stats.jump, solid, passThrough);
+        const zoc = zoneOfControl(this.units, this.active.team);
+        const reach = reachable(this.grid, this.active.pos, this.active.stats.move, this.active.stats.jump, solid, passThrough, zoc);
         overlays.path = pathTo(reach, this.hoverTile) ?? [];
       }
     } else if (this.phase === "attackTarget" || this.phase === "itemTarget") {

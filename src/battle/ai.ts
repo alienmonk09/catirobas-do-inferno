@@ -1,5 +1,5 @@
 import type { AIPersonality, Point, SkillDef, Unit } from "../core/types";
-import { Grid, manhattan, moveBlockers, samePoint } from "./grid";
+import { Grid, manhattan, moveBlockers, samePoint, zoneOfControl } from "./grid";
 import { pathTo, reachable } from "./pathfinding";
 import { aoeTiles, tilesInRange } from "./targeting";
 import { forecastSkill, forecastWeapon } from "./forecast";
@@ -127,7 +127,8 @@ export function planEnemyTurn(unit: Unit, units: Unit[], grid: Grid): AIPlan {
   }
 
   const { solid, passThrough } = moveBlockers(units, unit);
-  const reach = reachable(grid, unit.pos, unit.stats.move, unit.stats.jump, solid, passThrough);
+  const zoc = zoneOfControl(units, unit.team);
+  const reach = reachable(grid, unit.pos, unit.stats.move, unit.stats.jump, solid, passThrough, zoc);
 
   // Stand tiles: every tile the unit may actually stop on (includes its own
   // position at cost 0; excludes ally-occupied pass-through tiles).
