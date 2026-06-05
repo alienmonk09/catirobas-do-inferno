@@ -216,6 +216,8 @@ export interface Unit {
   alive: boolean;
   /** Per-battle volatile: set when a charged skill has been announced but not yet resolved. */
   charging?: { skillId: string; target: Point; turnsLeft: number };
+  /** Marks a unit that was recruited from the enemy side this battle. */
+  recruited?: boolean;
 }
 
 export interface Tile {

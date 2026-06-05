@@ -7,6 +7,7 @@ import { pathTo, reachable } from "../battle/pathfinding";
 import { aoeTiles, knockbackTo, leapLanding, tilesInRange } from "../battle/targeting";
 import {
   applyTerrainEffect,
+  canRecruit,
   coverFor,
   fallDamage,
   isStopped,
@@ -33,6 +34,7 @@ import { getItem } from "../data/items";
 import { getClass } from "../data/classes";
 import { getVfx, vfxKeyForSkill, vfxKeyForWeapon } from "../data/sprites";
 import { PHASES } from "../data/maps";
+import { MAX_PARTY } from "../data/party";
 import { BattleUI } from "../ui/battleUI";
 import { formatHit } from "../battle/log";
 import type { GameContext, Scene } from "./sceneManager";
@@ -45,6 +47,7 @@ type Phase =
   | "attackTarget"
   | "skillTarget"
   | "itemTarget"
+  | "recruitTarget"
   | "enemy"
   | "resolving"
   | "over";
@@ -317,6 +320,18 @@ export class BattleScene implements Scene {
     this.ui.setTargetInfo(null);
     stopMusic();
     if (winner === "player") {
+      // Surviving recruited units join the persistent party (up to MAX_PARTY).
+      for (const u of this.units) {
+        if (!u.recruited || !u.alive) continue;
+        if (this.ctx.state.party.some((p) => p.id === u.id)) continue;
+        if (this.ctx.state.party.length >= MAX_PARTY) break;
+        // Re-id so the recruit can't collide with fresh enemy ids ("eN") in a
+        // later battle (createUnit's counter resets on reload). Safe here — the
+        // battle is over, so no in-flight animation references this unit's id.
+        u.id = `recruit-${u.id}`;
+        this.ctx.state.party.push(u);
+        this.pushLog(`${u.name} has joined the Ashen Banner permanently!`);
+      }
       startMusic("victory");
       const last = this.phaseIndex >= PHASES.length - 1;
       this.ui.showBanner({
@@ -354,16 +369,20 @@ export class BattleScene implements Scene {
     this.rangeTiles = [];
     this.ui.hideSubmenu();
     this.anchorMenuToActive();
+    const hasRecruitTarget = !this.hasActed && this.active !== null &&
+      this.units.some((u) => canRecruit(this.active!, u));
     this.ui.showActions({
       canMove: !this.hasMoved,
       canAct: !this.hasActed,
       canUndo: this.hasMoved && !this.hasActed && this.preMove !== null,
+      canRecruit: hasRecruitTarget,
       onMove: () => this.enterMove(),
       onAttack: () => this.enterAttack(),
       onSkill: () => this.enterSkillMenu(),
       onItem: () => this.enterItemMenu(),
       onWait: () => this.endActiveTurn(),
       onUndo: () => this.undoMove(),
+      onRecruit: () => this.enterRecruit(),
     });
     this.ui.setHint("Left-click to act · Right-click to cancel · Enter to end turn · , / . to rotate view");
   }
@@ -393,7 +412,8 @@ export class BattleScene implements Scene {
       this.phase === "move" ||
       this.phase === "attackTarget" ||
       this.phase === "skillTarget" ||
-      this.phase === "itemTarget"
+      this.phase === "itemTarget" ||
+      this.phase === "recruitTarget"
     );
   }
 
@@ -491,6 +511,30 @@ export class BattleScene implements Scene {
     this.rangeTiles = tilesInRange(this.grid, this.active.pos, item.range, true);
   }
 
+  private enterRecruit(): void {
+    if (!this.active || this.hasActed) return;
+    this.phase = "recruitTarget";
+    this.ui.clearActions();
+    this.ui.setHint("Recruit: click an adjacent weakened enemy to bring them to your side.");
+    // Only highlight enemies that satisfy canRecruit right now.
+    this.rangeTiles = this.units
+      .filter((u) => canRecruit(this.active!, u))
+      .map((u) => ({ ...u.pos }));
+  }
+
+  private tryRecruit(tile: Point): void {
+    if (!this.active || !this.inRangeTiles(tile)) return;
+    const target = this.unitAt(tile);
+    if (!target || !canRecruit(this.active, target)) return;
+    // Flip the unit to the player's side.
+    target.team = "player";
+    target.recruited = true;
+    target.facing = this.active.facing;
+    this.ui.toast(`${target.name} joins your cause!`);
+    this.pushLog(`${target.name} turns and fights for the Ashen Banner!`);
+    this.afterAction();
+  }
+
   // --- Click dispatch ---
 
   private handleClick(px: number, py: number): void {
@@ -509,6 +553,9 @@ export class BattleScene implements Scene {
         return;
       case "itemTarget":
         this.tryItem(tile);
+        return;
+      case "recruitTarget":
+        this.tryRecruit(tile);
         return;
       default:
         return;
@@ -1096,7 +1143,7 @@ export class BattleScene implements Scene {
         const reach = reachable(this.grid, this.active.pos, this.active.stats.move, this.active.stats.jump, solid, passThrough, zoc);
         overlays.path = pathTo(reach, this.hoverTile) ?? [];
       }
-    } else if (this.phase === "attackTarget" || this.phase === "itemTarget") {
+    } else if (this.phase === "attackTarget" || this.phase === "itemTarget" || this.phase === "recruitTarget") {
       overlays.attack = this.rangeTiles;
     } else if (this.phase === "skillTarget") {
       overlays.attack = this.rangeTiles;

@@ -420,6 +420,21 @@ export function fallDamage(unit: Unit, heightDrop: number): HitResult | null {
   return { unitId: unit.id, kind: "damage", amount: dmg, crit: false, killed, revived: false };
 }
 
+/** HP fraction threshold at or below which an enemy unit can be recruited. */
+export const RECRUIT_HP_FRACTION = 0.25;
+
+/**
+ * True when `recruiter` can recruit `target`: both alive, on opposing teams,
+ * orthogonally adjacent (manhattan distance 1), and the target's HP is at or
+ * below 25% of its max HP. Deterministic — no RNG.
+ */
+export function canRecruit(recruiter: Unit, target: Unit): boolean {
+  if (!recruiter.alive || !target.alive) return false;
+  if (recruiter.team === target.team) return false;
+  if (manhattan(recruiter.pos, target.pos) !== 1) return false;
+  return target.stats.hp <= RECRUIT_HP_FRACTION * target.stats.maxHp;
+}
+
 /** Restore HP/MP/revive, or grant a buff, from a consumable item. */
 export function resolveItem(
   target: Unit,

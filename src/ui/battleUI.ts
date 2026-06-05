@@ -11,12 +11,14 @@ export interface ActionState {
   canMove: boolean;
   canAct: boolean;
   canUndo?: boolean;
+  canRecruit?: boolean;
   onMove: () => void;
   onAttack: () => void;
   onSkill: () => void;
   onItem: () => void;
   onWait: () => void;
   onUndo?: () => void;
+  onRecruit?: () => void;
 }
 
 export interface BannerOpts {
@@ -305,6 +307,9 @@ export class BattleUI {
     this.actionMenu.appendChild(mk("Attack", state.canAct, state.onAttack, { accent: "a-attack", tip: "Strike an enemy in weapon range — flank or rear for bonus damage" }));
     this.actionMenu.appendChild(mk("Skill", state.canAct, state.onSkill, { accent: "a-skill", tip: "Cast a learned class skill (costs MP)" }));
     this.actionMenu.appendChild(mk("Item", state.canAct, state.onItem, { accent: "a-item", tip: "Use a shared consumable" }));
+    if (state.canRecruit) {
+      this.actionMenu.appendChild(mk("Recruit", true, state.onRecruit ?? (() => {}), { accent: "a-recruit", tip: "Recruit an adjacent weakened enemy — they join your cause and follow you into future battles" }));
+    }
     // "End Turn" (genre-standard "Wait"), detached from the offensive actions to
     // avoid a reflex misclick forfeiting the whole turn.
     this.actionMenu.appendChild(mk("End Turn", true, state.onWait, { accent: "a-end", extra: "end-turn", key: "E", tip: "Finish this unit's turn (Enter / E)" }));
