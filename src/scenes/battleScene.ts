@@ -230,11 +230,6 @@ export class BattleScene implements Scene {
 
     this.active = advanceToNextActor(this.units);
     if (!this.active) return;
-    this.turnCount++;
-    // A timed objective (survive/defend) can be met the instant the count ticks
-    // up — end now, before the active actor acts on the winning turn.
-    const timedWinner = this.outcome();
-    if (timedWinner) return this.endBattle(timedWinner);
     this.ui.setObjective(this.objectiveText());
     this.hasMoved = false;
     this.hasActed = false;
@@ -276,6 +271,10 @@ export class BattleScene implements Scene {
         const r = applyTerrainEffect(this.active, terr);
         if (r) this.pushPopup(r);
       }
+      // Count a COMPLETED turn (drives survive/defend objectives). The next
+      // beginNextTurn's outcome check ends the battle if the count is now met,
+      // before the following actor gets to act.
+      this.turnCount++;
     }
     this.active = null;
     this.phase = "resolving";
@@ -582,6 +581,9 @@ export class BattleScene implements Scene {
     this.pushPopup(res);
     // Counter damage can drop a player attacker low enough to auto-potion.
     this.tryAutoPotion(attacker);
+    // A counter kill still earns the defender its kill rewards (the active actor
+    // is the attacker, so the normal award path would miss it).
+    if (res.killed) this.creditKill(defender);
   }
 
   private trySkill(tile: Point): void {
@@ -770,6 +772,16 @@ export class BattleScene implements Scene {
   /** Add gil to the party treasury for enemies the player just defeated. */
   private awardGil(kills: number): void {
     if (kills > 0 && this.active?.team === "player") this.ctx.state.gil += kills * GIL_PER_KILL;
+  }
+
+  /** Credit a kill (gil + offensive XP/JP) to a PLAYER unit that wasn't the active
+   *  actor — e.g. a counterattacker on the enemy's turn. No-op for enemies. */
+  private creditKill(killer: Unit): void {
+    if (killer.team !== "player") return;
+    this.ctx.state.gil += GIL_PER_KILL;
+    const levels = grantXp(killer, 32); // offensive (12) + kill bonus (20), matching awardForAction
+    grantJp(killer, 20);
+    if (levels > 0) this.ui.toast(`${killer.name} reached Lv ${killer.level}!`);
   }
 
   private awardForAction(unit: Unit, opts: { offensive?: boolean; killed?: boolean; support?: boolean }): void {

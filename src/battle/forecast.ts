@@ -38,7 +38,9 @@ export function forecastSkill(caster: Unit, target: Unit, skill: SkillDef, ctx?:
   const power = skill.scaling === "magical" ? caster.stats.mag : caster.stats.atk;
   switch (skill.effect) {
     case "damage": {
-      let base = (power * skill.power) / 10 - (skill.scaling === "magical" ? target.stats.res : effectiveDef(target));
+      // Clamp the raw base to 1 BEFORE the multipliers, exactly as resolveSkillOnTarget
+      // does — otherwise a weak-element ×1.5 on a sub-1 base under-reports the real hit.
+      let base = Math.max(1, (power * skill.power) / 10 - (skill.scaling === "magical" ? target.stats.res : effectiveDef(target)));
       base *= positionalDamageMult(caster, target, skill.scaling, ctx);
       base *= defenseDamageMult(target, skill.scaling);
       base *= elementDamageMult(target, skill.element);
