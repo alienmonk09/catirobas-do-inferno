@@ -14,29 +14,31 @@ Living task list for the autonomous build. The roadmap (`ROADMAP.md`) is the
 
 ## Current state (resume point)
 - Branch: **`feat/tactics-depth-and-progression`** (off `main`; not merged, not pushed).
-- Build: clean. Tests: **1115 passing across 54 files**. Working tree: clean.
-- Last commit: `3290d50 chore: CI + CONTRIBUTING`. Recently shipped: classic mode, slow
-  mire, knockback pulls + throws (forced-movement line ✅), post-victory outro dialogue,
-  rebindable controls, CI workflow + CONTRIBUTING. ~39 features/items this session (499 → 1115).
-- ~26 features this session. The Codex `codex-companion review` is INTERMITTENT — it
-  alternates between producing verdicts and "Reviewer failed to output a response" (a
-  transient runtime fault, not a code signal). Across its ~5 working `review --base main`
-  passes it caught **~19 real P2/P3 findings — all fixed** (counter-on-melee-skills, gil
-  per-AoE-kill, save-field propagation, fall-kill credit, instant mute, leap/forecast clamps,
-  completed-turn counting, counter-kill rewards, AI-leap-LoS, music-voice lifecycle, cover-on-
-  dead-target…). Skill charge time's player flow was verified by static trace + the sim +
-  smoke (the review was flaky when it landed). A final `review --base main` before any merge
-  is the standing diligence gate — re-run it until it yields a clean verdict.
-- Commits: v0.2+v0.3 base → Counter → Time Mage → objectives(rout/defeat/survive)
-  → secondary job → **audio → equipment slots → terrain effects → Summoner →
-  objective variety(seize/defend)**.
-- Working mode this session: code via subagents (Claude Sonnet for impl, Codex for
-  review). Sequential per feature when core files (`types/combat/battleScene`) overlap;
-  parallel only when file-sets are disjoint. Each feature: build+test+browser-verify+
-  codex-review then commit. ⚠ the Codex `codex:rescue` *agent forwarder* duplicated
-  jobs (2× per dispatch) — drove 4 concurrent writers into one tree; prefer Claude
-  agents for impl (clean completion signal) and Codex via direct `codex-companion`
-  calls for review.
+- Build: clean. Tests: **1150 passing across 54 files**. Working tree: clean.
+- Last commit: `b5816aa fix(ui): dock the pre-battle dialogue box at the bottom`.
+- **The committed roadmap is essentially COMPLETE.** v0.3 ✅ (11 classes), v0.4 ✅
+  (reactions incl. equippable, knockback+fall, ZoC, charge time, terrain lava/spring/mire,
+  **objective variety COMPLETE incl. escort** — guest-VIP via `MapDef.allies`, phase4),
+  v0.5 ✅ (recruitable, full shop buy/sell/ownership items+gear+weapons, job mastery,
+  difficulty, AI personalities, permadeath), v0.6 (audio + **per-chapter battle music** +
+  settings + dialogue intro/outro + portraits), v1.0 QoL (save slots, undo, battle log,
+  NG+, accessibility), hygiene ✅ (CI, CONTRIBUTING, issue templates, Pages).
+- **Viewport-safe menus DONE** (Party Camp split into navigable Party/Reinforcements/Shop
+  tabs with fixed header + March footer; Party-Select/Title/Settings/Victory all fit; the
+  pre-battle dialogue box now docks at the bottom). Root cause was `inset:0` without
+  `position` (inert) — swept all four such rules; only `.ui-layer`/`.banner`/`.dialogue`/
+  `.party-screen` use it and all now have `position:absolute`.
+- **REMAINING = content/art/niche/legal tail needing the user's direction**: full character
+  portraits + richer cutscenes, niche mechanics (fog of war, weather, large/multi-tile units,
+  bravery/faith, weapon triangle, deep water/traps), perf pass, rebalance, LICENSE choice.
+- Working mode (ultracode): orchestrate via the **Workflow tool** — one coherent impl agent
+  (single writer for coupled changes), then **adversarial review fan-out** (distinct lenses:
+  logic/sim, state-leak, playability) with structured verdicts; main thread verifies
+  (build+test+browser), synthesizes (verify before fixing — skip false positives), commits.
+  Sequential when core files (`types/combat/battleScene/turnManager`) overlap. ⚠ Do NOT use
+  the Codex `codex:rescue` forwarder for impl (it duplicated jobs → concurrent writers).
+- Browser verify: puppeteer-core + system Edge headless; DEV-only `window.__game` hook in
+  `main.ts` (tree-shaken from prod) jumps to camp/victory for headless layout checks.
 
 ## Done (verified: build + tests + browser)
 - **v0.2 Tactics depth** (multi-agent reviewed; 5 findings fixed): facing/back-attacks,
