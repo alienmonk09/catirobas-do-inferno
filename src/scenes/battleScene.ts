@@ -2,7 +2,7 @@ import type { MapDef, Point, SkillDef, Unit } from "../core/types";
 import { RNG } from "../core/rng";
 import { grantJp, grantXp, createUnit } from "../core/unit";
 import { enemyLevelFor, refreshForBattle } from "../core/state";
-import { Grid, moveBlockers, samePoint } from "../battle/grid";
+import { Grid, manhattan, moveBlockers, samePoint } from "../battle/grid";
 import { pathTo, reachable } from "../battle/pathfinding";
 import { aoeTiles, knockbackTo, leapLanding, tilesInRange } from "../battle/targeting";
 import {
@@ -563,8 +563,9 @@ export class BattleScene implements Scene {
     if (isOffensive && !samePoint(center, this.active.pos)) {
       this.active.facing = directionTo(this.active.pos, center);
     }
-    // Leap skills: relocate the caster adjacent to the target before damage.
-    if (skill.leap && isOffensive) this.applyLeap(skill, this.active, center);
+    // Leap skills: validate a real enemy victim + landing, then hop the caster
+    // adjacent to it — all before any damage or cost is committed (no free teleport).
+    if (skill.leap && isOffensive && !this.resolveLeapMove(skill, this.active, center)) return;
     // All occupants of every affected tile (a fallen unit may share a tile with
     // a living one); resolveSkillOnTarget null-guards inapplicable targets.
     const affected = aoeTiles(this.grid, center, skill.aoe).flatMap((t) =>
@@ -635,13 +636,30 @@ export class BattleScene implements Scene {
    * faces it toward the target. Returns the target's position so callers can
    * recompute positional context after the move.
    */
-  private applyLeap(skill: SkillDef, caster: Unit, targetPos: Point): void {
-    if (!skill.leap || skill.aoe !== "single") return;
-    const land = leapLanding(this.grid, this.units, caster, targetPos);
-    if (!land) return;
+  /**
+   * For a leap skill, hop the caster onto a tile adjacent to its single-target
+   * victim before any damage or cost is committed. Returns false (with a toast)
+   * when the target tile holds no living enemy or there is no room to land, so
+   * the caller aborts the cast without moving or spending the action. Returns
+   * true (without moving) when the caster is already adjacent — strike in place.
+   */
+  private resolveLeapMove(skill: SkillDef, caster: Unit, center: Point): boolean {
+    if (!skill.leap || skill.aoe !== "single") return true;
+    const victim = this.units.find((u) => u.alive && u.team !== caster.team && samePoint(u.pos, center));
+    if (!victim) {
+      this.ui.toast("No valid target there.");
+      return false;
+    }
+    if (manhattan(caster.pos, victim.pos) <= 1) return true; // already adjacent — strike in place
+    const land = leapLanding(this.grid, this.units, caster, victim.pos);
+    if (!land) {
+      this.ui.toast("No room to land beside the target.");
+      return false;
+    }
     void this.ctx.animator.moveAlong(caster.id, [caster.pos, land]);
     caster.pos = { ...land };
-    caster.facing = directionTo(caster.pos, targetPos);
+    caster.facing = directionTo(caster.pos, victim.pos);
+    return true;
   }
 
   /** Shove a living single-target skill's victim directly away from the caster. */
@@ -728,7 +746,7 @@ export class BattleScene implements Scene {
       const isOffensive = skill.effect === "damage" || skill.effect === "debuff";
       if (isOffensive && !samePoint(center, unit.pos)) unit.facing = directionTo(unit.pos, center);
       // Leap skills: relocate the caster adjacent to the target before damage.
-      if (skill.leap && isOffensive) this.applyLeap(skill, unit, center);
+      if (skill.leap && isOffensive) this.resolveLeapMove(skill, unit, center);
       const affected = aoeTiles(this.grid, center, skill.aoe).flatMap((t) =>
         this.units.filter((u) => samePoint(u.pos, t)),
       );
