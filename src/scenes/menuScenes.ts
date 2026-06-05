@@ -4,6 +4,8 @@ import { clearSave, listSaves, loadGame, SAVE_SLOTS, type GameState } from "../c
 import { PHASES } from "../data/maps";
 import { el } from "../ui/dom";
 import type { GameContext, Scene } from "./sceneManager";
+import { isMuted, setMuted, getVolume, setVolume } from "../engine/audio";
+import { isMusicMuted, setMusicMuted } from "../engine/music";
 
 function resetState(state: GameState): void {
   state.party = createStartingParty();
@@ -60,6 +62,83 @@ class BannerScene implements Scene {
   }
 }
 
+/**
+ * Build the settings panel as a banner-card DOM element.
+ * `onBack` is called when the user presses "Back".
+ */
+function buildSettingsPanel(onBack: () => void): HTMLElement {
+  const banner = el("div", { className: "banner" });
+  const card = el("div", { className: "banner-card" });
+  card.appendChild(el("h1", { text: "Settings" }));
+
+  const settingsBody = el("div", { className: "settings-body" });
+
+  // --- Sound (master mute) toggle ---
+  const soundRow = el("div", { className: "settings-row" });
+  soundRow.appendChild(el("span", { className: "settings-label", text: "Sound" }));
+  const soundToggle = el("button", {
+    className: `btn small settings-toggle${isMuted() ? " settings-toggle-off" : ""}`,
+    text: isMuted() ? "Off" : "On",
+    onClick: () => {
+      const nowMuted = !isMuted();
+      setMuted(nowMuted);
+      soundToggle.textContent = nowMuted ? "Off" : "On";
+      soundToggle.className = `btn small settings-toggle${nowMuted ? " settings-toggle-off" : ""}`;
+    },
+  });
+  soundRow.appendChild(soundToggle);
+  settingsBody.appendChild(soundRow);
+
+  // --- Music toggle ---
+  const musicRow = el("div", { className: "settings-row" });
+  musicRow.appendChild(el("span", { className: "settings-label", text: "Music" }));
+  const musicToggle = el("button", {
+    className: `btn small settings-toggle${isMusicMuted() ? " settings-toggle-off" : ""}`,
+    text: isMusicMuted() ? "Off" : "On",
+    onClick: () => {
+      const nowMuted = !isMusicMuted();
+      setMusicMuted(nowMuted);
+      musicToggle.textContent = nowMuted ? "Off" : "On";
+      musicToggle.className = `btn small settings-toggle${nowMuted ? " settings-toggle-off" : ""}`;
+    },
+  });
+  musicRow.appendChild(musicToggle);
+  settingsBody.appendChild(musicRow);
+
+  // --- Volume slider ---
+  const volumeRow = el("div", { className: "settings-row" });
+  volumeRow.appendChild(el("span", { className: "settings-label", text: "Volume" }));
+  const sliderWrap = el("div", { className: "settings-slider-wrap" });
+  const slider = document.createElement("input");
+  slider.type = "range";
+  slider.min = "0";
+  slider.max = "100";
+  slider.value = String(Math.round(getVolume() * 100));
+  slider.className = "settings-slider";
+  slider.addEventListener("input", () => {
+    setVolume(Number(slider.value) / 100);
+    volLabel.textContent = slider.value;
+  });
+  const volLabel = el("span", {
+    className: "settings-vol-label",
+    text: String(Math.round(getVolume() * 100)),
+  });
+  sliderWrap.appendChild(slider);
+  sliderWrap.appendChild(volLabel);
+  volumeRow.appendChild(sliderWrap);
+  settingsBody.appendChild(volumeRow);
+
+  card.appendChild(settingsBody);
+
+  // --- Back button ---
+  const backRow = el("div", { attrs: { style: "display:flex;gap:10px;justify-content:center;margin-top:18px" } });
+  backRow.appendChild(el("button", { className: "btn", text: "Back", onClick: onBack }));
+  card.appendChild(backRow);
+
+  banner.appendChild(card);
+  return banner;
+}
+
 export class TitleScene extends BannerScene {
   constructor(ctx: GameContext) {
     super(ctx);
@@ -72,65 +151,78 @@ export class TitleScene extends BannerScene {
       this.ctx.nav.toBattle(index);
     };
 
-    const buttons: Array<{ label: string; onClick: () => void }> = [
-      { label: "New Game", onClick: () => this.ctx.nav.toPartySelect() },
-    ];
+    const rebuildTitle = () => {
+      this.root.innerHTML = "";
 
-    // Build save-slot rows as an extra element below the buttons.
-    const saves = listSaves();
-    const slotsEl = el("div", { className: "save-slots" });
-    slotsEl.appendChild(el("div", { className: "save-slots-label", text: "Save Slots" }));
-    for (let i = 0; i < SAVE_SLOTS; i++) {
-      const summary = saves[i];
-      const row = el("div", { className: "save-slot-row" });
-      if (summary) {
-        const slotNum = i + 1;
-        const btn = el("button", {
-          className: "btn small",
-          text: `Slot ${slotNum} — Phase ${summary.phaseIndex + 1} (${summary.partySize} heroes)`,
-          onClick: () => {
-            const save = loadGame(i);
-            if (save) {
-              applyLoaded(this.ctx.state, save);
-              this.ctx.nav.toParty();
-            }
-          },
-        });
-        row.appendChild(btn);
-      } else {
-        row.appendChild(
-          el("div", { className: "save-slot-empty", text: `Slot ${i + 1} — empty` }),
-        );
+      const buttons: Array<{ label: string; onClick: () => void }> = [
+        { label: "New Game", onClick: () => this.ctx.nav.toPartySelect() },
+        { label: "Settings", onClick: openSettings },
+      ];
+
+      // Build save-slot rows as an extra element below the buttons.
+      const saves = listSaves();
+      const slotsEl = el("div", { className: "save-slots" });
+      slotsEl.appendChild(el("div", { className: "save-slots-label", text: "Save Slots" }));
+      for (let i = 0; i < SAVE_SLOTS; i++) {
+        const summary = saves[i];
+        const row = el("div", { className: "save-slot-row" });
+        if (summary) {
+          const slotNum = i + 1;
+          const btn = el("button", {
+            className: "btn small",
+            text: `Slot ${slotNum} — Phase ${summary.phaseIndex + 1} (${summary.partySize} heroes)`,
+            onClick: () => {
+              const save = loadGame(i);
+              if (save) {
+                applyLoaded(this.ctx.state, save);
+                this.ctx.nav.toParty();
+              }
+            },
+          });
+          row.appendChild(btn);
+        } else {
+          row.appendChild(
+            el("div", { className: "save-slot-empty", text: `Slot ${i + 1} — empty` }),
+          );
+        }
+        slotsEl.appendChild(row);
       }
-      slotsEl.appendChild(row);
-    }
 
-    // Phase selector (testing): jump to any phase with a fresh level-3 party.
-    const selector = el("div", { className: "phase-select" });
-    selector.appendChild(el("span", { className: "label", text: "Jump to phase (test):" }));
-    const row = el("div", { className: "phase-row" });
-    PHASES.forEach((p, i) => {
-      row.appendChild(
-        el("button", {
-          className: "btn small",
-          text: `${i + 1}`,
-          attrs: { title: `Phase ${i + 1}: ${p.name}` },
-          onClick: () => startAtPhase(i),
-        }),
+      // Phase selector (testing): jump to any phase with a fresh level-3 party.
+      const selector = el("div", { className: "phase-select" });
+      selector.appendChild(el("span", { className: "label", text: "Jump to phase (test):" }));
+      const row = el("div", { className: "phase-row" });
+      PHASES.forEach((p, i) => {
+        row.appendChild(
+          el("button", {
+            className: "btn small",
+            text: `${i + 1}`,
+            attrs: { title: `Phase ${i + 1}: ${p.name}` },
+            onClick: () => startAtPhase(i),
+          }),
+        );
+      });
+      selector.appendChild(row);
+
+      const extras = el("div", {});
+      extras.appendChild(slotsEl);
+      extras.appendChild(selector);
+
+      this.showCard(
+        "TACTICS",
+        "An isometric, turn-based tactics campaign. Choose four heroes from seven — knight, archer, black mage, white mage, monk, thief, and druid, each of a distinct race — and lead them through seven battles of rising peril, gathering reinforcements as you march. Move, strike, cast, and grow.",
+        buttons,
+        extras,
       );
-    });
-    selector.appendChild(row);
+    };
 
-    const extras = el("div", {});
-    extras.appendChild(slotsEl);
-    extras.appendChild(selector);
+    const openSettings = () => {
+      this.root.innerHTML = "";
+      const settingsEl = buildSettingsPanel(() => rebuildTitle());
+      this.root.appendChild(settingsEl);
+    };
 
-    this.showCard(
-      "TACTICS",
-      "An isometric, turn-based tactics campaign. Choose four heroes from seven — knight, archer, black mage, white mage, monk, thief, and druid, each of a distinct race — and lead them through seven battles of rising peril, gathering reinforcements as you march. Move, strike, cast, and grow.",
-      buttons,
-      extras,
-    );
+    rebuildTitle();
   }
 }
 

@@ -16,6 +16,56 @@
 import { getAudioContext, getMasterGain, isMuted } from "./audio";
 
 // ---------------------------------------------------------------------------
+// Music-only mute — persisted separately from the global master mute.
+// ---------------------------------------------------------------------------
+
+const STORAGE_KEY_MUSIC_MUTED = "ashen-music-muted";
+
+function musicStorage(): Storage | null {
+  if (typeof window === "undefined") return null;
+  try {
+    return window.localStorage;
+  } catch {
+    return null;
+  }
+}
+
+function readStoredMusicMuted(): boolean {
+  try {
+    return musicStorage()?.getItem(STORAGE_KEY_MUSIC_MUTED) === "true";
+  } catch {
+    return false;
+  }
+}
+
+function writeStoredMusicMuted(value: boolean): void {
+  try {
+    musicStorage()?.setItem(STORAGE_KEY_MUSIC_MUTED, value ? "true" : "false");
+  } catch {
+    // localStorage can be unavailable in private mode; in-memory state still works.
+  }
+}
+
+let musicMuted = readStoredMusicMuted();
+
+export function isMusicMuted(): boolean {
+  return musicMuted;
+}
+
+export function setMusicMuted(value: boolean): void {
+  musicMuted = value;
+  writeStoredMusicMuted(value);
+  if (value && running) {
+    stopMusic();
+  }
+}
+
+export function toggleMusicMuted(): boolean {
+  setMusicMuted(!musicMuted);
+  return musicMuted;
+}
+
+// ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
 
@@ -209,7 +259,7 @@ function scheduleIteration(c: AudioContext, theme: ThemeDef, startTime: number):
 
 function scheduleLoop(theme: ThemeDef): void {
   if (!running || currentTheme !== theme) return;
-  if (isMuted()) {
+  if (isMuted() || isMusicMuted()) {
     // While muted, check again after the loop period and skip actual scheduling.
     const periodMs = themeDuration(theme) * 1000;
     loopTimer = setTimeout(() => scheduleLoop(theme), periodMs);
@@ -243,7 +293,7 @@ function scheduleLoop(theme: ThemeDef): void {
  */
 function scheduleNextLoop(theme: ThemeDef, nextStart: number): void {
   if (!running || currentTheme !== theme) return;
-  if (isMuted()) {
+  if (isMuted() || isMusicMuted()) {
     const periodMs = themeDuration(theme) * 1000;
     loopTimer = setTimeout(() => scheduleLoop(theme), periodMs);
     return;

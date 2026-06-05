@@ -245,6 +245,16 @@ const CSS = `
 .log-line.log-turn {
   opacity: 0.55; font-style: italic; margin-top: 2px;
 }
+
+/* Settings panel */
+.settings-body { display: flex; flex-direction: column; gap: 12px; margin: 6px 0 4px; }
+.settings-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.settings-label { font-size: 15px; font-weight: 600; min-width: 80px; text-align: left; }
+.settings-toggle { min-width: 60px; }
+.settings-toggle-off { border-color: rgba(220,90,90,0.6); color: #ff9a9a; }
+.settings-slider-wrap { display: flex; align-items: center; gap: 10px; flex: 1; }
+.settings-slider { flex: 1; accent-color: #7fb0ff; cursor: pointer; }
+.settings-vol-label { font-size: 13px; min-width: 28px; text-align: right; font-variant-numeric: tabular-nums; opacity: 0.85; }
 `;
 
 

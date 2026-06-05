@@ -1,5 +1,8 @@
 const STORAGE_KEY = "ashen-audio-muted";
-const MASTER_VOLUME = 0.25;
+const STORAGE_KEY_VOLUME = "ashen-audio-volume";
+/** Physical gain value when the user's volume is at 1.0 (100 %). */
+const BASE_MASTER = 0.25;
+const DEFAULT_VOLUME = 0.7;
 
 type AudioContextCtor = new () => AudioContext;
 
@@ -15,6 +18,7 @@ interface ToneOpts {
 let ctx: AudioContext | null = null;
 let master: GainNode | null = null;
 let muted = readStoredMuted();
+let volume = readStoredVolume();
 
 function storage(): Storage | null {
   if (typeof window === "undefined") return null;
@@ -41,6 +45,26 @@ function writeStoredMuted(value: boolean): void {
   }
 }
 
+function readStoredVolume(): number {
+  try {
+    const raw = storage()?.getItem(STORAGE_KEY_VOLUME);
+    if (raw === null || raw === undefined) return DEFAULT_VOLUME;
+    const parsed = Number(raw);
+    if (!Number.isFinite(parsed)) return DEFAULT_VOLUME;
+    return Math.max(0, Math.min(1, parsed));
+  } catch {
+    return DEFAULT_VOLUME;
+  }
+}
+
+function writeStoredVolume(value: number): void {
+  try {
+    storage()?.setItem(STORAGE_KEY_VOLUME, String(value));
+  } catch {
+    // localStorage can be unavailable in private mode; in-memory state still works.
+  }
+}
+
 function audioCtor(): AudioContextCtor | null {
   if (typeof window === "undefined") return null;
   const w = window as Window & { webkitAudioContext?: AudioContextCtor };
@@ -54,7 +78,7 @@ function context(): AudioContext | null {
   try {
     ctx = new Ctor();
     master = ctx.createGain();
-    master.gain.value = MASTER_VOLUME;
+    master.gain.value = BASE_MASTER * volume;
     master.connect(ctx.destination);
     return ctx;
   } catch {
@@ -128,6 +152,18 @@ export function setMuted(value: boolean): void {
 export function toggleMuted(): boolean {
   setMuted(!muted);
   return muted;
+}
+
+export function getVolume(): number {
+  return volume;
+}
+
+export function setVolume(v: number): void {
+  volume = Math.max(0, Math.min(1, v));
+  writeStoredVolume(volume);
+  if (master) {
+    master.gain.value = BASE_MASTER * volume;
+  }
 }
 
 export function noteToFreq(note: string): number {
