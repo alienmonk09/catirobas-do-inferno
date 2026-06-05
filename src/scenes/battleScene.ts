@@ -649,14 +649,17 @@ export class BattleScene implements Scene {
     }
     this.awardGil(results.filter((r) => r.killed).length);
     // Apply knockback (single-target offensive skills only) before afterAction so
-    // the new position is evaluated for terrain effects and objective checks.
+    // the new position is evaluated for terrain effects and objective checks. A
+    // shove off a ledge can land the killing blow — credit that kill too.
+    let fellKill = false;
     if (skill.effect === "damage" && skill.knockback) {
       const damagedTarget = results.find((r) => r.kind === "damage")
         ? this.units.find((u) => u.id === results.find((r) => r.kind === "damage")!.unitId)
         : undefined;
-      if (damagedTarget) this.applyKnockback(skill, this.active, damagedTarget);
+      if (damagedTarget) fellKill = this.applyKnockback(skill, this.active, damagedTarget);
     }
-    this.awardForAction(this.active, { offensive: skill.effect === "damage", killed: anyKilled, support });
+    if (fellKill) this.awardGil(1);
+    this.awardForAction(this.active, { offensive: skill.effect === "damage", killed: anyKilled || fellKill, support });
     this.afterAction();
   }
 
@@ -713,17 +716,22 @@ export class BattleScene implements Scene {
   }
 
   /** Shove a living single-target skill's victim directly away from the caster. */
-  private applyKnockback(skill: SkillDef, caster: Unit, target: Unit): void {
-    if (!skill.knockback || skill.aoe !== "single" || !target.alive) return;
+  /** Shove a target; returns true if the fall on landing killed it. */
+  private applyKnockback(skill: SkillDef, caster: Unit, target: Unit): boolean {
+    if (!skill.knockback || skill.aoe !== "single" || !target.alive) return false;
     const from = target.pos;
     const dest = knockbackTo(this.grid, this.units, caster.pos, from, skill.knockback);
-    if (samePoint(dest, from)) return;
+    if (samePoint(dest, from)) return false;
     const drop = this.grid.heightAt(from.x, from.y) - this.grid.heightAt(dest.x, dest.y);
     void this.ctx.animator.moveAlong(target.id, [from, dest]);
     target.pos = { ...dest };
     // Shoved off a ledge? Take fall damage on landing.
     const fall = fallDamage(target, drop);
-    if (fall) this.pushPopup(fall);
+    if (fall) {
+      this.pushPopup(fall);
+      return fall.killed;
+    }
+    return false;
   }
 
   private afterAction(): void {
@@ -1082,7 +1090,19 @@ export class BattleScene implements Scene {
       const s = this.selectedSkill;
       if (s.effect === "damage") {
         if (!enemy) return null;
-        const f = forecastSkill(this.active, enemy, s, this.posCtx(enemy.pos));
+        // A leap skill resolves from the landing tile next to the target, so forecast
+        // its flank/elevation from there rather than the caster's current tile.
+        let ctx = this.posCtx(enemy.pos);
+        if (s.leap) {
+          const land = leapLanding(this.grid, this.units, this.active, enemy.pos);
+          if (land) {
+            ctx = {
+              fromPos: { ...land },
+              heightDelta: this.grid.heightAt(land.x, land.y) - this.grid.heightAt(enemy.pos.x, enemy.pos.y),
+            };
+          }
+        }
+        const f = forecastSkill(this.active, enemy, s, ctx);
         let text = f.lethal ? `${f.amount} · KO` : `${f.amount}`;
         if (f.affinity === "weak") text += " · weak";
         else if (f.affinity === "resist") text += " · resist";

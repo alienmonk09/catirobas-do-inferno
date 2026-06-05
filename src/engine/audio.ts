@@ -78,7 +78,7 @@ function context(): AudioContext | null {
   try {
     ctx = new Ctor();
     master = ctx.createGain();
-    master.gain.value = BASE_MASTER * volume;
+    master.gain.value = muted ? 0 : BASE_MASTER * volume;
     master.connect(ctx.destination);
     return ctx;
   } catch {
@@ -144,9 +144,15 @@ export function isMuted(): boolean {
   return muted;
 }
 
+/** Push the muted/volume state onto the live master gain so it takes effect now. */
+function applyGain(): void {
+  if (master) master.gain.value = muted ? 0 : BASE_MASTER * volume;
+}
+
 export function setMuted(value: boolean): void {
   muted = value;
   writeStoredMuted(value);
+  applyGain(); // silence (or restore) already-scheduled music immediately
 }
 
 export function toggleMuted(): boolean {
@@ -161,9 +167,7 @@ export function getVolume(): number {
 export function setVolume(v: number): void {
   volume = Math.max(0, Math.min(1, v));
   writeStoredVolume(volume);
-  if (master) {
-    master.gain.value = BASE_MASTER * volume;
-  }
+  applyGain();
 }
 
 export function noteToFreq(note: string): number {
