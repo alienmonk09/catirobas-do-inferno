@@ -136,6 +136,9 @@ Put the [story](STORY.md) on screen.
 
 - ✅ New Game+ — clear the campaign, restart from Phase 1 keeping your leveled party, gil
   & gear; each cycle makes enemies tougher (+3 levels). 💭 more unlockables later
+- ✅ **Viewport-safe menus** — the Party Camp is split into navigable sections
+  (Party / Reinforcements / Shop) with a fixed header + March footer and a scrolling
+  body; New Game, Title, Settings & Victory all fit the visible screen (no clipping)
 - 💭 Accessibility pass (color-blind palettes, input remap, text scaling)
 - ✅ Three save slots (per-slot Continue on the title; old saves load as slot 1) and
   ✅ undo-move (take back a move before acting), and ✅ a settings menu (sound/music
