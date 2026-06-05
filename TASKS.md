@@ -15,7 +15,18 @@ Living task list for the autonomous build. The roadmap (`ROADMAP.md`) is the
 ## Current state (resume point)
 - Branch: **`feat/balance-and-terrain`** (off the prior `feat/skill-points-devpanel-explanations`,
   which is off `main`; neither merged nor pushed). Build: clean. Tests: **1163 passing**.
-- Latest session (balance + terrain pass, multi-agent reviewed):
+- Latest session (combat balance overhaul, multi-agent diagnosed + reviewed) — fixes the
+  reported wall (L1 party met L3 enemies in phase 2 and fell further behind every chapter):
+  - **Enemy levels are now PARTY-RELATIVE** (`enemyLevelFor(partyAvg, offset, difficulty, ngPlus)`
+    in state.ts; `partyAverageLevel`/`enemyTierOffset` helpers). Foes sit a notch below the party
+    (normal −1, easy −2, hard +0), with a clamped per-map tier offset (≤+1) preserving grunt/elite
+    spread. Authored map levels became the spread template (derived in `buildUnits`). Enemies can
+    never out-scale into an unwinnable wall; NG+ adds +3/cycle.
+  - **Battle XP pooled + split EQUALLY** across the whole party at victory (`distributeBattleXp`,
+    `enemyXpValue=12+5·level`, counts all foes). Removed per-action XP + `xpLevelMult`; SP/gold
+    stay per-action. Verified in-browser: fresh L1 party → win phase 1 → all heroes hit L2 evenly.
+  - difficulty.test.ts + newGamePlus.test.ts rewritten for the new signature.
+- Prior session (balance + terrain pass, multi-agent reviewed):
   - **Lower HP / faster fights**: all 14 classes' `base.hp` ×0.6 and `growth.hp` ×0.5
     (sim: avg battle 26→15 turns). Damage stats untouched → ~3-5 hits to kill.
   - **Start at level 1** (was 3) in `party.ts buildHero` — smaller opening stats, the
