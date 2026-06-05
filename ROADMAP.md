@@ -93,8 +93,9 @@ Classic mechanics that change how a fight is played, not just its numbers.
   ledges; ⏳ pulls, throws
 - ✅ **Zone of control & engagement** — moving into a tile adjacent to a living enemy ends
   your movement there (you can engage but not slip past the line); the AI is bound too
-- ⏳ **Spell charge time** — powerful magic resolves a few CT ticks later (FFT casting),
-  with a charging indicator and the option to interrupt
+- ✅ **Spell charge time** (FFT casting) — a charged skill (Black Mage's Meteor) is announced
+  on the cast turn (MP spent, "Charging…") and resolves on the caster's next turn; a KO
+  before then interrupts it. The AI sticks to instant skills, so the sim stays convergent.
 - 🚧 **Objective variety** — ✅ rout, defeat-the-commander (the finale: kill Maldrath),
   survive-N-turns, ✅ seize-a-point and ✅ defend-a-point (gold tile marker in the HUD);
   ⏳ escort (needs an NPC unit concept)

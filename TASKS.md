@@ -17,16 +17,15 @@ Living task list for the autonomous build. The roadmap (`ROADMAP.md`) is the
 - Build: clean. Tests: **954 passing across 46 files**. Working tree: clean.
 - Last commit: `3841d23 feat(v0.4): skill charge time (FFT casting)`. Shipped since the sell commit:
   battle log, undo move, save slots, settings menu, New Game+.
-- ~24 features this session. Codex reviewer went DOWN mid-session (6+ "failed to output")
-  then RECOVERED. Its `review --base main` ran 3 convergent passes: P2s (fall-kill credit,
-  instant mute, leap forecast / forecast clamp, completed-turn counting, counter-kill rewards)
-  all fixed; round 3 was only P3 (AI leap LoS fixed; a rampart-water claim was a false positive).
-  ~12 real review findings total this session, all addressed.
-- NOTE: the Codex reviewer started returning "Reviewer failed to output a response" on
-  EVERY scope (even small diffs) partway through this session — a transient runtime fault,
-  not a code signal. It worked for ~10 earlier features (caught ~9 real P2s). Recent
-  features (equipment shop, cover, ZoC, fall damage, recruit/race) are verified by
-  build+test+browser+self-review only; re-run Codex review on them when it recovers.
+- ~26 features this session. The Codex `codex-companion review` is INTERMITTENT — it
+  alternates between producing verdicts and "Reviewer failed to output a response" (a
+  transient runtime fault, not a code signal). Across its ~5 working `review --base main`
+  passes it caught **~19 real P2/P3 findings — all fixed** (counter-on-melee-skills, gil
+  per-AoE-kill, save-field propagation, fall-kill credit, instant mute, leap/forecast clamps,
+  completed-turn counting, counter-kill rewards, AI-leap-LoS, music-voice lifecycle, cover-on-
+  dead-target…). Skill charge time's player flow was verified by static trace + the sim +
+  smoke (the review was flaky when it landed). A final `review --base main` before any merge
+  is the standing diligence gate — re-run it until it yields a clean verdict.
 - Commits: v0.2+v0.3 base → Counter → Time Mage → objectives(rout/defeat/survive)
   → secondary job → **audio → equipment slots → terrain effects → Summoner →
   objective variety(seize/defend)**.
@@ -90,15 +89,11 @@ Living task list for the autonomous build. The roadmap (`ROADMAP.md`) is the
 - **Sell** (v0.5) — sell consumables & owned gear for half price; selling gear unequips it. `1f5ba27`.
 
 ## Next up (prioritized — what actually remains)
-1. **Skill charge time** (v0.4, FFT casting) — powerful magic resolves a few CT ticks later;
-   needs a charging state on Unit + turn-loop awareness + a charging indicator + interrupt.
-   HIGHEST RISK (it touches the core turn loop). Codex review is back, so it's doable — lean
-   hard on the AI-vs-AI sim + browser smoke + a review pass.
-2. **Recruitable units** (v0.5) — turn a beaten foe into a party member (a capture action +
+1. **Recruitable units** (v0.5) — turn a beaten foe into a party member (a capture action +
    mid-battle team switch + persistent roster addition).
-3. **Weapon shop / ownership** — like the Gear Shop, but weapons are class-locked and a unit
+2. **Weapon shop / ownership** — like the Gear Shop, but weapons are class-locked and a unit
    is never unarmed, so the dropdown gating + starting-weapon migration is fiddlier.
-4. **Job mastery** (v0.5) — master a class (learn all its skills) for a carried passive; note
+3. **Job mastery** (v0.5) — master a class (learn all its skills) for a carried passive; note
    it would touch the fragile stat pipeline (statsForUnit).
 5. **Content** (v0.6) — in-engine dialogue/cutscenes, character portraits, named-enemy intros,
    optional skirmish maps. (Agent-authored map balance/art is the risk here.)
