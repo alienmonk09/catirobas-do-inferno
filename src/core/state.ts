@@ -1,6 +1,6 @@
 import type { ClassId, Difficulty, RaceId, Unit } from "./types";
 import { createStartingParty } from "../data/party";
-import { startingInventory } from "../data/items";
+import { startingInventory, getItem } from "../data/items";
 import { CLASSES } from "../data/classes";
 import { RACES } from "../data/races";
 import { WEAPONS } from "../data/weapons";
@@ -15,6 +15,8 @@ export interface GameState {
   phaseIndex: number;
   /** Selected difficulty; scales enemy levels. */
   difficulty: Difficulty;
+  /** Party treasury in gil. Earned by defeating enemies. */
+  gil: number;
 }
 
 export function createGameState(): GameState {
@@ -23,7 +25,29 @@ export function createGameState(): GameState {
     inventory: startingInventory(),
     phaseIndex: 0,
     difficulty: "normal",
+    gil: 0,
   };
+}
+
+/** Flat gil awarded per enemy defeated in battle. */
+export const GIL_PER_KILL = 18;
+
+/**
+ * Attempt to purchase one unit of an item from the camp shop.
+ * Deducts the item's price from `state.gil` and increments the inventory count.
+ * Returns true on success; false if gil is insufficient or the item is unknown.
+ */
+export function buyItem(state: GameState, itemId: string): boolean {
+  let item;
+  try {
+    item = getItem(itemId);
+  } catch {
+    return false;
+  }
+  if (state.gil < item.price) return false;
+  state.gil -= item.price;
+  state.inventory[itemId] = (state.inventory[itemId] ?? 0) + 1;
+  return true;
 }
 
 const VALID_DIFFICULTIES: Difficulty[] = ["easy", "normal", "hard"];
@@ -84,6 +108,10 @@ export function loadGame(): GameState | null {
     // Back-compat: old saves lack `difficulty`; normalise any missing/invalid value.
     if (!VALID_DIFFICULTIES.includes(parsed.difficulty as Difficulty)) {
       parsed.difficulty = "normal" as Difficulty;
+    }
+    // Back-compat: old saves lack `gil`; normalise any missing/invalid value.
+    if (typeof parsed.gil !== "number" || !isFinite(parsed.gil) || parsed.gil < 0) {
+      parsed.gil = 0;
     }
     return parsed;
   } catch {

@@ -15,6 +15,8 @@ function applyLoaded(state: GameState, loaded: GameState): void {
   state.party = loaded.party;
   state.inventory = loaded.inventory;
   state.phaseIndex = loaded.phaseIndex;
+  state.difficulty = loaded.difficulty;
+  state.gil = loaded.gil;
 }
 
 /** A simple full-screen menu built from a banner card. */

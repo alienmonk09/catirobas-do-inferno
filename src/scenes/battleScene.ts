@@ -1,7 +1,7 @@
 import type { MapDef, Point, SkillDef, Unit } from "../core/types";
 import { RNG } from "../core/rng";
 import { grantJp, grantXp, createUnit } from "../core/unit";
-import { enemyLevelFor, refreshForBattle } from "../core/state";
+import { enemyLevelFor, refreshForBattle, GIL_PER_KILL } from "../core/state";
 import { Grid, manhattan, moveBlockers, samePoint } from "../battle/grid";
 import { pathTo, reachable } from "../battle/pathfinding";
 import { aoeTiles, knockbackTo, leapLanding, tilesInRange } from "../battle/targeting";
@@ -704,6 +704,7 @@ export class BattleScene implements Scene {
     if (opts.killed) {
       xp += 20;
       jp += 12;
+      this.ctx.state.gil += GIL_PER_KILL;
     }
     const levels = grantXp(unit, xp);
     grantJp(unit, jp);

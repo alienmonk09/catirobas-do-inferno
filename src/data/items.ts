@@ -8,6 +8,7 @@ export const ITEMS: Record<string, ItemDef> = {
     effect: "healHp",
     amount: 30,
     range: 1,
+    price: 25,
   },
   hiPotion: {
     id: "hiPotion",
@@ -16,6 +17,7 @@ export const ITEMS: Record<string, ItemDef> = {
     effect: "healHp",
     amount: 70,
     range: 1,
+    price: 60,
   },
   ether: {
     id: "ether",
@@ -24,6 +26,7 @@ export const ITEMS: Record<string, ItemDef> = {
     effect: "healMp",
     amount: 20,
     range: 1,
+    price: 40,
   },
   phoenixDown: {
     id: "phoenixDown",
@@ -32,6 +35,7 @@ export const ITEMS: Record<string, ItemDef> = {
     effect: "revive",
     amount: 20,
     range: 1,
+    price: 120,
   },
   hourglass: {
     id: "hourglass",
@@ -40,6 +44,7 @@ export const ITEMS: Record<string, ItemDef> = {
     effect: "buff",
     amount: 0,
     range: 1,
+    price: 50,
     statusKind: "haste",
     statusDuration: 3,
   },

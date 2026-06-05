@@ -151,6 +151,8 @@ export interface ItemDef {
   effect: ItemEffect;
   amount: number;
   range: number;
+  /** Gil cost to purchase from the camp shop. */
+  price: number;
   /** For buff items: which status to grant and for how long. */
   statusKind?: StatusKind;
   statusDuration?: number;

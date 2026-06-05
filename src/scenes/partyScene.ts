@@ -12,7 +12,7 @@ import {
   learnSkillForClass,
   xpForLevel,
 } from "../core/unit";
-import { saveGame } from "../core/state";
+import { saveGame, buyItem } from "../core/state";
 import { PHASES } from "../data/maps";
 import {
   partyCapForPhase,
@@ -20,6 +20,7 @@ import {
   recruitHero,
   type HeroDef,
 } from "../data/party";
+import { ITEMS } from "../data/items";
 import { getUnitSprite, getSkillSprite, getWeaponSprite, getEquipmentSprite, getCharacterSprite, getHeroSprite } from "../data/sprites";
 import { el, clear } from "../ui/dom";
 import { iconImg } from "../ui/icons";
@@ -317,6 +318,50 @@ export class PartyScene implements Scene {
       .map(([id, c]) => `${id} ×${c}`)
       .join("   ");
     screen.appendChild(el("div", { className: "inv-line", text: `Inventory: ${inv || "empty"}` }));
+
+    // Shop section.
+    screen.appendChild(el("div", { className: "section-title", text: "Camp Supply" }));
+    screen.appendChild(
+      el("div", { className: "inv-line", text: `Gil: ${this.ctx.state.gil}` }),
+    );
+    const shopGrid = el("div", { className: "shop-grid" });
+    for (const item of Object.values(ITEMS)) {
+      const owned = this.ctx.state.inventory[item.id] ?? 0;
+      const canAfford = this.ctx.state.gil >= item.price;
+      const row = el("div", { className: "shop-row" });
+      row.appendChild(
+        el("div", {
+          className: "shop-item-info",
+          children: [
+            el("span", { className: "shop-item-name", text: item.name }),
+            el("span", { className: "shop-item-desc", text: item.description }),
+          ],
+        }),
+      );
+      row.appendChild(
+        el("div", {
+          className: "shop-item-meta",
+          children: [
+            el("span", { className: "shop-item-price", text: `${item.price} gil` }),
+            el("span", { className: "shop-item-owned", text: `×${owned}` }),
+            el("button", {
+              className: "btn small",
+              text: "Buy",
+              attrs: canAfford ? {} : { disabled: "true" },
+              onClick: canAfford
+                ? () => {
+                    buyItem(this.ctx.state, item.id);
+                    saveGame(this.ctx.state);
+                    this.render();
+                  }
+                : undefined,
+            }),
+          ],
+        }),
+      );
+      shopGrid.appendChild(row);
+    }
+    screen.appendChild(shopGrid);
 
     const footer = el("div", { className: "party-footer" });
     footer.appendChild(

@@ -194,6 +194,14 @@ const CSS = `
 .unit-card .jpline { display: flex; justify-content: space-between; align-items: center; margin-top: 8px; }
 .party-footer { text-align: center; margin: 24px 0 8px; }
 .inv-line { text-align:center; font-size: 13px; opacity: 0.85; margin-top: 10px; }
+.shop-grid { max-width: 640px; margin: 12px auto 0; display: flex; flex-direction: column; gap: 6px; }
+.shop-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; background: rgba(22,26,42,0.95); border: 1px solid rgba(120,140,200,0.3); border-radius: 8px; padding: 10px 14px; }
+.shop-item-info { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
+.shop-item-name { font-size: 14px; font-weight: 600; }
+.shop-item-desc { font-size: 11px; opacity: 0.65; }
+.shop-item-meta { display: flex; align-items: center; gap: 10px; flex: none; }
+.shop-item-price { font-size: 13px; color: #ffd34d; font-weight: 600; min-width: 56px; text-align: right; }
+.shop-item-owned { font-size: 13px; opacity: 0.75; min-width: 28px; text-align: center; }
 .crit { color: #ffd34d; }
 
 /* Difficulty selector on the New Game / party-select screen */
