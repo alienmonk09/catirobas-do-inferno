@@ -103,6 +103,12 @@ export function leapLanding(grid: Grid, units: Unit[], caster: Unit, target: Poi
  * are blocked by the grid edge, blocked tiles, and tiles occupied by other
  * living units. Returns the last valid tile (may equal `target` if every step
  * is blocked). A pull never moves the target onto or past the caster's tile.
+ *
+ * When `throwOver` is true (implies shove direction; `pull` + `throwOver`
+ * together: `throwOver` is ignored in favour of the existing pull behaviour),
+ * occupied tiles are passed over rather than stopping the movement — the throw
+ * lands on the farthest reachable unoccupied in-bounds unblocked tile. If no
+ * such tile exists the target stays put.
  */
 export function knockbackTo(
   grid: Grid,
@@ -111,7 +117,11 @@ export function knockbackTo(
   target: Point,
   distance: number,
   pull = false,
+  throwOver = false,
 ): Point {
+  // Guard: pull + throwOver is nonsensical — honour pull, ignore throwOver.
+  const doThrow = throwOver && !pull;
+
   // Shove: step away from caster. Pull: step toward caster (reverse direction).
   const dir = directionTo(caster, target);
   const rawStep = dirVector(dir);
@@ -122,6 +132,25 @@ export function knockbackTo(
   const occ = new Set(
     units.filter((u) => u.alive && !samePoint(u.pos, target)).map((u) => key(u.pos)),
   );
+
+  if (doThrow) {
+    // Throw: step through occupied tiles, track the farthest unoccupied landing spot.
+    let bestClear = { ...target }; // fallback = no movement
+    let cur = { ...target };
+    for (let i = 0; i < distance; i++) {
+      const nx = cur.x + step.x;
+      const ny = cur.y + step.y;
+      if (!grid.inBounds(nx, ny)) break;   // hard stop at edge
+      if (grid.isBlocked(nx, ny)) break;   // hard stop at blocked tile
+      cur = { x: nx, y: ny };
+      if (!occ.has(key(cur))) {
+        bestClear = { ...cur }; // farthest unoccupied reachable tile so far
+      }
+      // occupied tiles are passed over — loop continues
+    }
+    return bestClear;
+  }
+
   let cur = { ...target };
   for (let i = 0; i < distance; i++) {
     const nx = cur.x + step.x;

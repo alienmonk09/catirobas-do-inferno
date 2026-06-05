@@ -118,6 +118,10 @@ export interface SkillDef {
   knockback?: number;
   /** When true, the skill's `knockback` distance pulls the target TOWARD the caster instead of away. */
   pull?: boolean;
+  /** When true, the knockback hurls the target OVER intervening units, landing on the farthest
+   *  reachable unoccupied tile. Grid edge and blocked tiles still stop the throw. Do not combine
+   *  with `pull` (a throw is always away from the caster). */
+  throwOver?: boolean;
   /** Leap skills: the caster jumps adjacent to the target before striking, ignoring line-of-sight. */
   leap?: boolean;
   /** FFT-style charge delay: the skill is announced now but resolves on the caster's next turn.

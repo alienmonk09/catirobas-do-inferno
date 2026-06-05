@@ -203,6 +203,91 @@ describe("skill definitions", () => {
     expect(skill.knockback).toBeGreaterThan(0);
     expect(skill.aoe).toBe("single");
   });
+
+  it("bodySlam has knockback: 3, throwOver: true, and aoe: single", () => {
+    const skill = SKILLS["bodySlam"];
+    expect(skill.knockback).toBe(3);
+    expect(skill.throwOver).toBe(true);
+    expect(skill.aoe).toBe("single");
+  });
+});
+
+describe("knockbackTo — throwOver variant", () => {
+  it("throw passes over an occupied tile and lands beyond it on a clear tile", () => {
+    const grid = makeGrid(10, 10);
+    // Caster at (2,5), target at (3,5), blocker at (4,5), clear at (5,5) and (6,5).
+    // throwOver=true, distance=3 → steps: (4,5)[occ pass], (5,5)[clear], (6,5)[clear].
+    // Farthest unoccupied reachable = (6,5).
+    const caster: Point = { x: 2, y: 5 };
+    const target: Point = { x: 3, y: 5 };
+    const blocker = unitAt({ x: 4, y: 5 });
+    const dest = knockbackTo(grid, [blocker], caster, target, 3, false, true);
+    expect(dest).toEqual({ x: 6, y: 5 });
+  });
+
+  it("throw still stops at the grid edge", () => {
+    const grid = makeGrid(10, 10);
+    // Caster at (2,5), target at (7,5), throw distance 3 → farthest reachable = (9,5); x=10 OOB.
+    const caster: Point = { x: 2, y: 5 };
+    const target: Point = { x: 7, y: 5 };
+    const dest = knockbackTo(grid, [], caster, target, 3, false, true);
+    expect(dest).toEqual({ x: 9, y: 5 }); // (10,5) is out of bounds
+  });
+
+  it("throw still stops at a blocked tile", () => {
+    // Caster at (2,5), target at (3,5), blocked at (5,5), throw distance 3.
+    // Step 1→(4,5) clear, step 2→(5,5) blocked (hard stop) → lands at (4,5).
+    const grid = makeGridWithBlocked(10, 10, [{ x: 5, y: 5 }]);
+    const caster: Point = { x: 2, y: 5 };
+    const target: Point = { x: 3, y: 5 };
+    const dest = knockbackTo(grid, [], caster, target, 3, false, true);
+    expect(dest).toEqual({ x: 4, y: 5 });
+  });
+
+  it("throw lands on farthest unoccupied tile when the last reachable tile is occupied", () => {
+    const grid = makeGrid(10, 10);
+    // Caster at (2,5), target at (3,5), blocker at (4,5), another blocker at (5,5).
+    // Throw distance 3 → steps (4,5)[occ], (5,5)[occ], (6,5)[clear]. Farthest unoccupied = (6,5).
+    const caster: Point = { x: 2, y: 5 };
+    const target: Point = { x: 3, y: 5 };
+    const b1 = unitAt({ x: 4, y: 5 });
+    const b2 = unitAt({ x: 5, y: 5 });
+    const dest = knockbackTo(grid, [b1, b2], caster, target, 3, false, true);
+    expect(dest).toEqual({ x: 6, y: 5 });
+  });
+
+  it("throw returns target tile (no movement) when every reachable tile is occupied", () => {
+    const grid = makeGrid(10, 10);
+    // Caster at (2,5), target at (3,5), blockers at (4,5) and only 1 distance available.
+    // Distance=1, only step is (4,5) which is occupied → no clear tile found, stays at (3,5).
+    const caster: Point = { x: 2, y: 5 };
+    const target: Point = { x: 3, y: 5 };
+    const blocker = unitAt({ x: 4, y: 5 });
+    const dest = knockbackTo(grid, [blocker], caster, target, 1, false, true);
+    expect(dest).toEqual({ x: 3, y: 5 });
+  });
+
+  it("throwOver=false (default) is identical to the normal shove when a unit blocks", () => {
+    const grid = makeGrid(10, 10);
+    const caster: Point = { x: 2, y: 5 };
+    const target: Point = { x: 3, y: 5 };
+    const blocker = unitAt({ x: 4, y: 5 });
+    // Normal shove stops at blocker; default throwOver=false must match.
+    expect(knockbackTo(grid, [blocker], caster, target, 3, false, false)).toEqual(
+      knockbackTo(grid, [blocker], caster, target, 3),
+    );
+  });
+
+  it("pull + throwOver together honours pull behaviour (throwOver is ignored)", () => {
+    const grid = makeGrid(10, 10);
+    // Caster at (2,5), target at (6,5), blocker at (5,5).
+    // pull=true, throwOver=true → throwOver ignored, pull stops before blocker at (6,5).
+    const caster: Point = { x: 2, y: 5 };
+    const target: Point = { x: 6, y: 5 };
+    const blocker = unitAt({ x: 5, y: 5 });
+    const dest = knockbackTo(grid, [blocker], caster, target, 3, true, true);
+    expect(dest).toEqual({ x: 6, y: 5 }); // same as pull without throwOver
+  });
 });
 
 describe("knockbackTo — pull variant", () => {

@@ -858,7 +858,7 @@ export class BattleScene implements Scene {
   private applyKnockback(skill: SkillDef, caster: Unit, target: Unit): boolean {
     if (!skill.knockback || skill.aoe !== "single" || !target.alive) return false;
     const from = target.pos;
-    const dest = knockbackTo(this.grid, this.units, caster.pos, from, skill.knockback, skill.pull ?? false);
+    const dest = knockbackTo(this.grid, this.units, caster.pos, from, skill.knockback, skill.pull ?? false, skill.throwOver ?? false);
     if (samePoint(dest, from)) return false;
     const drop = this.grid.heightAt(from.x, from.y) - this.grid.heightAt(dest.x, dest.y);
     void this.ctx.animator.moveAlong(target.id, [from, dest]);

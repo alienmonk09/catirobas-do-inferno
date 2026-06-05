@@ -249,6 +249,26 @@ export const SKILL_SPRITES: Record<string, SpriteDef> = {
       "..AABBBBAA....",
     ],
   },
+  // Monk — bodySlam: hurl a foe over intervening units (throwOver variant)
+  bodySlam: {
+    palette: { A: "#1a0a2e", B: "#f5c842", C: "#ffe88a", D: "#ff6600", E: "#ffffff", F: "#cc3300", G: "#ff9940", H: "#8b0000" },
+    rows: [
+      "....AAAA......",
+      "...ABCCA......",
+      "..ABCCBBA.....",
+      "..ABCBCBA.....",
+      ".AABBBBBAA....",
+      ".AABBBBBAA..A.",
+      "..ABDDDBA.ABA.",
+      "..ABDDDBA.ABA.",
+      "...ADDDA..ABA.",
+      "....ADDA.AABA.",
+      ".....AFA.AGGA.",
+      ".....AFA.AGGA.",
+      "......A..AHA..",
+      ".........AA...",
+    ],
+  },
   backstab: {
     palette: { A: "#101018", B: "#c9d2e0", C: "#8a93a6", D: "#6b4a2a", R: "#e03a3a", S: "#ff8a5a" },
     rows: [

@@ -48,7 +48,7 @@ export const CLASSES: Record<ClassId, ClassDef> = {
     description: "Unarmed bruiser. High HP and damage with self-sustain.",
     base: { hp: 110, mp: 30, atk: 15, def: 9, mag: 8, res: 8, spd: 11, move: 4, jump: 3 },
     growth: { hp: 12, mp: 3, atk: 2.0, def: 1.2, mag: 1.0, res: 0.9, spd: 0.9 },
-    skillIds: ["palmStrike", "chakra", "earthShake"],
+    skillIds: ["palmStrike", "chakra", "bodySlam", "earthShake"],
     weaponIds: ["knuckles", "fellKnuckles"],
     reactions: ["counter"],
     color: "#d68a4f",
