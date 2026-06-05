@@ -47,6 +47,7 @@ export interface OverlaySet {
   attack: Point[];
   aoe: Point[];
   path: Point[];
+  objective?: Point[];
 }
 
 /** A transient spell/skill effect animation playing over a tile. */
@@ -97,6 +98,7 @@ const COLOR = {
   path: "rgba(245,225,90,0.65)",
   hover: "rgba(255,255,255,0.22)",
   gridLine: "rgba(0,0,0,0.18)",
+  objective: "rgba(255,210,80,0.55)",
 };
 
 /** One-glyph badge + color per status, drawn as a pip over the unit's HP bar.
@@ -221,6 +223,7 @@ export class Renderer {
     for (const t of view.overlays.path) push(t, COLOR.path);
     for (const t of view.overlays.aoe) push(t, COLOR.aoe);
     if (view.hoverTile) push(view.hoverTile, COLOR.hover);
+    for (const t of view.overlays.objective ?? []) push(t, COLOR.objective);
     return m;
   }
 

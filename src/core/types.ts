@@ -211,7 +211,9 @@ export interface Tile {
 export type Objective =
   | { kind: "rout" }
   | { kind: "defeat"; targetName: string }
-  | { kind: "survive"; turns: number };
+  | { kind: "survive"; turns: number }
+  | { kind: "seize"; x: number; y: number }
+  | { kind: "defend"; x: number; y: number; turns: number };
 
 export interface MapDef {
   id: string;

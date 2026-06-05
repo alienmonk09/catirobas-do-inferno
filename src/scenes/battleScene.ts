@@ -195,9 +195,21 @@ export class BattleScene implements Scene {
         return `Objective: defeat ${obj.targetName}`;
       case "survive":
         return `Objective: survive ${Math.min(this.turnCount, obj.turns)}/${obj.turns} turns`;
+      case "seize":
+        return "Objective: seize the marked tile";
+      case "defend":
+        return `Objective: hold the marked tile — ${Math.min(this.turnCount, obj.turns)}/${obj.turns} turns`;
       default:
         return "Objective: defeat all enemies";
     }
+  }
+
+  /** Target tiles to highlight permanently for seize/defend objectives. */
+  private objectiveTiles(): Point[] {
+    const obj = this.map.objective;
+    if (!obj) return [];
+    if (obj.kind === "seize" || obj.kind === "defend") return [{ x: obj.x, y: obj.y }];
+    return [];
   }
 
   private beginNextTurn(): void {
@@ -808,7 +820,7 @@ export class BattleScene implements Scene {
   }
 
   private buildView(origin: ScreenPoint): BattleView {
-    const overlays: OverlaySet = { move: [], attack: [], aoe: [], path: [] };
+    const overlays: OverlaySet = { move: [], attack: [], aoe: [], path: [], objective: this.objectiveTiles() };
     if (this.phase === "move") {
       overlays.move = this.rangeTiles;
       if (this.hoverTile && this.inRangeTiles(this.hoverTile) && this.active) {

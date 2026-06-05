@@ -110,8 +110,13 @@ describe("full battle simulation (AI vs AI)", () => {
 
       expect(turns).toBeLessThan(CAP); // it actually terminated
       expect(winner === "player" || winner === "enemy").toBe(true);
-      // Someone died for the battle to end.
-      expect(units.some((u) => !u.alive)).toBe(true);
+      // Time-based objectives (survive/defend) can end with all units alive;
+      // all other objectives require at least one death to resolve.
+      const obj = PHASES[phase].objective ?? { kind: "rout" };
+      const timeBased = obj.kind === "survive" || obj.kind === "defend";
+      if (!timeBased) {
+        expect(units.some((u) => !u.alive)).toBe(true);
+      }
     });
   }
 

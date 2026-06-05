@@ -30,7 +30,8 @@ export const outerRamparts: MapDef = {
   id: "outerRamparts",
   name: "The Outer Ramparts",
   intro:
-    "The keep's outer wall rears up out of the ash — merlons manned, a single gate yawning at its center. Maldrath's garrison holds the high stone and rains shafts and fire on the courtyard below. Force the gate or scale the ends, but get off the killing floor before the wall whittles you down.",
+    "The keep's outer wall rears up out of the ash — merlons manned, a single gate yawning at its center. Maldrath's garrison holds the high stone and rains shafts and fire on the courtyard below. Force the gate or scale the ends and seize the gatehouse at the wall's crown to break the garrison's hold.",
+  objective: { kind: "seize", x: 5, y: 0 },
   width: 12,
   height: 12,
   heights,

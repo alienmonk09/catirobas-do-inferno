@@ -75,6 +75,16 @@ export function evaluateOutcome(
     case "survive":
       if (!enemiesAlive) return "player";
       return turnsElapsed >= obj.turns ? "player" : null;
+    case "seize":
+      // Standing a unit on the marked tile wins; routing every foe also wins, so
+      // the battle can never soft-lock if the tile turns out hard to reach.
+      if (units.some((u) => u.team === "player" && u.alive && u.pos.x === obj.x && u.pos.y === obj.y)) return "player";
+      return enemiesAlive ? null : "player";
+    case "defend":
+      if (units.some((u) => u.team === "enemy" && u.alive && u.pos.x === obj.x && u.pos.y === obj.y))
+        return "enemy";
+      if (!enemiesAlive) return "player";
+      return turnsElapsed >= obj.turns ? "player" : null;
   }
 }
 

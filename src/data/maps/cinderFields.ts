@@ -54,7 +54,8 @@ export const cinderFields: MapDef = {
   id: "cinderFields",
   name: "The Cinder Fields",
   intro:
-    "Past the bridge the land opens into a plain of burned farmland — black stubble, broken fences, the husks of barns. There is no chokepoint to hold here; Maldrath's roving company means to surround you on open ground. Use the rubble for cover and don't let them flank.",
+    "Past the bridge the land opens into a plain of burned farmland — black stubble, broken fences, the husks of barns. Maldrath's roving company means to overrun your position. Hold the rally point at the field's center and don't let them seize it — survive long enough and reinforcements will turn the tide.",
+  objective: { kind: "defend", x: 6, y: 8, turns: 7 },
   width: 13,
   height: 11,
   heights,
