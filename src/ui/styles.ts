@@ -1,4 +1,6 @@
 const CSS = `
+:root { --ui-scale: 1; }
+
 .ui-layer {
   position: absolute;
   inset: 0;
@@ -6,6 +8,7 @@ const CSS = `
   font-family: "Segoe UI", system-ui, sans-serif;
   color: #e8e8f2;
   user-select: none;
+  font-size: calc(14px * var(--ui-scale));
 }
 .ui-layer * { pointer-events: auto; }
 
@@ -296,7 +299,70 @@ const CSS = `
 .settings-slider-wrap { display: flex; align-items: center; gap: 10px; flex: 1; }
 .settings-slider { flex: 1; accent-color: #7fb0ff; cursor: pointer; }
 .settings-vol-label { font-size: 13px; min-width: 28px; text-align: right; font-variant-numeric: tabular-nums; opacity: 0.85; }
+.settings-scale-group { display: flex; gap: 5px; }
+
+/* Text-scale: key readable containers honour --ui-scale. */
+.banner-card h1 { font-size: calc(28px * var(--ui-scale)); margin-bottom: 10px; }
+.banner-card p  { font-size: calc(15px * var(--ui-scale)); opacity: 0.88; line-height: 1.5; margin-bottom: 18px; white-space: pre-line; }
+.banner-card .btn { font-size: calc(16px * var(--ui-scale)); padding: 10px 24px; }
+.panel h3 { font-size: calc(15px * var(--ui-scale)); margin-bottom: 2px; }
+.dlg-text { font-size: calc(16px * var(--ui-scale)); line-height: 1.55; min-height: 50px; }
+.dlg-speaker { font-size: calc(14px * var(--ui-scale)); }
+.settings-label { font-size: calc(15px * var(--ui-scale)); font-weight: 600; min-width: 80px; text-align: left; }
+
+/* High-contrast overrides — only when .high-contrast is on <html>. */
+.high-contrast .panel {
+  background: rgba(0, 0, 0, 0.95);
+  border: 2px solid #c8d0ff;
+  box-shadow: 0 6px 24px rgba(0,0,0,0.8);
+}
+.high-contrast .banner {
+  background: rgba(0, 0, 0, 0.92);
+}
+.high-contrast .banner-card {
+  background: rgba(0, 0, 0, 0.98);
+  border: 2px solid #c8d0ff;
+  box-shadow: 0 12px 48px rgba(0,0,0,0.85);
+}
+.high-contrast .ui-layer {
+  color: #f0f0ff;
+}
+.high-contrast .btn {
+  background: rgba(10, 14, 40, 0.98);
+  border: 2px solid #a0b8ff;
+  color: #f0f0ff;
+}
+.high-contrast .btn:hover {
+  background: rgba(40, 60, 140, 1);
+  border-color: #d0ddff;
+}
+.high-contrast .btn:focus {
+  outline: 3px solid #ffd34d;
+  outline-offset: 2px;
+}
+.high-contrast .skill-card {
+  background: rgba(0, 0, 12, 0.97);
+  border: 2px solid #a0b8ff;
+  color: #f0f0ff;
+}
+.high-contrast .skill-card:hover {
+  background: rgba(20, 30, 80, 1);
+  border-color: #d0ddff;
+}
+.high-contrast .dialogue-box {
+  background: rgba(0, 0, 10, 0.98);
+  border: 2px solid #c8d0ff;
+}
+.high-contrast .unit-card {
+  background: rgba(0, 0, 12, 0.97);
+  border: 2px solid rgba(160, 180, 240, 0.6);
+}
+.high-contrast .settings-toggle-off {
+  border-color: #ff6060;
+  color: #ffcccc;
+}
 `;
+
 
 
 let injected = false;

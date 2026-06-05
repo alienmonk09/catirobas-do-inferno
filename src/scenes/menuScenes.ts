@@ -6,6 +6,13 @@ import { el } from "../ui/dom";
 import type { GameContext, Scene } from "./sceneManager";
 import { isMuted, setMuted, getVolume, setVolume } from "../engine/audio";
 import { isMusicMuted, setMusicMuted } from "../engine/music";
+import {
+  getTextScale,
+  setTextScale,
+  isHighContrast,
+  setHighContrast,
+  type TextScale,
+} from "../engine/accessibility";
 
 function resetState(state: GameState): void {
   state.party = createStartingParty();
@@ -131,6 +138,50 @@ function buildSettingsPanel(onBack: () => void): HTMLElement {
   sliderWrap.appendChild(volLabel);
   volumeRow.appendChild(sliderWrap);
   settingsBody.appendChild(volumeRow);
+
+  // --- Text size selector ---
+  const textSizeRow = el("div", { className: "settings-row" });
+  textSizeRow.appendChild(el("span", { className: "settings-label", text: "Text size" }));
+  const scales: Array<{ value: TextScale; label: string }> = [
+    { value: "normal", label: "Normal" },
+    { value: "large", label: "Large" },
+    { value: "larger", label: "Larger" },
+  ];
+  const scaleGroup = el("div", { className: "settings-scale-group" });
+  const scaleButtons: HTMLButtonElement[] = [];
+  for (const s of scales) {
+    const btn = el("button", {
+      className: `btn small${getTextScale() === s.value ? " settings-toggle" : ""}`,
+      text: s.label,
+      onClick: () => {
+        setTextScale(s.value);
+        for (const b of scaleButtons) {
+          const active = b.textContent === s.label;
+          b.className = `btn small${active ? " settings-toggle" : ""}`;
+        }
+      },
+    });
+    scaleButtons.push(btn as HTMLButtonElement);
+    scaleGroup.appendChild(btn);
+  }
+  textSizeRow.appendChild(scaleGroup);
+  settingsBody.appendChild(textSizeRow);
+
+  // --- High contrast toggle ---
+  const hcRow = el("div", { className: "settings-row" });
+  hcRow.appendChild(el("span", { className: "settings-label", text: "High contrast" }));
+  const hcToggle = el("button", {
+    className: `btn small settings-toggle${isHighContrast() ? "" : " settings-toggle-off"}`,
+    text: isHighContrast() ? "On" : "Off",
+    onClick: () => {
+      const nowOn = !isHighContrast();
+      setHighContrast(nowOn);
+      hcToggle.textContent = nowOn ? "On" : "Off";
+      hcToggle.className = `btn small settings-toggle${nowOn ? "" : " settings-toggle-off"}`;
+    },
+  });
+  hcRow.appendChild(hcToggle);
+  settingsBody.appendChild(hcRow);
 
   card.appendChild(settingsBody);
 

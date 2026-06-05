@@ -5,6 +5,7 @@ import { GameLoop } from "./engine/loop";
 import { createGameState } from "./core/state";
 import { PHASES } from "./data/maps";
 import { injectStyles } from "./ui/styles";
+import { applyAccessibility } from "./engine/accessibility";
 import { SceneManager, type GameContext } from "./scenes/sceneManager";
 import { TitleScene, VictoryScene } from "./scenes/menuScenes";
 import { BattleScene } from "./scenes/battleScene";
@@ -17,6 +18,7 @@ function boot(): void {
   if (!app || !canvas) throw new Error("Missing #app or #game canvas");
 
   injectStyles();
+  applyAccessibility();
   const renderer = new Renderer(canvas);
   const input = new Input(canvas);
   const animator = new Animator();
