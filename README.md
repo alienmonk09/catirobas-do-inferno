@@ -137,11 +137,11 @@ decisive winner while asserting HP/stat invariants every turn.
 
 ## Roadmap
 
-See **[ROADMAP.md](ROADMAP.md)**. Short version: v0.2 tactics depth and most of
-v0.3 have shipped (facing/back-attacks, line of sight, elevation, the full status
-kit, elemental affinities, party-size progression, the Time Mage, counters,
-objective variety, two larger maps) — next is a secondary-job system, equipment,
-more classes, then narrative/audio.
+See **[ROADMAP.md](ROADMAP.md)** and the working backlog in **[TASKS.md](TASKS.md)**.
+Short version: v0.2 tactics depth and most of v0.3 have shipped (facing/back-attacks,
+line of sight, elevation, the full status kit, elemental affinities, party-size
+progression, the Time Mage, the secondary-job system, counters, objective variety,
+two larger maps) — next is equipment, more classes, terrain effects, then audio.
 
 ## Known minor limitations
 
