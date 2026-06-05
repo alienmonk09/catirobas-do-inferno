@@ -148,7 +148,7 @@ Put the [story](STORY.md) on screen.
 - ⏳ Add a license (currently unlicensed — all rights reserved by default; the owner's call)
 - ✅ CI: `tsc` strict + `vite build` + the full Vitest suite on every push/PR
   (`.github/workflows/ci.yml`)
-- 🚧 CONTRIBUTING guide (✅ `CONTRIBUTING.md`); ⏳ issue templates
+- ✅ CONTRIBUTING guide (`CONTRIBUTING.md`) + GitHub issue templates (bug / idea)
 - ✅ Playable build published via GitHub Pages (`.github/workflows/deploy.yml`, on `main`)
 
 ---
