@@ -1,0 +1,23 @@
+name: CI
+
+# Type-check, build, and run the full test suite on every push and pull request.
+# (deploy.yml handles the GitHub Pages publish on main; this guards correctness.)
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      # `npm run build` runs `tsc --noEmit` (strict type-check) then `vite build`.
+      - run: npm run build
+      - run: npm test
