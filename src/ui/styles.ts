@@ -168,7 +168,7 @@ const CSS = `
 
 /* Pre-battle story scene — classic JRPG text box docked at the bottom. */
 .dialogue {
-  inset: 0; display: flex; align-items: flex-end; justify-content: center;
+  position: absolute; inset: 0; display: flex; align-items: flex-end; justify-content: center;
   background: rgba(6, 8, 16, 0.55); padding: 0 0 36px;
 }
 .dialogue-box {
