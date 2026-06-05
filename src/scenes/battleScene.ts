@@ -7,6 +7,7 @@ import { pathTo, reachable } from "../battle/pathfinding";
 import { aoeTiles, knockbackTo, leapLanding, tilesInRange } from "../battle/targeting";
 import {
   applyTerrainEffect,
+  fallDamage,
   isStopped,
   resolveAutoPotion,
   resolveCounterAttack,
@@ -687,10 +688,15 @@ export class BattleScene implements Scene {
   /** Shove a living single-target skill's victim directly away from the caster. */
   private applyKnockback(skill: SkillDef, caster: Unit, target: Unit): void {
     if (!skill.knockback || skill.aoe !== "single" || !target.alive) return;
-    const dest = knockbackTo(this.grid, this.units, caster.pos, target.pos, skill.knockback);
-    if (samePoint(dest, target.pos)) return;
-    void this.ctx.animator.moveAlong(target.id, [target.pos, dest]);
+    const from = target.pos;
+    const dest = knockbackTo(this.grid, this.units, caster.pos, from, skill.knockback);
+    if (samePoint(dest, from)) return;
+    const drop = this.grid.heightAt(from.x, from.y) - this.grid.heightAt(dest.x, dest.y);
+    void this.ctx.animator.moveAlong(target.id, [from, dest]);
     target.pos = { ...dest };
+    // Shoved off a ledge? Take fall damage on landing.
+    const fall = fallDamage(target, drop);
+    if (fall) this.pushPopup(fall);
   }
 
   private afterAction(): void {

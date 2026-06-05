@@ -362,6 +362,22 @@ export function applyTerrainEffect(unit: Unit, terrain: TerrainType): HitResult 
   }
 }
 
+// A fall hurts only past a meaningful ledge, scaling with how far the unit drops.
+const FALL_THRESHOLD = 2; // levels of height drop before a fall deals damage
+const FALL_FRAC_PER_LEVEL = 0.08; // maxHp fraction lost per level dropped
+
+/**
+ * Damage from being knocked off a ledge: `heightDrop` is the origin tile height
+ * minus the landing tile height (in level units). Returns null if the drop is
+ * below the threshold or the unit is already down.
+ */
+export function fallDamage(unit: Unit, heightDrop: number): HitResult | null {
+  if (!unit.alive || heightDrop < FALL_THRESHOLD) return null;
+  const dmg = Math.max(1, Math.round(unit.stats.maxHp * FALL_FRAC_PER_LEVEL * heightDrop));
+  const { killed } = dealDamage(unit, dmg);
+  return { unitId: unit.id, kind: "damage", amount: dmg, crit: false, killed, revived: false };
+}
+
 /** Restore HP/MP/revive, or grant a buff, from a consumable item. */
 export function resolveItem(
   target: Unit,
