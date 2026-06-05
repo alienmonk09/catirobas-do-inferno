@@ -34,6 +34,7 @@ import { getItem } from "../data/items";
 import { getClass } from "../data/classes";
 import { getVfx, vfxKeyForSkill, vfxKeyForWeapon } from "../data/sprites";
 import { PHASES } from "../data/maps";
+import { dialogueFor } from "../data/dialogue";
 import { MAX_PARTY } from "../data/party";
 import { BattleUI } from "../ui/battleUI";
 import { formatHit } from "../battle/log";
@@ -185,6 +186,11 @@ export class BattleScene implements Scene {
     this.phase = "intro";
     this.ui.hideCombatControls();
     this.ui.hideRotateControl();
+    // Play the chapter's story scene first (if any), then the Begin-Battle banner.
+    this.ui.showDialogue(dialogueFor(this.map.id), () => this.showIntroBanner());
+  }
+
+  private showIntroBanner(): void {
     this.ui.showBanner({
       title: `Phase ${this.phaseIndex + 1}: ${this.map.name}`,
       body: `${this.map.intro}\n\n${this.objectiveText()}`,

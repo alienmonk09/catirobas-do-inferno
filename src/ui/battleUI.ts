@@ -1,4 +1,5 @@
 import type { ItemDef, SkillDef, StatusKind, Unit } from "../core/types";
+import type { DialogueLine } from "../data/dialogue";
 import { getClass } from "../data/classes";
 import { getWeapon } from "../data/weapons";
 import { getSkill } from "../data/skills";
@@ -42,6 +43,7 @@ export class BattleUI {
   private bannerEl: HTMLDivElement;
   private rotateCtl: HTMLDivElement;
   private rotLabel: HTMLDivElement;
+  private dialogueEl: HTMLDivElement;
   private battleLogPanel: HTMLDivElement;
   private battleLogLines: HTMLDivElement;
   private toastTimer = 0;
@@ -59,6 +61,7 @@ export class BattleUI {
     this.toastEl = el("div", { className: "panel toast" });
     this.hintEl = el("div", { className: "hint" });
     this.bannerEl = el("div", { className: "banner" });
+    this.dialogueEl = el("div", { className: "dialogue" });
     this.rotLabel = el("div", { className: "rlabel", text: "0°" });
     this.rotateCtl = el("div", { className: "panel rotate-ctl" });
     this.battleLogLines = el("div", { className: "battle-log-lines" });
@@ -75,6 +78,7 @@ export class BattleUI {
       this.toastEl,
       this.hintEl,
       this.bannerEl,
+      this.dialogueEl,
       this.rotateCtl,
       this.battleLogPanel,
     ]) {
@@ -411,6 +415,78 @@ export class BattleUI {
 
   hideBanner(): void {
     this.bannerEl.style.display = "none";
+  }
+
+  /**
+   * Play a pre-battle story scene one line at a time in a JRPG-style text box.
+   * Clicking the box (or "Next") advances; "Skip" jumps to the end. Calls
+   * `onDone` after the last line (or immediately if there are no lines).
+   */
+  showDialogue(lines: DialogueLine[], onDone: () => void): void {
+    if (lines.length === 0) {
+      onDone();
+      return;
+    }
+    let i = 0;
+    const speakerEl = el("div", { className: "dlg-speaker" });
+    const textEl = el("div", { className: "dlg-text" });
+    const progressEl = el("div", { className: "dlg-progress" });
+    const finish = () => {
+      this.hideDialogue();
+      onDone();
+    };
+    const advance = () => {
+      i += 1;
+      if (i >= lines.length) {
+        finish();
+        return;
+      }
+      render();
+    };
+    const render = () => {
+      const line = lines[i];
+      // The narrator ("—") shows no speaker chip; characters do.
+      const isNarrator = line.speaker === "—";
+      speakerEl.textContent = line.speaker;
+      speakerEl.style.display = isNarrator ? "none" : "block";
+      textEl.textContent = line.text;
+      nextBtn.textContent = i >= lines.length - 1 ? "Begin ▸" : "Next ▸";
+      progressEl.textContent = `${i + 1} / ${lines.length}`;
+    };
+    // The box itself advances on click; the explicit buttons don't double-fire.
+    const box = el("div", { className: "dialogue-box", onClick: () => advance() });
+    box.appendChild(speakerEl);
+    box.appendChild(textEl);
+    const bar = el("div", { className: "dlg-bar" });
+    const skipBtn = el("button", {
+      className: "btn small dlg-skip",
+      text: "Skip",
+      onClick: (e) => {
+        e.stopPropagation();
+        finish();
+      },
+    });
+    const nextBtn = el("button", {
+      className: "btn small dlg-next",
+      text: "Next ▸",
+      onClick: (e) => {
+        e.stopPropagation();
+        advance();
+      },
+    });
+    bar.appendChild(skipBtn);
+    bar.appendChild(progressEl);
+    bar.appendChild(nextBtn);
+    box.appendChild(bar);
+    clear(this.dialogueEl);
+    this.dialogueEl.appendChild(box);
+    this.dialogueEl.style.display = "flex";
+    render();
+  }
+
+  hideDialogue(): void {
+    this.dialogueEl.style.display = "none";
+    clear(this.dialogueEl);
   }
 
   /** Hide all transient combat UI (used when entering banner/AI states). */

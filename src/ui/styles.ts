@@ -160,6 +160,32 @@ const CSS = `
 .banner-card p { font-size: 15px; opacity: 0.88; line-height: 1.5; margin-bottom: 18px; white-space: pre-line; }
 .banner-card .btn { font-size: 16px; padding: 10px 24px; }
 
+/* Pre-battle story scene — classic JRPG text box docked at the bottom. */
+.dialogue {
+  inset: 0; display: flex; align-items: flex-end; justify-content: center;
+  background: rgba(6, 8, 16, 0.55); padding: 0 0 36px;
+}
+.dialogue-box {
+  position: relative;
+  width: min(680px, calc(100% - 48px));
+  background: rgba(12, 14, 26, 0.96);
+  border: 1px solid rgba(140,160,220,0.45);
+  border-radius: 12px; padding: 16px 20px 14px;
+  box-shadow: 0 12px 48px rgba(0,0,0,0.65);
+  cursor: pointer;
+}
+.dlg-speaker {
+  display: inline-block; margin-bottom: 8px;
+  font-size: 14px; font-weight: 700; color: #ffd34d;
+  letter-spacing: 0.3px;
+}
+.dlg-text { font-size: 16px; line-height: 1.55; min-height: 50px; }
+.dlg-bar { display: flex; align-items: center; justify-content: space-between; margin-top: 12px; }
+.dlg-progress { font-size: 12px; opacity: 0.55; font-variant-numeric: tabular-nums; }
+.dlg-skip { opacity: 0.8; }
+.dlg-next { border-color: rgba(210,170,120,0.55); }
+.dlg-next:hover { background: rgba(150,110,70,0.9); }
+
 .phase-select { margin-top: 18px; padding-top: 14px; border-top: 1px solid rgba(120,140,200,0.25); }
 .phase-select .label { display: block; font-size: 12px; opacity: 0.6; margin-bottom: 8px; }
 .phase-row { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
