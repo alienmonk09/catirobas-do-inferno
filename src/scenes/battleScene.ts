@@ -23,12 +23,11 @@ import { hasLineOfSight } from "../battle/los";
 import { directionTo } from "../battle/facing";
 import { advanceToNextActor, endTurn, evaluateOutcome, previewOrder } from "../battle/turnManager";
 import { planEnemyTurn } from "../battle/ai";
-import { forecastSkill, forecastWeapon } from "../battle/forecast";
 import { screenToTile, worldToScreen, rotateTile, type Rotation, type ScreenPoint } from "../engine/iso";
 import { sfx } from "../engine/audio";
 import { startMusic, stopMusic, battleThemeForPhase } from "../engine/music";
 import { actionForKey, getBinding } from "../engine/keybindings";
-import type { ActiveEffect, BattleView, FloatingText, ForecastTag, OverlaySet } from "../engine/renderer";
+import type { ActiveEffect, FloatingText } from "../engine/renderer";
 import { getWeapon } from "../data/weapons";
 import { getSkill } from "../data/skills";
 import { getItem } from "../data/items";
@@ -40,6 +39,7 @@ import { MAX_PARTY } from "../data/party";
 import { BattleUI } from "../ui/battleUI";
 import { formatHit } from "../battle/log";
 import type { GameContext, Scene } from "./sceneManager";
+import { POPUP_COLORS, SHAKE_DUR, LUNGE_DUR, buildView } from "./battleView";
 
 type Phase =
   | "intro"
@@ -53,15 +53,6 @@ type Phase =
   | "enemy"
   | "resolving"
   | "over";
-
-const POPUP_COLORS = {
-  damage: "#ff7a7a",
-  crit: "#ffd34d",
-  heal: "#7fe39a",
-  mp: "#7fb0ff",
-  revive: "#ffffff",
-  status: "#ffd34d",
-};
 
 export class BattleScene implements Scene {
   private grid: Grid;
@@ -90,8 +81,6 @@ export class BattleScene implements Scene {
   private lunge: { id: string; tx: number; ty: number; age: number } | null = null;
   private time = 0;
 
-  private static readonly SHAKE_DUR = 0.22;
-  private static readonly LUNGE_DUR = 0.18;
   private static readonly LOG_CAP = 60;
 
   private log: string[] = [];
@@ -252,14 +241,6 @@ export class BattleScene implements Scene {
       default:
         return "Objective: defeat all enemies";
     }
-  }
-
-  /** Target tiles to highlight permanently for seize/defend/escort objectives. */
-  private objectiveTiles(): Point[] {
-    const obj = this.map.objective;
-    if (!obj) return [];
-    if (obj.kind === "seize" || obj.kind === "defend" || obj.kind === "escort") return [{ x: obj.x, y: obj.y }];
-    return [];
   }
 
   private beginNextTurn(): void {
@@ -1130,7 +1111,7 @@ export class BattleScene implements Scene {
     const target = this.units.find((u) => u.id === res.unitId);
     if (!target) return;
     // Visual feedback bookkeeping.
-    if (res.kind === "damage") this.hitShake.set(res.unitId, BattleScene.SHAKE_DUR);
+    if (res.kind === "damage") this.hitShake.set(res.unitId, SHAKE_DUR);
     if (res.killed) this.deaths.set(res.unitId, 0);
     if (res.revived) this.deaths.delete(res.unitId);
     let text: string;
@@ -1208,7 +1189,7 @@ export class BattleScene implements Scene {
     for (const [id, age] of this.deaths) this.deaths.set(id, age + dt);
     if (this.lunge) {
       this.lunge.age += dt;
-      if (this.lunge.age >= BattleScene.LUNGE_DUR) this.lunge = null;
+      if (this.lunge.age >= LUNGE_DUR) this.lunge = null;
     }
 
     // Hover + target info.
@@ -1225,157 +1206,7 @@ export class BattleScene implements Scene {
       this.ui.setTargetInfo(null);
     }
 
-    this.ctx.renderer.render(this.buildView(origin));
-  }
-
-  private buildView(origin: ScreenPoint): BattleView {
-    const overlays: OverlaySet = { move: [], attack: [], aoe: [], path: [], objective: this.objectiveTiles() };
-    if (this.phase === "move") {
-      overlays.move = this.rangeTiles;
-      if (this.hoverTile && this.inRangeTiles(this.hoverTile) && this.active) {
-        const { solid, passThrough } = moveBlockers(this.units, this.active);
-        const zoc = zoneOfControl(this.units, this.active.team);
-        const reach = reachable(this.grid, this.active.pos, this.active.stats.move, this.active.stats.jump, solid, passThrough, zoc);
-        overlays.path = pathTo(reach, this.hoverTile) ?? [];
-      }
-    } else if (this.phase === "attackTarget" || this.phase === "itemTarget" || this.phase === "recruitTarget") {
-      overlays.attack = this.rangeTiles;
-    } else if (this.phase === "skillTarget") {
-      overlays.attack = this.rangeTiles;
-      if (this.hoverTile && this.selectedSkill && this.inRangeTiles(this.hoverTile)) {
-        overlays.aoe = aoeTiles(this.grid, this.hoverTile, this.selectedSkill.aoe);
-      }
-    }
-    let forecast: ForecastTag | null = null;
-    if (this.active && this.hoverTile && this.inRangeTiles(this.hoverTile)) {
-      forecast = this.computeForecast(this.hoverTile);
-    }
-
-    return {
-      grid: this.grid,
-      units: this.units,
-      origin,
-      rot: this.rot,
-      activeUnitId: this.active?.id ?? null,
-      hoverTile: this.hoverTile,
-      overlays,
-      popups: this.popups,
-      animPos: this.ctx.animator.animPos,
-      effects: this.effects,
-      unitOffsets: this.computeUnitOffsets(),
-      deathFade: this.deaths,
-      forecast,
-      time: this.time,
-    };
-  }
-
-  /** Per-unit pixel offsets for hit shake and attack lunge. */
-  private computeUnitOffsets(): Map<string, { dx: number; dy: number }> {
-    const offsets = new Map<string, { dx: number; dy: number }>();
-    for (const [id, remaining] of this.hitShake) {
-      const amp = (remaining / BattleScene.SHAKE_DUR) * 3;
-      offsets.set(id, { dx: Math.sin(this.time * 70) * amp, dy: 0 });
-    }
-    if (this.lunge) {
-      const att = this.units.find((u) => u.id === this.lunge!.id);
-      if (att) {
-        const za = this.grid.heightAt(att.pos.x, att.pos.y);
-        const a = this.projectTile(att.pos.x, att.pos.y, za);
-        const zt = this.grid.heightAt(this.lunge.tx, this.lunge.ty);
-        const t = this.projectTile(this.lunge.tx, this.lunge.ty, zt);
-        let vx = t.sx - a.sx;
-        let vy = t.sy - a.sy;
-        const m = Math.hypot(vx, vy) || 1;
-        vx /= m;
-        vy /= m;
-        const f = Math.sin(Math.min(1, this.lunge.age / BattleScene.LUNGE_DUR) * Math.PI) * 7;
-        const prev = offsets.get(this.lunge.id) ?? { dx: 0, dy: 0 };
-        offsets.set(this.lunge.id, { dx: prev.dx + vx * f, dy: prev.dy + vy * f });
-      }
-    }
-    return offsets;
-  }
-
-  /** Damage/heal preview for the hovered target, given the current action. */
-  private computeForecast(tile: Point): ForecastTag | null {
-    if (!this.active) return null;
-    const occupants = this.units.filter((u) => samePoint(u.pos, tile));
-    const enemy = occupants.find((u) => u.alive && u.team !== this.active!.team);
-    const ally = occupants.find((u) => u.alive && u.team === this.active!.team);
-    const deadAlly = occupants.find((u) => !u.alive && u.team === this.active!.team);
-
-    if (this.phase === "attackTarget") {
-      if (!enemy) return null;
-      const f = forecastWeapon(this.active, enemy, getWeapon(this.active.weaponId), this.posCtx(enemy.pos));
-      return { tile, text: f.lethal ? `${f.amount} · KO` : `${f.amount}`, color: POPUP_COLORS.damage, strong: f.lethal };
-    }
-
-    if (this.phase === "skillTarget" && this.selectedSkill) {
-      const s = this.selectedSkill;
-      if (s.effect === "damage") {
-        if (!enemy) return null;
-        // A leap skill resolves from the landing tile next to the target, so forecast
-        // its flank/elevation from there rather than the caster's current tile.
-        let ctx = this.posCtx(enemy.pos);
-        if (s.leap) {
-          const adjacent = manhattan(this.active.pos, enemy.pos) <= 1;
-          const land = adjacent ? null : leapLanding(this.grid, this.units, this.active, enemy.pos);
-          // Boxed-in, non-adjacent leap target: the cast would be rejected ("no room
-          // to land"), so don't show a misleading forecast.
-          if (!adjacent && !land) return null;
-          if (land) {
-            ctx = {
-              fromPos: { ...land },
-              heightDelta: this.grid.heightAt(land.x, land.y) - this.grid.heightAt(enemy.pos.x, enemy.pos.y),
-            };
-          }
-        }
-        const f = forecastSkill(this.active, enemy, s, ctx);
-        let text = f.lethal ? `${f.amount} · KO` : `${f.amount}`;
-        if (f.affinity === "weak") text += " · weak";
-        else if (f.affinity === "resist") text += " · resist";
-        return { tile, text, color: POPUP_COLORS.damage, strong: f.lethal || f.affinity === "weak" };
-      }
-      if (s.effect === "heal") {
-        if (!ally) return null;
-        const f = forecastSkill(this.active, ally, s);
-        const real = Math.min(f.amount, ally.stats.maxHp - ally.stats.hp);
-        return real > 0 ? { tile, text: `+${real}`, color: POPUP_COLORS.heal, strong: false } : null;
-      }
-      if (s.effect === "revive") {
-        if (!deadAlly) return null;
-        return { tile, text: "Revive", color: POPUP_COLORS.revive, strong: false };
-      }
-      if (s.effect === "buff" || s.effect === "debuff") {
-        const t = s.effect === "buff" ? ally : enemy;
-        if (!t || !s.statusKind) return null;
-        return { tile, text: s.statusKind, color: POPUP_COLORS.status, strong: false };
-      }
-      return null;
-    }
-
-    if (this.phase === "itemTarget" && this.selectedItemId) {
-      const item = getItem(this.selectedItemId);
-      if (item.effect === "healHp") {
-        if (!ally) return null;
-        const real = Math.min(item.amount, ally.stats.maxHp - ally.stats.hp);
-        return real > 0 ? { tile, text: `+${real}`, color: POPUP_COLORS.heal, strong: false } : null;
-      }
-      if (item.effect === "healMp") {
-        if (!ally) return null;
-        const real = Math.min(item.amount, ally.stats.maxMp - ally.stats.mp);
-        return real > 0 ? { tile, text: `+${real} MP`, color: POPUP_COLORS.mp, strong: false } : null;
-      }
-      if (item.effect === "revive") {
-        if (!deadAlly) return null;
-        return { tile, text: "Revive", color: POPUP_COLORS.revive, strong: false };
-      }
-      if (item.effect === "buff") {
-        if (!ally || !item.statusKind) return null;
-        return { tile, text: item.statusKind, color: POPUP_COLORS.status, strong: false };
-      }
-    }
-    return null;
+    this.ctx.renderer.render(buildView(this, origin));
   }
 
   dispose(): void {
