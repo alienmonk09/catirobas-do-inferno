@@ -204,7 +204,9 @@ export function planEnemyTurn(unit: Unit, units: Unit[], grid: Grid): AIPlan {
     for (const skill of damageSkills) {
       const cells = tilesInRange(grid, stand, skill.range, false);
       for (const center of cells) {
-        if (skill.range > 1 && !hasLineOfSight(grid, stand, center)) continue;
+        // Leap skills jump over obstacles, so they ignore line of sight (matching
+        // the player targeting path); other ranged skills still need a clear line.
+        if (skill.range > 1 && !skill.leap && !hasLineOfSight(grid, stand, center)) continue;
         const affected = aoeTiles(grid, center, skill.aoe);
         let total = 0;
         let kills = 0;
