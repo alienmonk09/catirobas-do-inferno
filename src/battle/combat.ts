@@ -2,6 +2,7 @@ import type { ActiveStatus, Element, ItemEffect, SkillDef, StatusKind, Unit, Wea
 import { RNG } from "../core/rng";
 import { attackAngle, type AttackAngle } from "./facing";
 import { getRace } from "../data/races";
+import { getClass } from "../data/classes";
 
 export type HitKind = "damage" | "heal" | "mp" | "revive" | "status";
 
@@ -189,6 +190,30 @@ export function resolveWeaponAttack(
   const { value, crit } = applyVarianceAndCrit(base, rng, weapon.kind === "physical", critChance);
   const { killed } = dealDamage(target, value);
   return { unitId: target.id, kind: "damage", amount: value, crit, killed, revived: false };
+}
+
+/** True if the unit's class has the Counter reaction (strikes back at melee). */
+export function canCounter(unit: Unit): boolean {
+  return getClass(unit.classId).reaction === "counter";
+}
+
+/**
+ * A counterattack from `defender` back at `attacker`, or null if it can't happen
+ * (defender can't counter, either is down, or the attacker is outside the
+ * defender's weapon reach). Callers gate this to melee provocations. The weapon
+ * is passed in so combat stays free of the weapon data table.
+ */
+export function resolveCounterAttack(
+  defender: Unit,
+  attacker: Unit,
+  defenderWeapon: WeaponDef,
+  rng: RNG,
+  ctx?: AttackContext,
+): HitResult | null {
+  if (!defender.alive || !attacker.alive || !canCounter(defender)) return null;
+  const dist = Math.abs(defender.pos.x - attacker.pos.x) + Math.abs(defender.pos.y - attacker.pos.y);
+  if (dist === 0 || dist > defenderWeapon.range) return null;
+  return resolveWeaponAttack(defender, attacker, defenderWeapon, rng, ctx);
 }
 
 export function addStatus(unit: Unit, status: ActiveStatus): void {

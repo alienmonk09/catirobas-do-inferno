@@ -7,6 +7,7 @@ import { pathTo, reachable } from "../battle/pathfinding";
 import { aoeTiles, tilesInRange } from "../battle/targeting";
 import {
   isStopped,
+  resolveCounterAttack,
   resolveItem,
   resolveSkillOnTarget,
   resolveWeaponAttack,
@@ -471,7 +472,24 @@ export class BattleScene implements Scene {
     this.pushEffect(target.pos, vfxKeyForWeapon(weapon));
     this.pushPopup(res);
     this.awardForAction(this.active, { offensive: true, killed: res.killed });
+    // A surviving melee-struck defender may strike back.
+    this.tryCounter(target, this.active, weapon.range);
     this.afterAction();
+  }
+
+  /** Resolve a counterattack from `defender` against `attacker` (melee only). */
+  private tryCounter(defender: Unit, attacker: Unit, incomingWeaponRange: number): void {
+    if (incomingWeaponRange !== 1 || !defender.alive) return;
+    const w = getWeapon(defender.weaponId);
+    defender.facing = directionTo(defender.pos, attacker.pos);
+    const ctx: AttackContext = {
+      heightDelta: this.grid.heightAt(defender.pos.x, defender.pos.y) - this.grid.heightAt(attacker.pos.x, attacker.pos.y),
+    };
+    const res = resolveCounterAttack(defender, attacker, w, this.rng, ctx);
+    if (!res) return;
+    this.lunge = { id: defender.id, tx: attacker.pos.x, ty: attacker.pos.y, age: 0 };
+    this.pushEffect(attacker.pos, vfxKeyForWeapon(w));
+    this.pushPopup(res);
   }
 
   private trySkill(tile: Point): void {
@@ -552,6 +570,12 @@ export class BattleScene implements Scene {
       this.endBattle(battleWinner(this.units)!);
       return;
     }
+    // The active unit can be felled by a counterattack — end its turn instead of
+    // re-opening a menu over a corpse.
+    if (!this.active?.alive) {
+      this.endActiveTurn();
+      return;
+    }
     this.refreshMenu();
   }
 
@@ -598,6 +622,8 @@ export class BattleScene implements Scene {
         const res = resolveWeaponAttack(unit, target, weapon, this.rng, heightDelta(target.pos));
         this.pushEffect(target.pos, vfxKeyForWeapon(weapon));
         this.pushPopup(res);
+        // The struck player unit may counter the attacker.
+        this.tryCounter(target, unit, weapon.range);
       }
     } else if (plan.action.kind === "skill" && plan.action.skillId && plan.action.targetTile) {
       const skill = getSkill(plan.action.skillId);

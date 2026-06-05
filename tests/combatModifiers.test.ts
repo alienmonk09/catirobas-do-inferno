@@ -5,12 +5,15 @@ import {
   defenseDamageMult,
   elementAffinity,
   elementDamageMult,
+  canCounter,
+  resolveCounterAttack,
   hasStatus,
   isStopped,
   tickStatuses,
   addStatus,
   type AttackContext,
 } from "../src/battle/combat";
+import { RNG } from "../src/core/rng";
 import { forecastWeapon, forecastSkill } from "../src/battle/forecast";
 import { createUnit } from "../src/core/unit";
 import type { Unit } from "../src/core/types";
@@ -161,6 +164,48 @@ describe("elemental affinity", () => {
     expect(fElf.affinity).toBe("weak");
     expect(fDwarf.affinity).toBe("resist");
     expect(fHuman.affinity).toBe("neutral");
+  });
+});
+
+describe("Counter reaction", () => {
+  const at = (classId: Unit["classId"], team: "player" | "enemy", pos: { x: number; y: number }) =>
+    createUnit({ name: classId, team, classId, pos });
+
+  it("knights and monks can counter; archers and mages cannot", () => {
+    expect(canCounter(at("knight", "player", { x: 0, y: 0 }))).toBe(true);
+    expect(canCounter(at("monk", "player", { x: 0, y: 0 }))).toBe(true);
+    expect(canCounter(at("archer", "player", { x: 0, y: 0 }))).toBe(false);
+    expect(canCounter(at("blackMage", "player", { x: 0, y: 0 }))).toBe(false);
+  });
+
+  it("a struck knight strikes back at an adjacent attacker", () => {
+    const defender = at("knight", "player", { x: 0, y: 0 });
+    const attacker = at("knight", "enemy", { x: 1, y: 0 });
+    const before = attacker.stats.hp;
+    const res = resolveCounterAttack(defender, attacker, getWeapon("sword"), new RNG(5));
+    expect(res).not.toBeNull();
+    expect(res!.kind).toBe("damage");
+    expect(attacker.stats.hp).toBe(before - res!.amount);
+  });
+
+  it("does not counter when the defender's class lacks the reaction", () => {
+    const defender = at("archer", "player", { x: 0, y: 0 });
+    const attacker = at("knight", "enemy", { x: 1, y: 0 });
+    expect(resolveCounterAttack(defender, attacker, getWeapon("bow"), new RNG(5))).toBeNull();
+  });
+
+  it("does not counter a foe outside the defender's weapon reach", () => {
+    const defender = at("knight", "player", { x: 0, y: 0 });
+    const attacker = at("knight", "enemy", { x: 3, y: 0 }); // sword range 1, distance 3
+    expect(resolveCounterAttack(defender, attacker, getWeapon("sword"), new RNG(5))).toBeNull();
+  });
+
+  it("does not counter when the defender is dead", () => {
+    const defender = at("knight", "player", { x: 0, y: 0 });
+    defender.alive = false;
+    defender.stats.hp = 0;
+    const attacker = at("knight", "enemy", { x: 1, y: 0 });
+    expect(resolveCounterAttack(defender, attacker, getWeapon("sword"), new RNG(5))).toBeNull();
   });
 });
 

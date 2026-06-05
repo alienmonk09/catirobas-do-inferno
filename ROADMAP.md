@@ -74,11 +74,12 @@ The next push: grow the party, make the UI teach itself, and widen the campaign.
 - ⏳ **Equipment slots** — armor & accessories (stat mods, status immunity, affinity)
 - 💭 Terrain hazards & special tiles (lava DoT, deep water, traps, destructible cover)
 
-## v0.4 — Battlefield systems ⏳
+## v0.4 — Battlefield systems 🚧
 
 Classic mechanics that change how a fight is played, not just its numbers.
 
-- ⏳ **Reaction abilities** — counterattack, auto-potion, cover an ally (FFT reactions)
+- 🚧 **Reaction abilities** — ✅ Counter (Knight/Monk strike back at melee attackers);
+  ⏳ auto-potion, cover an ally, and equippable reactions (FFT-style) still to come
 - ⏳ **Knockback / forced movement** — shoves, pulls, throws; fall damage off ledges
 - ⏳ **Zone of control & engagement** — passing an enemy's reach has a cost
 - ⏳ **Spell charge time** — powerful magic resolves a few CT ticks later (FFT casting),

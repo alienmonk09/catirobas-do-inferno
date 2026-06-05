@@ -5,7 +5,7 @@ import { createUnit } from "../src/core/unit";
 import { createStartingParty } from "../src/data/party";
 import { Grid, samePoint } from "../src/battle/grid";
 import { aoeTiles } from "../src/battle/targeting";
-import { resolveSkillOnTarget, resolveWeaponAttack } from "../src/battle/combat";
+import { resolveCounterAttack, resolveSkillOnTarget, resolveWeaponAttack } from "../src/battle/combat";
 import { advanceToNextActor, battleWinner, endTurn } from "../src/battle/turnManager";
 import { planEnemyTurn } from "../src/battle/ai";
 import { getWeapon } from "../src/data/weapons";
@@ -56,7 +56,10 @@ function applyPlan(unit: Unit, units: Unit[], grid: Grid, rng: RNG): void {
   if (plan.action.kind === "attack" && plan.action.targetTile) {
     const target = units.find((u) => u.alive && samePoint(u.pos, plan.action.targetTile!));
     if (target && target.team !== unit.team) {
-      resolveWeaponAttack(unit, target, getWeapon(unit.weaponId), rng);
+      const weapon = getWeapon(unit.weaponId);
+      resolveWeaponAttack(unit, target, weapon, rng);
+      // Melee provokes a counter from a surviving defender.
+      if (weapon.range === 1) resolveCounterAttack(target, unit, getWeapon(target.weaponId), rng);
     }
   } else if (plan.action.kind === "skill" && plan.action.skillId && plan.action.targetTile) {
     const skill = getSkill(plan.action.skillId);

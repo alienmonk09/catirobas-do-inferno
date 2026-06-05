@@ -55,6 +55,8 @@ npm test           # run the Vitest suite
   tall terrain block the shot. Watch for **status pips** above a unit: Poison and
   Regen tick HP each turn, Stop costs turns, Protect/Shell blunt physical/magical
   damage, Haste/Slow bend turn speed.
+- **Reactions.** Melee bruisers — **Knight** and **Monk** — strike back at any
+  adjacent foe that hits them in melee, so charging a held line has a price.
 - Win by defeating all enemies. Between phases, the **Party Camp** screen lets
   you change classes, swap weapons, spend JP to learn new skills, and **recruit
   reinforcements** from the rest of the roster as the campaign opens deployment
