@@ -14,8 +14,8 @@ Living task list for the autonomous build. The roadmap (`ROADMAP.md`) is the
 
 ## Current state (resume point)
 - Branch: **`feat/tactics-depth-and-progression`** (off `main`; not merged, not pushed).
-- Build: clean. Tests: **677 passing across 29 files**. Working tree: clean.
-- Last commit: `a6934ed feat(v0.3): Geomancer class`.
+- Build: clean. Tests: **755 passing across 32 files**. Working tree: clean.
+- Last commit: `f7bedd2 feat(v0.6): background music`.
 - Commits: v0.2+v0.3 base → Counter → Time Mage → objectives(rout/defeat/survive)
   → secondary job → **audio → equipment slots → terrain effects → Summoner →
   objective variety(seize/defend)**.
@@ -54,24 +54,26 @@ Living task list for the autonomous build. The roadmap (`ROADMAP.md`) is the
   Strike); pure `knockbackTo` helper, player+AI; shove-into-lava synergy. `eb86c87`.
 - **Geomancer** (v0.3, 10th class) — durable earth control caster (Boulder/Tremor/Quagmire/
   Petrify). `a6934ed`.
-- Combat smoke-tested in-browser (Cinder Fields defend → Victory at 7/7, no page errors).
+- **Lancer** (v0.3, 11th class — completes the named-class roster) — Jump leap-strike (LOS-
+  ignoring, lands adjacent; validates victim+landing, routs-on-no-cost). `4297798` (+`f51b1f9`).
+- **Difficulty modes** (v0.5) — Easy/Normal/Hard scale enemy level at New Game; save back-compat. `2eb3d3f`.
+- **Music** (v0.6) — soft code-synth battle/camp/victory themes on the SFX engine. `f7bedd2`.
+- Combat smoke-tested in-browser twice (Cinder Fields defend → Victory at 7/7, with music; no errors).
 
-## Next up (prioritized)
-1. **Lancer** (v0.3, last named class) — Jump: leap to an empty tile adjacent to a target
-   (ignoring intervening units/height), bonus damage on landing. Custom leap resolution in
-   battleScene (reuse the knockback displacement pattern); spear weapon (range 2); sprite+icons.
-2. **Skill charge time** (v0.4, FFT casting) — powerful magic resolves a few CT ticks later,
-   charging indicator + interrupt. Deeper turn-loop change (turnManager CT state) — higher risk.
-3. **Zone of control & engagement** — passing an enemy's reach has a cost (touches pathfinding).
-4. **Cover-ally reaction** — intercept a hit for an adjacent ally (needs attack target-redirect
-   + honest forecast integration; deferred from the reaction batch).
-5. **Shop & economy** (v0.5) — gil drops + buy at camp. NOTE: equipment/weapons are currently
-   *freely* equippable (no ownership), so a meaningful shop needs an ownership/inventory gate
-   first — decide that model before building. Consumable-only shop is the cheap version.
-6. **Difficulty modes** (v0.5) — scale enemy level/stats at battle setup; self-contained, low risk.
-7. **Music** (v0.6) — code-synth ambient loop per phase on the audio module (can't verify sound).
-8. Escort objective (needs NPC unit concept). Job mastery, recruitable enemies, dialogue,
-   fog of war — see `ROADMAP.md`.
+## Next up (prioritized — all that remain are higher-risk or need a design decision)
+1. **Shop & economy** (v0.5) — START with gil drops (per enemy defeat, level-scaled) + a
+   CONSUMABLES-only camp shop (low risk, self-contained; equipment/weapons stay free for now).
+   A real equipment/weapon shop needs an OWNERSHIP gate (own-before-equip), which reworks the
+   equip dropdowns — do that as a follow-up.
+2. **Cover-ally reaction** — intercept a hit for an adjacent ally. Needs: `ClassDef.reaction`
+   → `reactions[]` refactor (so a tank can have counter + cover), an attack target-redirect at
+   resolution (weapon + single-skill, player + AI paths), and ideally honest forecast.
+3. **Zone of control** — entering a tile adjacent to a living enemy stops further movement
+   (BFS change in pathfinding `reachable`). ⚠ may change the AI-vs-AI sim dynamics — watch that test.
+4. **Skill charge time** (v0.4, FFT casting) — powerful magic resolves a few CT ticks later;
+   charging state on Unit + turn-loop awareness + UI + interrupt. Highest risk (turn loop).
+5. Escort objective (needs NPC unit concept). Job mastery, recruitable enemies, dialogue/
+   portraits, fog of war — see `ROADMAP.md`.
 
 ## Known issues / cleanups
 - AI doesn't account for walking into a Counter when scoring attacks (minor; counters

@@ -68,9 +68,9 @@ The next push: grow the party, make the UI teach itself, and widen the campaign.
 - ✅ **Secondary job / ability pool** — equip a second class's skill set at the camp;
   its learned skills are usable alongside the primary's (FFT-style). Learn across both
   jobs with JP; the first sub-job skill is granted on equip.
-- 🚧 **More classes** — ✅ Time Mage (tempo control), ✅ Summoner (wide-AoE glass cannon),
-  and ✅ Geomancer (durable earth control caster), all retrainable at camp; ⏳ Lancer
-  (jump) still to come
+- ✅ **More classes** — Time Mage (tempo control), Summoner (wide-AoE glass cannon),
+  Geomancer (durable earth control caster), and Lancer (Jump leap-strike), all
+  retrainable at camp. (11 classes total.)
 - ✅ **Elemental affinities** — races carry fire/bolt/nature weaknesses & resistances
   that scale spell damage (×1.5 / ×0.5); folded into the shared forecast, which flags
   *weak/resist*, so the AI aims spells at weaknesses too. *(Equipment/terrain affinities later.)*
@@ -106,7 +106,8 @@ Classic mechanics that change how a fight is played, not just its numbers.
 - ⏳ **Recruitable / capturable units** — turn beaten foes or story NPCs into party members
 - ⏳ **Shop & economy** — gil drops, buy/sell weapons, armor, items between chapters
 - ⏳ **Job mastery** — master a class to unlock the next; passives carried across jobs
-- ⏳ **Difficulty modes & AI personalities** — aggressive/defensive/support archetypes
+- 🚧 **Difficulty modes & AI personalities** — ✅ Easy/Normal/Hard (scale enemy levels at
+  New Game); ⏳ AI personalities (aggressive/defensive/support archetypes)
 - 💭 **Casualty / permadeath option** — Fire-Emblem-style classic mode
 - 💭 **Bravery / Faith / morale** — unit traits that scale reactions and magic
 - 💭 **Weapon/class triangle** — rock-paper-scissors matchups for readable counters
@@ -117,8 +118,8 @@ Put the [story](STORY.md) on screen.
 
 - ⏳ In-engine dialogue / cutscene system; per-chapter story beats
 - ⏳ Character portraits and named-enemy intros
-- 🚧 **Audio** — ✅ combat SFX (WebAudio code-synth: hit/crit/heal/magic/KO/select) + HUD
-  mute toggle; ⏳ music per phase
+- ✅ **Audio** — combat SFX (WebAudio code-synth: hit/crit/heal/magic/KO/select) + HUD mute
+  toggle, plus soft code-synth music (battle/camp/victory themes) sharing the same engine
 - 💭 Light overworld / chapter-select map; branching paths (Tactics Ogre-style)
 
 ## v1.0 — Release polish 💭
