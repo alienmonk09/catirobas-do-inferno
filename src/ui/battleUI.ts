@@ -3,7 +3,7 @@ import type { DialogueLine } from "../data/dialogue";
 import { getClass } from "../data/classes";
 import { getWeapon } from "../data/weapons";
 import { getSkill } from "../data/skills";
-import { getCharacterSprite, getItemSprite, getSkillSprite, getWeaponSprite } from "../data/sprites";
+import { getCharacterSprite, getItemSprite, getSkillSprite, getWeaponSprite, speakerSprite } from "../data/sprites";
 import { isMuted, toggleMuted } from "../engine/audio";
 import { el, clear } from "./dom";
 import { iconImg, portraitImg } from "./icons";
@@ -443,19 +443,33 @@ export class BattleUI {
       }
       render();
     };
+    const portraitEl = el("div", { className: "dlg-portrait" });
+    const speakerRow = el("div", { className: "dlg-speaker-row" });
+    speakerRow.appendChild(portraitEl);
+    speakerRow.appendChild(speakerEl);
     const render = () => {
       const line = lines[i];
-      // The narrator ("—") shows no speaker chip; characters do.
+      // The narrator ("—") shows no speaker chip or portrait; characters do.
       const isNarrator = line.speaker === "—";
       speakerEl.textContent = line.speaker;
       speakerEl.style.display = isNarrator ? "none" : "block";
+      // Portrait: show hero sprite when available, hide otherwise.
+      const sprite = speakerSprite(line.speaker);
+      clear(portraitEl);
+      if (sprite) {
+        portraitEl.appendChild(iconImg(sprite, 48));
+        portraitEl.style.display = "flex";
+      } else {
+        portraitEl.style.display = "none";
+      }
+      speakerRow.style.display = isNarrator ? "none" : "flex";
       textEl.textContent = line.text;
       nextBtn.textContent = i >= lines.length - 1 ? "Begin ▸" : "Next ▸";
       progressEl.textContent = `${i + 1} / ${lines.length}`;
     };
     // The box itself advances on click; the explicit buttons don't double-fire.
     const box = el("div", { className: "dialogue-box", onClick: () => advance() });
-    box.appendChild(speakerEl);
+    box.appendChild(speakerRow);
     box.appendChild(textEl);
     const bar = el("div", { className: "dlg-bar" });
     const skipBtn = el("button", {

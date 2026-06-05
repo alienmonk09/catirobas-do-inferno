@@ -7,6 +7,7 @@ import { ITEM_SPRITES } from "./items";
 import { SKILL_SPRITES } from "./skills";
 import { EQUIPMENT_SPRITES } from "./equipment";
 import { VFX } from "./vfx";
+import { ROSTER } from "../party";
 
 export type VfxKey =
   | "physical"
@@ -30,6 +31,18 @@ export function getCharacterSprite(classId: ClassId): SpriteDef {
 /** A roster hero's unique sprite, or undefined if none is defined for that id. */
 export function getHeroSprite(id: string): SpriteDef | undefined {
   return HERO_SPRITES[id];
+}
+
+/**
+ * Resolve a dialogue speaker name to their portrait sprite.
+ * Matches ROSTER heroes case-insensitively. Returns null for the narrator ("—"),
+ * unknown speakers (e.g. "Maldrath"), or heroes with no sprite defined.
+ */
+export function speakerSprite(name: string): SpriteDef | null {
+  const lower = name.toLowerCase();
+  const hero = ROSTER.find((h) => h.name.toLowerCase() === lower);
+  if (!hero) return null;
+  return HERO_SPRITES[hero.id] ?? null;
 }
 /**
  * The sprite to draw for a unit. Player units carry their roster id, so they get

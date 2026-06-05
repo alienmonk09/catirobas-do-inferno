@@ -174,8 +174,22 @@ const CSS = `
   box-shadow: 0 12px 48px rgba(0,0,0,0.65);
   cursor: pointer;
 }
+.dlg-speaker-row {
+  display: flex; align-items: center; gap: 10px; margin-bottom: 8px;
+}
+.dlg-portrait {
+  display: flex; align-items: center; justify-content: center;
+  width: 52px; height: 64px; flex: none;
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(140, 160, 220, 0.35);
+  border-radius: 6px; overflow: hidden;
+  image-rendering: pixelated;
+}
+.dlg-portrait .icon {
+  image-rendering: pixelated; image-rendering: crisp-edges;
+}
 .dlg-speaker {
-  display: inline-block; margin-bottom: 8px;
+  display: inline-block;
   font-size: 14px; font-weight: 700; color: #ffd34d;
   letter-spacing: 0.3px;
 }
