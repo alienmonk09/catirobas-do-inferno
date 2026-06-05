@@ -45,11 +45,11 @@ export const outerRamparts: MapDef = {
     { x: 8, y: 11 },
   ],
   enemies: [
-    { name: "Rampart Captain", classId: "knight", level: 7, weaponId: "greatsword", skillIds: ["powerStrike", "guard"], pos: { x: 3, y: 1 }, personality: "aggressive", raceId: "dwarf" },
-    { name: "Siege Mage", classId: "blackMage", level: 7, weaponId: "rod", skillIds: ["fire", "bolt", "stop"], pos: { x: 7, y: 1 }, raceId: "elf" },
-    { name: "Wall Sentry", classId: "archer", level: 6, weaponId: "longbow", skillIds: ["aimedShot", "cripple"], pos: { x: 8, y: 2 }, personality: "defensive", raceId: "halfling" },
-    { name: "Wall Watcher", classId: "archer", level: 6, weaponId: "bow", skillIds: ["aimedShot"], pos: { x: 4, y: 2 }, personality: "defensive", raceId: "halfling" },
-    { name: "Gate Cleric", classId: "whiteMage", level: 6, weaponId: "staff", skillIds: ["cure", "protect", "haste"], pos: { x: 6, y: 2 }, personality: "support", raceId: "human" },
-    { name: "Gate Brute", classId: "monk", level: 7, weaponId: "knuckles", skillIds: ["palmStrike", "earthShake"], pos: { x: 5, y: 3 }, raceId: "orc" },
+    { name: "Rampart Captain", classId: "knight", level: 10, weaponId: "greatsword", skillIds: ["powerStrike", "guard"], pos: { x: 3, y: 1 }, personality: "aggressive", raceId: "dwarf" },
+    { name: "Siege Mage", classId: "blackMage", level: 10, weaponId: "rod", skillIds: ["fire", "bolt", "stop"], pos: { x: 7, y: 1 }, raceId: "gnome" },
+    { name: "Wall Sentry", classId: "archer", level: 9, weaponId: "longbow", skillIds: ["aimedShot", "cripple"], pos: { x: 8, y: 2 }, personality: "defensive", raceId: "halfling" },
+    { name: "Wall Watcher", classId: "archer", level: 9, weaponId: "bow", skillIds: ["aimedShot"], pos: { x: 4, y: 2 }, personality: "defensive", raceId: "halfling" },
+    { name: "Gate Cleric", classId: "whiteMage", level: 9, weaponId: "staff", skillIds: ["cure", "protect", "haste"], pos: { x: 6, y: 2 }, personality: "support", raceId: "human" },
+    { name: "Gate Breaker", classId: "berserker", level: 10, weaponId: "warAxe", skillIds: ["rampage", "cleave"], pos: { x: 5, y: 3 }, personality: "aggressive", raceId: "saurian" },
   ],
 };

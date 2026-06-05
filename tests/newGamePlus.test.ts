@@ -107,11 +107,11 @@ describe("startNgPlus", () => {
     expect(state.party[0].level).not.toBe(firstUnitLevel);
   });
 
-  it("keeps gil", () => {
+  it("keeps gold", () => {
     const state = createGameState();
-    state.gil = 1500;
+    state.gold = 1500;
     startNgPlus(state);
-    expect(state.gil).toBe(1500);
+    expect(state.gold).toBe(1500);
   });
 
   it("keeps ownedEquipment", () => {

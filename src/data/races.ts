@@ -43,6 +43,30 @@ export const RACES: Record<RaceId, RaceDef> = {
     weak: ["bolt"],
     resist: ["nature"],
   },
+  gnome: {
+    id: "gnome",
+    name: "Gnome",
+    description: "Pint-sized arcane tinkerer — deep mana and sharp wits, but slight of frame. Insulated against shocks; a stray spark sets the workshop alight.",
+    mod: { mp: 10, mag: 3, res: 2, hp: -6, atk: -1 },
+    weak: ["fire"],
+    resist: ["bolt"],
+  },
+  saurian: {
+    id: "saurian",
+    name: "Saurian",
+    description: "Scaled and cold-blooded — thick hide and crushing strength, sluggish and dull to magic. Basks through flame; the cold leaves it torpid.",
+    mod: { hp: 14, atk: 3, def: 1, spd: -2, mag: -3 },
+    weak: ["ice"],
+    resist: ["fire"],
+  },
+  sylph: {
+    id: "sylph",
+    name: "Sylph",
+    description: "Airy fae — fleet, quick to cast, and feather-light, but barely there to a solid blow. The wind-borne ground a storm's wrath; living groves cradle them.",
+    mod: { spd: 3, mag: 2, move: 1, hp: -10, def: -2 },
+    weak: ["bolt"],
+    resist: ["nature"],
+  },
 };
 
 export function getRace(id: RaceId): RaceDef {

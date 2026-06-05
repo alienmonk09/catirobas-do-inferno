@@ -52,7 +52,7 @@ function boot(): void {
       toCamp: (phase = 1) => {
         ctx.state.party = createParty(ROSTER.slice(0, Math.min(6, ROSTER.length)).map((h) => h.id));
         ctx.state.inventory = startingInventory();
-        ctx.state.gil = 800;
+        ctx.state.gold = 800;
         ctx.state.phaseIndex = phase;
         ctx.nav.toParty();
       },

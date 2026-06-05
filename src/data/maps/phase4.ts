@@ -48,10 +48,10 @@ export const phase4: MapDef = {
     { name: "Sable the Envoy", classId: "whiteMage", level: 4, weaponId: "staff", skillIds: ["cure"], pos: { x: 6, y: 8 }, raceId: "human" },
   ],
   enemies: [
-    { name: "Pyromancer Velis", classId: "blackMage", level: 6, weaponId: "rod", skillIds: ["fire", "fireball", "poison"], pos: { x: 4, y: 2 }, raceId: "elf" },
-    { name: "Stormcaller Dane", classId: "blackMage", level: 6, weaponId: "rod", skillIds: ["fire", "bolt", "stop"], pos: { x: 5, y: 2 }, raceId: "elf" },
-    { name: "Abbess Mirelle", classId: "whiteMage", level: 5, weaponId: "staff", skillIds: ["cure", "cura", "protect", "haste"], pos: { x: 2, y: 3 }, raceId: "human" },
-    { name: "Court Guard Rolf", classId: "knight", level: 6, weaponId: "sword", skillIds: ["powerStrike", "guard"], pos: { x: 4, y: 4 }, raceId: "dwarf" },
-    { name: "Temple Fist Kai", classId: "monk", level: 5, weaponId: "knuckles", skillIds: ["palmStrike", "earthShake"], pos: { x: 5, y: 4 }, raceId: "orc" },
+    { name: "Pyromancer Velis", classId: "blackMage", level: 9, weaponId: "rod", skillIds: ["fire", "fireball", "poison"], pos: { x: 4, y: 2 }, raceId: "elf" },
+    { name: "Stormcaller Dane", classId: "blackMage", level: 9, weaponId: "rod", skillIds: ["fire", "bolt", "stop"], pos: { x: 5, y: 2 }, raceId: "elf" },
+    { name: "Abbess Mirelle", classId: "whiteMage", level: 8, weaponId: "staff", skillIds: ["cure", "cura", "protect", "haste"], pos: { x: 2, y: 3 }, raceId: "human" },
+    { name: "Court Guard Rolf", classId: "knight", level: 9, weaponId: "sword", skillIds: ["powerStrike", "guard"], pos: { x: 4, y: 4 }, raceId: "dwarf" },
+    { name: "Temple Fist Kai", classId: "monk", level: 8, weaponId: "knuckles", skillIds: ["palmStrike", "earthShake"], pos: { x: 5, y: 4 }, raceId: "orc" },
   ],
 };

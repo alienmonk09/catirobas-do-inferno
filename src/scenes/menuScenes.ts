@@ -27,7 +27,7 @@ function resetState(state: GameState): void {
   state.inventory = startingInventory();
   state.phaseIndex = 0;
   state.difficulty = "normal";
-  state.gil = 0;
+  state.gold = 0;
   state.ownedEquipment = [];
   state.ownedWeapons = [];
   state.slot = 0;
@@ -40,7 +40,7 @@ function applyLoaded(state: GameState, loaded: GameState): void {
   state.inventory = loaded.inventory;
   state.phaseIndex = loaded.phaseIndex;
   state.difficulty = loaded.difficulty;
-  state.gil = loaded.gil;
+  state.gold = loaded.gold;
   state.ownedEquipment = loaded.ownedEquipment;
   state.ownedWeapons = loaded.ownedWeapons;
   state.slot = loaded.slot;

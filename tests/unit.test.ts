@@ -57,10 +57,10 @@ describe("xpForLevel", () => {
     expect(xpForLevel(1)).toBe(100);
   });
 
-  it("grows by 40 per level", () => {
-    expect(xpForLevel(2)).toBe(140);
-    expect(xpForLevel(3)).toBe(180);
-    expect(xpForLevel(10)).toBe(100 + 9 * 40);
+  it("grows by 45 per level", () => {
+    expect(xpForLevel(2)).toBe(145);
+    expect(xpForLevel(3)).toBe(190);
+    expect(xpForLevel(10)).toBe(100 + 9 * 45);
   });
 
   it("is strictly increasing across levels", () => {
@@ -292,8 +292,8 @@ describe("grantXp", () => {
 
   it("returns the number of levels gained", () => {
     const u = freshKnight();
-    // lv1 needs 100, lv2 needs 140 -> 240 total reaches level 3 exactly
-    const gained = grantXp(u, 240);
+    // lv1 needs 100, lv2 needs 145 -> 245 total reaches level 3 exactly
+    const gained = grantXp(u, 245);
     expect(gained).toBe(2);
     expect(u.level).toBe(3);
     expect(u.xp).toBe(0);
@@ -301,11 +301,11 @@ describe("grantXp", () => {
 
   it("handles multiple level-ups in a single grant", () => {
     const u = freshKnight();
-    // 100 + 140 + 180 = 420 to reach level 4
+    // 100 + 145 + 190 = 435 to reach level 4
     const gained = grantXp(u, 500);
     expect(gained).toBe(3);
     expect(u.level).toBe(4);
-    expect(u.xp).toBe(80); // 500 - 420
+    expect(u.xp).toBe(65); // 500 - 435
   });
 
   it("raises max stats on level up", () => {

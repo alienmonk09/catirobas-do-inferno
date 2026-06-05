@@ -64,63 +64,63 @@ describe("ownsEquipment", () => {
 describe("buyEquipment", () => {
   it("deducts the price, adds to ownedEquipment, and returns true when affordable and unowned", () => {
     const state = createGameState();
-    state.gil = 500;
+    state.gold = 500;
     const price = EQUIPMENT.leatherArmor.price;
     const result = buyEquipment(state, "leatherArmor");
     expect(result).toBe(true);
-    expect(state.gil).toBe(500 - price);
+    expect(state.gold).toBe(500 - price);
     expect(state.ownedEquipment).toContain("leatherArmor");
   });
 
-  it("returns false and mutates nothing when gil is insufficient", () => {
+  it("returns false and mutates nothing when gold is insufficient", () => {
     const state = createGameState();
-    state.gil = 10; // leatherArmor costs 90
-    const gilBefore = state.gil;
+    state.gold = 10; // leatherArmor costs 90
+    const gilBefore = state.gold;
     const ownedBefore = [...state.ownedEquipment];
     const result = buyEquipment(state, "leatherArmor");
     expect(result).toBe(false);
-    expect(state.gil).toBe(gilBefore);
+    expect(state.gold).toBe(gilBefore);
     expect(state.ownedEquipment).toEqual(ownedBefore);
   });
 
   it("returns false and mutates nothing when item is already owned", () => {
     const state = createGameState();
-    state.gil = 9999;
+    state.gold = 9999;
     state.ownedEquipment.push("ironRing");
-    const gilBefore = state.gil;
+    const gilBefore = state.gold;
     const result = buyEquipment(state, "ironRing");
     expect(result).toBe(false);
-    expect(state.gil).toBe(gilBefore);
+    expect(state.gold).toBe(gilBefore);
     expect(state.ownedEquipment.filter((id) => id === "ironRing").length).toBe(1);
   });
 
   it("returns false for an unknown equipment id", () => {
     const state = createGameState();
-    state.gil = 9999;
+    state.gold = 9999;
     const result = buyEquipment(state, "nonexistent_gear");
     expect(result).toBe(false);
-    expect(state.gil).toBe(9999);
+    expect(state.gold).toBe(9999);
     expect(state.ownedEquipment).toEqual([]);
   });
 
-  it("can buy exactly when gil equals the price", () => {
+  it("can buy exactly when gold equals the price", () => {
     const state = createGameState();
-    state.gil = EQUIPMENT.ironRing.price;
+    state.gold = EQUIPMENT.ironRing.price;
     const result = buyEquipment(state, "ironRing");
     expect(result).toBe(true);
-    expect(state.gil).toBe(0);
+    expect(state.gold).toBe(0);
   });
 
-  it("returns false when gil is exactly one short", () => {
+  it("returns false when gold is exactly one short", () => {
     const state = createGameState();
-    state.gil = EQUIPMENT.ironRing.price - 1;
+    state.gold = EQUIPMENT.ironRing.price - 1;
     const result = buyEquipment(state, "ironRing");
     expect(result).toBe(false);
   });
 
   it("updates ownsEquipment after a successful purchase", () => {
     const state = createGameState();
-    state.gil = 999;
+    state.gold = 999;
     expect(ownsEquipment(state, "swiftBoots")).toBe(false);
     buyEquipment(state, "swiftBoots");
     expect(ownsEquipment(state, "swiftBoots")).toBe(true);
@@ -134,7 +134,7 @@ describe("buyEquipment", () => {
 describe("ownedEquipment - save/load round-trip", () => {
   it("persists ownedEquipment through save -> load", () => {
     const state = createGameState();
-    state.gil = 999;
+    state.gold = 999;
     buyEquipment(state, "ironRing");
     buyEquipment(state, "chainmail");
     saveGame(state);

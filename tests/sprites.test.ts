@@ -6,7 +6,7 @@ import { WEAPON_SPRITES } from "../src/data/sprites/weapons";
 import { ITEM_SPRITES } from "../src/data/sprites/items";
 import { SKILL_SPRITES } from "../src/data/sprites/skills";
 import { VFX } from "../src/data/sprites/vfx";
-import { vfxKeyForSkill, vfxKeyForWeapon } from "../src/data/sprites";
+import { vfxKeyForSkill, vfxKeyForWeapon, getWeaponSprite, getSkillSprite, getItemSprite } from "../src/data/sprites";
 import { CLASSES } from "../src/data/classes";
 import { WEAPONS } from "../src/data/weapons";
 import { ITEMS } from "../src/data/items";
@@ -36,12 +36,20 @@ describe("sprite data", () => {
     });
   }
 
-  it("every class/weapon/item/skill id has a sprite", () => {
+  it("every class id has a dedicated sprite", () => {
     const chars: Record<string, unknown> = CHARACTER_SPRITES;
     for (const id of Object.keys(CLASSES)) expect(chars[id]).toBeTruthy();
-    for (const id of Object.keys(WEAPONS)) expect(WEAPON_SPRITES[id]).toBeTruthy();
-    for (const id of Object.keys(ITEMS)) expect(ITEM_SPRITES[id]).toBeTruthy();
-    for (const id of Object.keys(SKILLS)) expect(SKILL_SPRITES[id]).toBeTruthy();
+  });
+
+  it("every weapon/item/skill id resolves to a real sprite (dedicated or same-family fallback)", () => {
+    // Weapons, items & skills may borrow a same-family authored icon via the
+    // resolver (e.g. a new fire skill reuses the Fire icon) — never the grey box.
+    const weaponSprites = Object.values(WEAPON_SPRITES);
+    for (const id of Object.keys(WEAPONS)) expect(weaponSprites).toContain(getWeaponSprite(id));
+    const itemSprites = Object.values(ITEM_SPRITES);
+    for (const id of Object.keys(ITEMS)) expect(itemSprites).toContain(getItemSprite(id));
+    const skillSprites = Object.values(SKILL_SPRITES);
+    for (const id of Object.keys(SKILLS)) expect(skillSprites).toContain(getSkillSprite(id));
   });
 
   it("every skill and weapon resolves to an existing VFX family", () => {

@@ -48,6 +48,33 @@ export const ITEMS: Record<string, ItemDef> = {
     statusKind: "haste",
     statusDuration: 3,
   },
+  xPotion: {
+    id: "xPotion",
+    name: "X-Potion",
+    description: "Restore 140 HP to an ally.",
+    effect: "healHp",
+    amount: 140,
+    range: 1,
+    price: 130,
+  },
+  turboEther: {
+    id: "turboEther",
+    name: "Turbo Ether",
+    description: "Restore 50 MP to an ally.",
+    effect: "healMp",
+    amount: 50,
+    range: 1,
+    price: 110,
+  },
+  megaPhoenix: {
+    id: "megaPhoenix",
+    name: "Mega Phoenix",
+    description: "Revive a fallen ally with 80 HP.",
+    effect: "revive",
+    amount: 80,
+    range: 1,
+    price: 260,
+  },
 };
 
 export function getItem(id: string): ItemDef {

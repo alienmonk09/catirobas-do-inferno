@@ -27,13 +27,17 @@ describe("hero roster", () => {
   });
 
   it("grows the party cap across the campaign without exceeding the roster", () => {
-    expect(partyCapForPhase(0)).toBe(PARTY_SIZE);
+    expect(partyCapForPhase(0)).toBe(PARTY_SIZE); // start: three-strong
     expect(partyCapForPhase(1)).toBe(PARTY_SIZE);
-    expect(partyCapForPhase(2)).toBe(5);
-    expect(partyCapForPhase(4)).toBe(5);
-    expect(partyCapForPhase(6)).toBe(6); // the sixth slot is held for the finale
+    expect(partyCapForPhase(2)).toBe(4); // fourth slot opens
+    expect(partyCapForPhase(4)).toBe(5); // fifth slot opens
+    expect(partyCapForPhase(6)).toBe(6); // sixth slot for the finale
     expect(partyCapForPhase(9)).toBeLessThanOrEqual(MAX_PARTY);
     expect(partyCapForPhase(6)).toBeGreaterThan(partyCapForPhase(0));
+    // Monotonic, non-decreasing growth across the campaign.
+    for (let p = 1; p <= 6; p++) {
+      expect(partyCapForPhase(p)).toBeGreaterThanOrEqual(partyCapForPhase(p - 1));
+    }
   });
 
   it("offers only un-recruited roster heroes as reinforcements", () => {

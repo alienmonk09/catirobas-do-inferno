@@ -4,7 +4,7 @@ import { CLASSES } from "../src/data/classes";
 import { statsForLevel } from "../src/core/unit";
 import type { ClassId, RaceId } from "../src/core/types";
 
-const RACE_IDS: RaceId[] = ["human", "elf", "dwarf", "halfling", "orc"];
+const RACE_IDS: RaceId[] = ["human", "elf", "dwarf", "halfling", "orc", "gnome", "saurian", "sylph"];
 const STAT_KEYS = ["hp", "mp", "atk", "def", "mag", "res", "spd", "move", "jump"];
 
 describe("race data", () => {

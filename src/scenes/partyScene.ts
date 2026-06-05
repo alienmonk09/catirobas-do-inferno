@@ -49,6 +49,10 @@ export class PartyScene implements Scene {
   private root: HTMLDivElement;
   /** Which camp section is on screen. Persists across re-renders (buy/equip/etc). */
   private activeTab: CampTab = "party";
+  /** The tab the last render painted — used to keep scroll position when a
+   *  re-render stays on the same section (e.g. changing a card selector), and
+   *  reset it only when the section actually changes. */
+  private renderedTab: CampTab | null = null;
 
   constructor(private ctx: GameContext) {
     saveGame(ctx.state); // checkpoint progress
@@ -369,6 +373,11 @@ export class PartyScene implements Scene {
   }
 
   private render(): void {
+    // Preserve the body's scroll position across a same-section re-render so that
+    // changing a selector (class / weapon / equipment) on a card doesn't jolt the
+    // whole screen back to the top. A genuine section change starts at the top.
+    const prevBody = this.root.querySelector(".party-body") as HTMLElement | null;
+    const keepScroll = prevBody && this.renderedTab === this.activeTab ? prevBody.scrollTop : 0;
     clear(this.root);
     const screen = el("div", { className: "party-screen" });
     const idx = this.ctx.state.phaseIndex;
@@ -378,7 +387,7 @@ export class PartyScene implements Scene {
     const showReinforce = this.hasReinforcements();
     if (this.activeTab === "reinforcements" && !showReinforce) this.activeTab = "party";
 
-    // --- Header: title, status, gil, and the section tab bar (all fixed). ---
+    // --- Header: title, status, gold, and the section tab bar (all fixed). ---
     const head = el("div", { className: "party-head" });
     head.appendChild(el("h1", { text: "Party Camp" }));
     if (this.ctx.state.permadeath) {
@@ -390,7 +399,7 @@ export class PartyScene implements Scene {
         text: `Next: Phase ${idx + 1} — ${nextMap.name}. Units are fully restored before each battle.`,
       }),
     );
-    head.appendChild(el("div", { className: "camp-gil", text: `Gil: ${this.ctx.state.gil}` }));
+    head.appendChild(el("div", { className: "camp-gold", text: `Gold: ${this.ctx.state.gold}` }));
 
     const tabs = el("div", { className: "camp-tabs" });
     const tabDef: { id: CampTab; label: string; badge?: string }[] = [
@@ -428,6 +437,9 @@ export class PartyScene implements Scene {
     );
     screen.appendChild(footer);
     this.root.appendChild(screen);
+    // Restore scroll now the new body is in the DOM and laid out.
+    body.scrollTop = keepScroll;
+    this.renderedTab = this.activeTab;
   }
 
   /** Party section: the editable roster of unit cards. */
@@ -469,7 +481,7 @@ export class PartyScene implements Scene {
     const shopGrid = el("div", { className: "shop-grid" });
     for (const item of Object.values(ITEMS)) {
       const owned = this.ctx.state.inventory[item.id] ?? 0;
-      const canAfford = this.ctx.state.gil >= item.price;
+      const canAfford = this.ctx.state.gold >= item.price;
       const row = el("div", { className: "shop-row" });
       row.appendChild(
         el("div", {
@@ -486,7 +498,7 @@ export class PartyScene implements Scene {
         el("div", {
           className: "shop-item-meta",
           children: [
-            el("span", { className: "shop-item-price", text: `${item.price} gil` }),
+            el("span", { className: "shop-item-price", text: `${item.price} gold` }),
             el("span", { className: "shop-item-owned", text: `×${owned}` }),
             el("button", {
               className: "btn small",
@@ -527,7 +539,7 @@ export class PartyScene implements Scene {
     const gearGrid = el("div", { className: "shop-grid" });
     for (const equip of Object.values(EQUIPMENT)) {
       const owned = ownsEquipment(this.ctx.state, equip.id);
-      const canAfford = this.ctx.state.gil >= equip.price;
+      const canAfford = this.ctx.state.gold >= equip.price;
       const modHint = Object.entries(equip.mod)
         .map(([k, v]) => `${(v as number) >= 0 ? "+" : ""}${v as number} ${k.toUpperCase()}`)
         .join(", ");
@@ -549,7 +561,7 @@ export class PartyScene implements Scene {
         el("div", {
           className: "shop-item-meta",
           children: [
-            el("span", { className: "shop-item-price", text: `${equip.price} gil` }),
+            el("span", { className: "shop-item-price", text: `${equip.price} gold` }),
             el("span", {
               className: "shop-item-owned",
               text: owned ? "owned" : "",
@@ -594,7 +606,7 @@ export class PartyScene implements Scene {
       // Only show weapons with a positive price (starter weapons are free / default-owned).
       if (weapon.price <= 0) continue;
       const owned = ownsWeapon(this.ctx.state, weapon.id);
-      const canAfford = this.ctx.state.gil >= weapon.price;
+      const canAfford = this.ctx.state.gold >= weapon.price;
       const isEquipped = this.ctx.state.party.some((u) => u.weaponId === weapon.id);
       const classNames = weapon.classes.map((c) => CLASSES[c].name).join(", ");
       const row = el("div", { className: "shop-row" });
@@ -612,7 +624,7 @@ export class PartyScene implements Scene {
         el("div", {
           className: "shop-item-meta",
           children: [
-            el("span", { className: "shop-item-price", text: `${weapon.price} gil` }),
+            el("span", { className: "shop-item-price", text: `${weapon.price} gold` }),
             el("span", {
               className: "shop-item-owned",
               text: owned ? "owned" : "",

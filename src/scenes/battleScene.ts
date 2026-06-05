@@ -1,7 +1,7 @@
-import type { Direction, MapDef, Point, SkillDef, Unit } from "../core/types";
+import type { ClassId, Direction, MapDef, Point, SkillDef, Unit } from "../core/types";
 import { RNG } from "../core/rng";
-import { grantJp, grantXp, createUnit } from "../core/unit";
-import { enemyLevelFor, refreshForBattle, survivorsAfterBattle, GIL_PER_KILL } from "../core/state";
+import { grantJp, grantXp, createUnit, recomputeStats, xpForLevel } from "../core/unit";
+import { enemyLevelFor, refreshForBattle, survivorsAfterBattle, goldForKill } from "../core/state";
 import { Grid, manhattan, moveBlockers, samePoint, zoneOfControl } from "../battle/grid";
 import { pathTo, reachable } from "../battle/pathfinding";
 import { aoeTiles, knockbackTo, leapLanding, tilesInRange } from "../battle/targeting";
@@ -32,7 +32,7 @@ import type { ActiveEffect, BattleView, FloatingText, ForecastTag, OverlaySet } 
 import { getWeapon } from "../data/weapons";
 import { getSkill } from "../data/skills";
 import { getItem } from "../data/items";
-import { getClass } from "../data/classes";
+import { CLASSES, getClass } from "../data/classes";
 import { getVfx, vfxKeyForSkill, vfxKeyForWeapon } from "../data/sprites";
 import { PHASES } from "../data/maps";
 import { dialogueFor, outroFor } from "../data/dialogue";
@@ -105,7 +105,104 @@ export class BattleScene implements Scene {
     this.ui = new BattleUI(ctx.uiParent);
     this.buildUnits();
     this.bindInput();
+    this.setupDevBar();
     this.showIntro();
+  }
+
+  // --- Dev tools (rapid playtesting; never shown in a normal player build) ---
+
+  /** True when the dev shortcut bar should appear: Vite dev server, or a `dev`
+   *  query string on a deployed build (e.g. ?dev). */
+  private devEnabled(): boolean {
+    try {
+      const env = (import.meta as { env?: { DEV?: boolean } }).env;
+      if (env?.DEV) return true;
+    } catch {
+      /* import.meta unavailable */
+    }
+    return typeof location !== "undefined" && /[?&]dev\b/.test(location.search);
+  }
+
+  /** A living player unit to target with dev actions — the active one, else the first. */
+  private devTargetUnit(): Unit | null {
+    if (this.active?.team === "player" && this.active.alive) return this.active;
+    return this.units.find((u) => u.team === "player" && u.alive) ?? null;
+  }
+
+  private setupDevBar(): void {
+    if (!this.devEnabled()) return;
+    this.ui.showDevBar([
+      { label: "Win", title: "Win this battle instantly", onClick: () => { if (this.phase !== "over") this.endBattle("player"); } },
+      { label: "Lose", title: "Lose this battle instantly", onClick: () => { if (this.phase !== "over") this.endBattle("enemy"); } },
+      { label: "Kill foe", title: "Remove one living enemy", onClick: () => this.devKillEnemy() },
+      { label: "+Lvl", title: "Level up the active/first hero", onClick: () => this.devLevelUp() },
+      { label: "Class▸", title: "Cycle the active/first hero's class", onClick: () => this.devCycleClass() },
+      { label: "+500g", title: "Add 500 gold", onClick: () => { this.ctx.state.gold += 500; this.ui.toast(`Gold: ${this.ctx.state.gold}`); } },
+      { label: "Heal", title: "Fully restore the party", onClick: () => this.devHealParty() },
+    ]);
+  }
+
+  private devKillEnemy(): void {
+    if (this.phase === "over") return;
+    const foe = this.units.find((u) => u.alive && u.team === "enemy");
+    if (!foe) return;
+    foe.stats.hp = 0;
+    foe.alive = false;
+    foe.statuses = [];
+    this.pushLog(`[dev] removed ${foe.name}`);
+    this.refreshTurnBar();
+    const winner = this.outcome();
+    if (winner) this.endBattle(winner);
+  }
+
+  private devLevelUp(): void {
+    if (this.phase === "over") return;
+    const u = this.devTargetUnit();
+    if (!u) return;
+    grantXp(u, Math.max(1, xpForLevel(u.level) - u.xp));
+    this.ui.toast(`${u.name} → Lv ${u.level}`);
+    if (this.active === u) this.ui.setActiveUnit(u);
+  }
+
+  private devCycleClass(): void {
+    if (this.phase === "over") return;
+    const u = this.devTargetUnit();
+    if (!u) return;
+    const ids = Object.keys(CLASSES) as ClassId[];
+    const next = ids[(ids.indexOf(u.classId) + 1) % ids.length];
+    const c = getClass(next);
+    u.classId = next;
+    u.subClassId = undefined;
+    u.weaponId = c.weaponIds[0];
+    u.learnedSkillIds = c.skillIds.slice(0, 1);
+    recomputeStats(u, true);
+    this.ui.toast(`${u.name} → ${c.name}`);
+    if (this.active === u) {
+      this.ui.setActiveUnit(u);
+      // The old class's skill selection / open submenu / target highlights are now
+      // stale — drop them and return to a clean action menu while in player control
+      // (covers menu AND the *Target sub-phases, not just "menu").
+      if (this.playerInControl) {
+        this.selectedSkill = null;
+        this.selectedItemId = null;
+        this.rangeTiles = [];
+        this.ui.hideSubmenu();
+        this.phase = "menu";
+        this.refreshMenu();
+      }
+    }
+  }
+
+  private devHealParty(): void {
+    if (this.phase === "over") return;
+    for (const u of this.units) {
+      if (u.team === "player" && u.alive) {
+        u.stats.hp = u.stats.maxHp;
+        u.stats.mp = u.stats.maxMp;
+      }
+    }
+    if (this.active) this.ui.setActiveUnit(this.active);
+    this.ui.toast("Party fully restored");
   }
 
   // --- Setup ---
@@ -257,6 +354,9 @@ export class BattleScene implements Scene {
   }
 
   private beginNextTurn(): void {
+    // Already resolved (e.g. a dev shortcut ended the battle mid-animation) —
+    // never re-enter the turn loop and re-show combat controls over the banner.
+    if (this.phase === "over") return;
     const winner = this.outcome();
     if (winner) return this.endBattle(winner);
 
@@ -317,6 +417,10 @@ export class BattleScene implements Scene {
   }
 
   private endActiveTurn(): void {
+    // The battle may have ended underneath an in-flight async turn (e.g. a dev
+    // shortcut, or a resolution that already won) — don't run the turn loop on
+    // top of a finished battle.
+    if (this.phase === "over") return;
     if (this.active) {
       // Damage/heal-over-time (Poison, Regen) resolve as the turn ends.
       for (const r of endTurn(this.active)) this.pushPopup(r);
@@ -340,6 +444,7 @@ export class BattleScene implements Scene {
   }
 
   private endBattle(winner: "player" | "enemy"): void {
+    if (this.phase === "over") return; // idempotent — ignore repeat/late calls
     this.phase = "over";
     this.active = null;
     this.ui.hideCombatControls();
@@ -669,8 +774,10 @@ export class BattleScene implements Scene {
     const res = resolveWeaponAttack(this.active, actual, weapon, this.rng, this.posCtx(actual.pos));
     this.pushEffect(actual.pos, vfxKeyForWeapon(weapon));
     this.pushPopup(res);
-    this.awardForAction(this.active, { offensive: true, killed: res.killed });
-    this.awardGil(res.killed ? 1 : 0);
+    // Scale XP by the unit actually struck — Cover may have redirected the hit
+    // onto `actual` rather than the originally-aimed `target`.
+    this.awardForAction(this.active, { offensive: true, killed: res.killed }, actual.level);
+    this.awardGold(res.killed ? 1 : 0);
     // A surviving melee-struck defender may strike back.
     this.tryCounter(actual, this.active);
     this.afterAction();
@@ -703,7 +810,7 @@ export class BattleScene implements Scene {
     this.tryAutoPotion(attacker);
     // A counter kill still earns the defender its kill rewards (the active actor
     // is the attacker, so the normal award path would miss it).
-    if (res.killed) this.creditKill(defender);
+    if (res.killed) this.creditKill(defender, attacker.level);
   }
 
   private trySkill(tile: Point): void {
@@ -811,7 +918,7 @@ export class BattleScene implements Scene {
         : this.units.find((u) => u.alive && u.team !== caster.team && samePoint(u.pos, center));
       if (victim) this.tryCounter(victim, caster);
     }
-    this.awardGil(results.filter((r) => r.killed).length);
+    this.awardGold(results.filter((r) => r.killed).length);
     // Apply knockback (single-target offensive skills only) before afterAction so
     // the new position is evaluated for terrain effects and objective checks. A
     // shove off a ledge can land the killing blow — credit that kill too.
@@ -822,8 +929,17 @@ export class BattleScene implements Scene {
         : undefined;
       if (damagedTarget) fellKill = this.applyKnockback(skill, caster, damagedTarget);
     }
-    if (fellKill) this.awardGil(1);
-    this.awardForAction(caster, { offensive: skill.effect === "damage", killed: anyKilled || fellKill, support });
+    if (fellKill) this.awardGold(1);
+    // Level the XP scaling off enemies actually DAMAGED this cast (from results),
+    // not every unit standing on an AoE tile — so a support cast near a foe, or a
+    // corpse on a hit tile, can't skew the multiplier.
+    const damagedEnemyLevels = results
+      .filter((r) => r.kind === "damage")
+      .map((r) => this.units.find((u) => u.id === r.unitId))
+      .filter((u): u is Unit => !!u && u.team !== caster.team)
+      .map((u) => u.level);
+    const enemyLvl = damagedEnemyLevels.length ? Math.max(...damagedEnemyLevels) : undefined;
+    this.awardForAction(caster, { offensive: skill.effect === "damage", killed: anyKilled || fellKill, support }, enemyLvl);
     if (fromCharge) {
       // The charge resolution IS the full turn — end it directly (no menu re-open).
       this.endActiveTurn();
@@ -935,30 +1051,51 @@ export class BattleScene implements Scene {
 
   // --- Progression ---
 
-  /** Add gil to the party treasury for enemies the player just defeated. */
-  private awardGil(kills: number): void {
-    if (kills > 0 && this.active?.team === "player") this.ctx.state.gil += kills * GIL_PER_KILL;
+  /** Add gold to the party treasury for enemies the player just defeated. The
+   *  bounty scales with the current chapter so the treasury keeps pace. */
+  private awardGold(kills: number): void {
+    if (kills > 0 && this.active?.team === "player") {
+      this.ctx.state.gold += kills * goldForKill(this.ctx.state.phaseIndex);
+    }
   }
 
-  /** Credit a kill (gil + offensive XP/JP) to a PLAYER unit that wasn't the active
+  /**
+   * Anti-grind XP scaling: punching above your level pays a premium, farming
+   * weaklings pays a pittance. Keeps progression steady instead of letting a fed
+   * unit snowball off low-level kills. Returns 1 when no foe level is supplied.
+   */
+  private xpLevelMult(unit: Unit, enemyLevel?: number): number {
+    if (enemyLevel === undefined) return 1;
+    return Math.max(0.5, Math.min(1.5, 1 + 0.08 * (enemyLevel - unit.level)));
+  }
+
+  /** Credit a kill (gold + offensive XP/JP) to a PLAYER unit that wasn't the active
    *  actor — e.g. a counterattacker on the enemy's turn. No-op for enemies. */
-  private creditKill(killer: Unit): void {
+  private creditKill(killer: Unit, enemyLevel?: number): void {
     if (killer.team !== "player") return;
-    this.ctx.state.gil += GIL_PER_KILL;
-    const levels = grantXp(killer, 32); // offensive (12) + kill bonus (20), matching awardForAction
+    this.ctx.state.gold += goldForKill(this.ctx.state.phaseIndex);
+    // offensive (13) + kill bonus (14), matching awardForAction, then level-scaled.
+    const xp = Math.max(1, Math.round(27 * this.xpLevelMult(killer, enemyLevel)));
+    const levels = grantXp(killer, xp);
     grantJp(killer, 20);
     if (levels > 0) this.ui.toast(`${killer.name} reached Lv ${killer.level}!`);
   }
 
-  private awardForAction(unit: Unit, opts: { offensive?: boolean; killed?: boolean; support?: boolean }): void {
+  private awardForAction(
+    unit: Unit,
+    opts: { offensive?: boolean; killed?: boolean; support?: boolean },
+    enemyLevel?: number,
+  ): void {
     if (unit.team !== "player") return;
-    let xp = opts.offensive ? 12 : opts.support ? 10 : 8;
+    // Flatter awards than before — the kill bonus is trimmed so a single carry
+    // can't snowball, and the whole party climbs at a steadier cadence.
+    let xp = opts.offensive ? 13 : opts.support ? 10 : 8;
     let jp = opts.offensive ? 8 : opts.support ? 8 : 6;
     if (opts.killed) {
-      xp += 20;
+      xp += 14;
       jp += 12;
     }
-    const levels = grantXp(unit, xp);
+    const levels = grantXp(unit, Math.max(1, Math.round(xp * this.xpLevelMult(unit, enemyLevel))));
     grantJp(unit, jp);
     if (levels > 0) {
       this.ui.toast(`${unit.name} reached Lv ${unit.level}!`);

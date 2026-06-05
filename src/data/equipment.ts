@@ -65,6 +65,55 @@ export const EQUIPMENT: Record<string, EquipmentDef> = {
     mod: { spd: 2 },
     price: 100,
   },
+  // ── Premium tier — expensive end-game gear ────────────────────────────────
+  dragonMail: {
+    id: "dragonMail",
+    name: "Dragon Mail",
+    slot: "armor",
+    description: "Scales of a fallen wyrm. Tremendous protection and vitality, but ponderous to move in.",
+    mod: { def: 12, hp: 24, spd: -2 },
+    price: 480,
+  },
+  archmagusRobe: {
+    id: "archmagusRobe",
+    name: "Archmagus Robe",
+    slot: "armor",
+    description: "Vestments humming with deep arcana. Greatly bolsters magical resilience and reserves.",
+    mod: { def: 2, res: 7, mp: 16, mag: 1 },
+    price: 420,
+  },
+  hermesBoots: {
+    id: "hermesBoots",
+    name: "Hermes Boots",
+    slot: "accessory",
+    description: "Winged boots that all but carry the wearer — far swifter and more mobile.",
+    mod: { spd: 3, move: 1 },
+    price: 360,
+  },
+  giantsBelt: {
+    id: "giantsBelt",
+    name: "Giant's Belt",
+    slot: "accessory",
+    description: "A broad girdle of titan leather that swells the wearer's vitality.",
+    mod: { hp: 28 },
+    price: 280,
+  },
+  sageCirclet: {
+    id: "sageCirclet",
+    name: "Sage Circlet",
+    slot: "accessory",
+    description: "A silver band set with a focusing gem — sharpens magic and deepens the mana pool.",
+    mod: { mag: 3, mp: 8 },
+    price: 340,
+  },
+  guardianAmulet: {
+    id: "guardianAmulet",
+    name: "Guardian Amulet",
+    slot: "accessory",
+    description: "A warded talisman that turns aside both blade and spell alike.",
+    mod: { def: 3, res: 3 },
+    price: 300,
+  },
 };
 
 export function getEquipment(id: string): EquipmentDef {

@@ -10,7 +10,7 @@ export interface HeroDef {
   raceId: RaceId;
 }
 
-/** The roster of named heroes who can carry the Ashen Banner. Pick 4. */
+/** The roster of named heroes who can carry the Ashen Banner. Pick PARTY_SIZE. */
 export const ROSTER: HeroDef[] = [
   { id: "garan", name: "Garan", classId: "knight", raceId: "dwarf" },
   { id: "lyra", name: "Lyra", classId: "archer", raceId: "elf" },
@@ -19,10 +19,14 @@ export const ROSTER: HeroDef[] = [
   { id: "bron", name: "Bron", classId: "monk", raceId: "orc" },
   { id: "enzo", name: "Enzo", classId: "thief", raceId: "halfling" },
   { id: "penelope", name: "Penelope", classId: "druid", raceId: "elf" },
+  { id: "aldric", name: "Aldric", classId: "paladin", raceId: "human" },
+  { id: "throk", name: "Throk", classId: "berserker", raceId: "saurian" },
+  { id: "kira", name: "Kira", classId: "ninja", raceId: "sylph" },
 ];
 
-/** How many heroes you pick at the start of a new game. */
-export const PARTY_SIZE = 4;
+/** How many heroes you deploy at the start of a new game. Smaller than the
+ *  late-game cap so the roster visibly grows across the campaign. */
+export const PARTY_SIZE = 3;
 
 /** Hard ceiling on party size (the whole roster). */
 export const MAX_PARTY = ROSTER.length;
@@ -33,10 +37,12 @@ export const MAX_PARTY = ROSTER.length;
  * ments arrive at a readable pace. Maps must offer at least this many spawns.
  */
 export function partyCapForPhase(phaseIndex: number): number {
-  // 7-phase campaign (indices 0–6): the 5th slot opens mid-run, the 6th is
-  // held back for the finale (the last phase) so the roster peaks at the climax.
+  // 7-phase campaign (indices 0–6): the army grows one slot every couple of
+  // chapters — start with three, reach a six-strong company at the finale — so
+  // reinforcements arrive at a steady, readable pace.
   if (phaseIndex >= 6) return Math.min(6, MAX_PARTY);
-  if (phaseIndex >= 2) return 5;
+  if (phaseIndex >= 4) return 5;
+  if (phaseIndex >= 2) return 4;
   return PARTY_SIZE;
 }
 

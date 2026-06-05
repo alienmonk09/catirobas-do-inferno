@@ -27,9 +27,9 @@ export interface Stats {
   jump: number;
 }
 
-export type ClassId = "knight" | "archer" | "blackMage" | "whiteMage" | "monk" | "thief" | "druid" | "timeMage" | "summoner" | "geomancer" | "lancer";
+export type ClassId = "knight" | "archer" | "blackMage" | "whiteMage" | "monk" | "thief" | "druid" | "timeMage" | "summoner" | "geomancer" | "lancer" | "paladin" | "berserker" | "ninja";
 
-export type RaceId = "human" | "elf" | "dwarf" | "halfling" | "orc";
+export type RaceId = "human" | "elf" | "dwarf" | "halfling" | "orc" | "gnome" | "saurian" | "sylph";
 
 /** Flat stat deltas a race applies on top of class stats (omitted = 0). */
 export type RaceMod = Partial<Pick<Stats, "hp" | "mp" | "atk" | "def" | "mag" | "res" | "spd" | "move" | "jump">>;
@@ -140,7 +140,7 @@ export interface EquipmentDef {
   slot: EquipSlot;
   description: string;
   mod: EquipMod;
-  /** Gil cost to purchase from the gear shop. */
+  /** Gold cost to purchase from the gear shop. */
   price: number;
 }
 
@@ -153,7 +153,7 @@ export interface WeaponDef {
   range: number;
   kind: WeaponKind;
   classes: ClassId[];
-  /** Gil cost to purchase from the weapon shop. */
+  /** Gold cost to purchase from the weapon shop. */
   price: number;
 }
 
@@ -166,7 +166,7 @@ export interface ItemDef {
   effect: ItemEffect;
   amount: number;
   range: number;
-  /** Gil cost to purchase from the camp shop. */
+  /** Gold cost to purchase from the camp shop. */
   price: number;
   /** For buff items: which status to grant and for how long. */
   statusKind?: StatusKind;

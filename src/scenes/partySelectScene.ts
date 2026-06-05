@@ -68,7 +68,7 @@ export class PartySelectScene implements Scene {
     this.ctx.state.inventory = startingInventory();
     this.ctx.state.phaseIndex = 0;
     this.ctx.state.difficulty = this.difficulty;
-    this.ctx.state.gil = 0;
+    this.ctx.state.gold = 0;
     this.ctx.state.ownedEquipment = [];
     // Seed ownedWeapons from the starting party's equipped weapons.
     this.ctx.state.ownedWeapons = [...new Set(this.ctx.state.party.map((u) => u.weaponId))];
@@ -124,7 +124,7 @@ export class PartySelectScene implements Scene {
     head.appendChild(
       el("div", {
         className: "sub",
-        text: `Five kingdoms fell; these seven still carry the Ashen Banner. Pick ${PARTY_SIZE} to march.`,
+        text: `Five kingdoms fell; these ten still carry the Ashen Banner. Pick ${PARTY_SIZE} to march — your company grows as the campaign wears on.`,
       }),
     );
     screen.appendChild(head);

@@ -70,7 +70,7 @@ The next push: grow the party, make the UI teach itself, and widen the campaign.
   jobs with JP; the first sub-job skill is granted on equip.
 - ✅ **More classes** — Time Mage (tempo control), Summoner (wide-AoE glass cannon),
   Geomancer (durable earth control caster), and Lancer (Jump leap-strike), all
-  retrainable at camp. (11 classes total.)
+  retrainable at camp. (11 classes at this milestone — 14 after v0.5.5.)
 - ✅ **Elemental affinities** — races carry fire/bolt/nature weaknesses & resistances
   that scale spell damage (×1.5 / ×0.5); folded into the shared forecast, which flags
   *weak/resist*, so the AI aims spells at weaknesses too. *(Equipment/terrain affinities later.)*
@@ -120,6 +120,64 @@ Classic mechanics that change how a fight is played, not just its numbers.
   lost from the roster for good
 - 💭 **Bravery / Faith / morale** — unit traits that scale reactions and magic
 - 💭 **Weapon/class triangle** — rock-paper-scissors matchups for readable counters
+
+## v0.5.5 — Balance, content & dev velocity ✅ *(this pass)*
+
+A tuning + content sweep aimed at a steady sense of growth, a deeper roster, and
+a treasury you always want to spend — plus the scaffolding to build faster.
+
+- ✅ **Gold, not gil** — the treasury is now **gold** everywhere (UI + code), with a
+  save migration so pre-rename saves carry their balance over.
+- ✅ **Smaller starting party, growing company** — you now deploy **three** heroes at
+  New Game (was four) and earn slots as the campaign wears on (3 → 4 → 5 → 6 by the
+  finale). The roster you pick from grew to **ten** heroes, so there's real choice up
+  front and the army visibly grows.
+- ✅ **Three new classes** — **Paladin** (holy tank/support hybrid), **Berserker**
+  (glass wrecking-ball), and **Ninja** (fast dual-element thrower) — **14 classes total**,
+  each with its own 4-skill kit, weapons, and sprite; all retrainable at camp.
+- ✅ **Three new races** — **Gnome** (frail arcane tinker), **Saurian** (scaled brute,
+  fire-tough / cold-weak), **Sylph** (airy fae) — **8 races total**, introducing an
+  **ice** weakness that pairs with the Summoner's Shiva.
+- ✅ **Smoother progression (no power spike)** — a gently rising XP curve, a trimmed
+  kill bonus (so a single carry can't snowball), and **level-difference XP scaling**
+  (punch up for a premium, farm weaklings for a pittance). The whole party climbs at a
+  steadier cadence.
+- ✅ **Enemy curve tracks the party** — late-chapter foes were re-leveled to keep pace
+  with the expected party level (finale boss now Lv 14), so the challenge holds instead
+  of the party turning into gods. New classes/races seed enemy spawns for variety.
+- ✅ **Deeper economy** — a long tail of premium gear (legendary weapons, Dragon Mail,
+  Hermes Boots, Sage Circlet…) and consumables (X-Potion, Turbo Ether, Mega Phoenix),
+  with **chapter-scaled gold bounties** (later fights pay more). Affordable basics,
+  always something bigger to save for.
+- ✅ **Penelope, right-sized** — her hero sprite was redrawn with a normally-proportioned
+  head (the old one was comically large).
+- ✅ **Dev shortcut bar** — a `?dev` / dev-server-only cheat bar in battle (Win · Lose ·
+  Kill foe · +Lvl · Class▸ · +500g · Heal) to cycle through states fast while testing.
+- ✅ **Camp UX** — changing a card selector no longer jolts the view back to the top
+  (scroll position is preserved across same-section re-renders); tighter cards; the
+  smaller starting party means the camp fits the viewport for most of the run.
+- ✅ **Smarter sprite fallbacks** — new skills/weapons/items inherit a same-family icon
+  automatically (e.g. a new fire skill reuses the Fire icon), so adding content no longer
+  needs a hand-drawn icon to avoid the grey placeholder.
+
+### Refactor: modular data for parallel development 🚧
+
+Goal: stop funnelling every content change through a few giant files so work can fan
+out across independent files (and independent agents).
+
+- ✅ **Per-class skill modules** — `data/skills.ts` (770 lines, edited by *every* ability
+  change) is split into `data/skills/<class>.ts` files behind an `index.ts` barrel,
+  mirroring the already-modular `data/maps/`. Adding a class's kit is now a new file +
+  one barrel line — no shared-file contention.
+- ✅ **Sprite contention removed** — the icon resolvers fall back by family, so new
+  skills/weapons/items don't have to touch the big `sprites/*` records at all.
+- ⏳ **Decompose `battleScene.ts` (~1.5k lines)** — the remaining god-object. Proposed
+  split (deliberate, not rushed — it's stateful integration code with light direct test
+  coverage): extract **combat resolution** (attack/cast/knockback/counter application),
+  **AI-turn execution**, **objective/outcome + banners**, **input/selection handling**,
+  and **dev tools** into collaborators the scene composes. Do this behind the test suite,
+  ideally one extraction per PR.
+- 💭 Split `classes.ts` / `weapons.ts` per-class next if they start to contend.
 
 ## v0.6 — Narrative & presentation ⏳
 

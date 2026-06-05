@@ -241,11 +241,11 @@ const CSS = `
 .camp-tab:hover { background: rgba(60,74,120,0.95); border-color: rgba(160,180,230,0.7); }
 .camp-tab.active { border-color: #ffd34d; color: #ffd34d; box-shadow: 0 0 0 1px #ffd34d; }
 .camp-tab .tab-badge { display: inline-block; margin-left: 6px; background: #5fbf72; color: #0c140c; font-size: 11px; font-weight: 800; border-radius: 8px; padding: 0 6px; }
-.camp-gil { font-size: 13px; color: #ffd34d; font-weight: 600; margin-top: 6px; }
+.camp-gold { font-size: 13px; color: #ffd34d; font-weight: 600; margin-top: 6px; }
 .section-title { text-align: center; font-size: 18px; font-weight: 700; margin: 18px 0 4px; color: #9fe0a8; }
 .section-title:first-child { margin-top: 4px; }
 .party-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 14px; max-width: 1100px; margin: 0 auto; }
-.unit-card { background: rgba(22,26,42,0.95); border: 1px solid rgba(120,140,200,0.3); border-radius: 10px; padding: 14px; }
+.unit-card { background: rgba(22,26,42,0.95); border: 1px solid rgba(120,140,200,0.3); border-radius: 10px; padding: 11px 12px; }
 .unit-card.selectable { cursor: pointer; transition: border-color 0.12s, box-shadow 0.12s, transform 0.05s; }
 .unit-card.selectable:hover { border-color: rgba(160,180,230,0.7); transform: translateY(-1px); }
 .unit-card.selected { border-color: #ffd34d; box-shadow: 0 0 0 1px #ffd34d, 0 6px 20px rgba(0,0,0,0.5); }
@@ -256,8 +256,8 @@ const CSS = `
 .card-head .icon { background: rgba(0,0,0,0.25); border-radius: 6px; padding: 2px; }
 .wlabel { display: flex; align-items: center; gap: 6px; }
 .skill-icons { display: flex; gap: 4px; margin-top: 4px; }
-.unit-card label { font-size: 12px; opacity: 0.8; display: block; margin: 8px 0 3px; }
-.unit-card select { width: 100%; background: #1a1e30; color: #eee; border: 1px solid #455; border-radius: 5px; padding: 5px; }
+.unit-card label { font-size: 12px; opacity: 0.8; display: block; margin: 6px 0 2px; }
+.unit-card select { width: 100%; background: #1a1e30; color: #eee; border: 1px solid #455; border-radius: 5px; padding: 4px; }
 .unit-card .skills { font-size: 12px; opacity: 0.85; margin-top: 6px; }
 .unit-card .jpline { display: flex; justify-content: space-between; align-items: center; margin-top: 8px; }
 .party-footer { flex: none; text-align: center; padding: 12px 24px; border-top: 1px solid rgba(120,140,200,0.22); background: rgba(12,15,26,0.96); }
@@ -281,9 +281,11 @@ const CSS = `
 .diff-btn.active.hard { border-color: #e85a5a; color: #ff9a9a; box-shadow: 0 0 0 1px #e85a5a; }
 .diff-desc { text-align: center; font-size: 12px; opacity: 0.65; margin-bottom: 6px; min-height: 16px; }
 
-/* Battle log — scrollable history panel, bottom-right corner */
+/* Battle log — scrollable history panel, top-right corner (below the rotate
+   control). Kept clear of the bottom-right target panel (enemy info card),
+   which used to sit underneath it. */
 .battle-log {
-  right: 14px; bottom: 14px;
+  right: 14px; top: 60px;
   width: 220px; max-height: 160px;
   display: flex; flex-direction: column;
   padding: 6px 8px;
@@ -306,6 +308,23 @@ const CSS = `
 .log-line.log-turn {
   opacity: 0.55; font-style: italic; margin-top: 2px;
 }
+
+/* Dev shortcut bar — top-left, only shown in dev builds (?dev / vite dev). */
+.dev-bar {
+  left: 14px; top: 14px;
+  display: flex; flex-direction: column; gap: 4px; padding: 6px 7px;
+  border-color: rgba(245,200,66,0.5); background: rgba(28,22,8,0.9);
+  max-width: 120px; z-index: 50;
+}
+.dev-bar-title {
+  font-size: 9px; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase;
+  color: #f5c842; opacity: 0.85; text-align: center; margin-bottom: 1px;
+}
+.dev-btn {
+  padding: 4px 6px; font-size: 11px; font-weight: 700;
+  background: rgba(60,50,20,0.95); border-color: rgba(245,200,66,0.45); color: #ffe9a8;
+}
+.dev-btn:hover { background: rgba(110,90,30,1); }
 
 /* Settings panel */
 .settings-body { display: flex; flex-direction: column; gap: 12px; margin: 6px 0 4px; }

@@ -10,9 +10,13 @@ export function nextUnitId(prefix = "u"): string {
   return `${prefix}${idCounter}`;
 }
 
-/** XP needed to reach the next level (flat-ish curve). */
+/**
+ * XP needed to reach the next level. A gently rising curve (each level costs a
+ * little more than the last) so progression decelerates smoothly instead of
+ * front-loading early levels and then letting the party outpace the campaign.
+ */
 export function xpForLevel(level: number): number {
-  return 100 + (level - 1) * 40;
+  return 100 + (level - 1) * 45;
 }
 
 /**

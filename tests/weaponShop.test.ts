@@ -74,64 +74,64 @@ describe("ownsWeapon", () => {
 describe("buyWeapon", () => {
   it("deducts the price, adds to ownedWeapons, and returns true when affordable and unowned", () => {
     const state = createGameState();
-    state.gil = 500;
+    state.gold = 500;
     const price = WEAPONS.greatsword.price;
     const result = buyWeapon(state, "greatsword");
     expect(result).toBe(true);
-    expect(state.gil).toBe(500 - price);
+    expect(state.gold).toBe(500 - price);
     expect(state.ownedWeapons).toContain("greatsword");
   });
 
-  it("returns false and mutates nothing when gil is insufficient", () => {
+  it("returns false and mutates nothing when gold is insufficient", () => {
     const state = createGameState();
-    state.gil = 10; // greatsword costs 200
-    const gilBefore = state.gil;
+    state.gold = 10; // greatsword costs 200
+    const gilBefore = state.gold;
     const ownedBefore = [...state.ownedWeapons];
     const result = buyWeapon(state, "greatsword");
     expect(result).toBe(false);
-    expect(state.gil).toBe(gilBefore);
+    expect(state.gold).toBe(gilBefore);
     expect(state.ownedWeapons).toEqual(ownedBefore);
   });
 
   it("returns false and mutates nothing when weapon is already owned", () => {
     const state = createGameState();
-    state.gil = 9999;
+    state.gold = 9999;
     state.ownedWeapons.push("greatsword");
-    const gilBefore = state.gil;
+    const gilBefore = state.gold;
     const result = buyWeapon(state, "greatsword");
     expect(result).toBe(false);
-    expect(state.gil).toBe(gilBefore);
+    expect(state.gold).toBe(gilBefore);
     expect(state.ownedWeapons.filter((id) => id === "greatsword").length).toBe(1);
   });
 
   it("returns false for an unknown weapon id", () => {
     const state = createGameState();
-    state.gil = 9999;
+    state.gold = 9999;
     const ownedBefore = [...state.ownedWeapons];
     const result = buyWeapon(state, "nonexistent_weapon");
     expect(result).toBe(false);
-    expect(state.gil).toBe(9999);
+    expect(state.gold).toBe(9999);
     expect(state.ownedWeapons).toEqual(ownedBefore);
   });
 
-  it("can buy exactly when gil equals the price", () => {
+  it("can buy exactly when gold equals the price", () => {
     const state = createGameState();
-    state.gil = WEAPONS.longbow.price;
+    state.gold = WEAPONS.longbow.price;
     const result = buyWeapon(state, "longbow");
     expect(result).toBe(true);
-    expect(state.gil).toBe(0);
+    expect(state.gold).toBe(0);
   });
 
-  it("returns false when gil is exactly one short", () => {
+  it("returns false when gold is exactly one short", () => {
     const state = createGameState();
-    state.gil = WEAPONS.longbow.price - 1;
+    state.gold = WEAPONS.longbow.price - 1;
     const result = buyWeapon(state, "longbow");
     expect(result).toBe(false);
   });
 
   it("updates ownsWeapon after a successful purchase", () => {
     const state = createGameState();
-    state.gil = 999;
+    state.gold = 999;
     expect(ownsWeapon(state, "greatsword")).toBe(false);
     buyWeapon(state, "greatsword");
     expect(ownsWeapon(state, "greatsword")).toBe(true);
@@ -143,57 +143,57 @@ describe("buyWeapon", () => {
 // ---------------------------------------------------------------------------
 
 describe("sellWeapon", () => {
-  it("removes from ownedWeapons and adds floor(price/2) gil, returns true for unequipped weapon", () => {
+  it("removes from ownedWeapons and adds floor(price/2) gold, returns true for unequipped weapon", () => {
     const state = createGameState();
     state.ownedWeapons.push("greatsword");
-    state.gil = 0;
+    state.gold = 0;
     // No unit equipped with greatsword — safe to sell.
     const result = sellWeapon(state, "greatsword");
     expect(result).toBe(true);
     expect(state.ownedWeapons).not.toContain("greatsword");
-    expect(state.gil).toBe(Math.floor(WEAPONS.greatsword.price / 2));
+    expect(state.gold).toBe(Math.floor(WEAPONS.greatsword.price / 2));
   });
 
   it("refuses (returns false, no mutation) when a party unit has the weapon equipped", () => {
     const state = createGameState();
     state.ownedWeapons.push("greatsword");
-    state.gil = 0;
+    state.gold = 0;
     const unit = createUnit({ name: "Tester", team: "player", classId: "knight", pos: { x: 0, y: 0 }, weaponId: "greatsword" });
     state.party = [unit];
     const result = sellWeapon(state, "greatsword");
     expect(result).toBe(false);
     expect(state.ownedWeapons).toContain("greatsword");
-    expect(state.gil).toBe(0);
+    expect(state.gold).toBe(0);
   });
 
   it("returns false and mutates nothing when weapon is not owned", () => {
     const state = createGameState();
-    state.gil = 100;
+    state.gold = 100;
     const result = sellWeapon(state, "greatsword");
     expect(result).toBe(false);
-    expect(state.gil).toBe(100);
+    expect(state.gold).toBe(100);
     expect(state.ownedWeapons).not.toContain("greatsword");
   });
 
   it("returns false and mutates nothing for an unknown weapon id", () => {
     const state = createGameState();
-    state.gil = 100;
+    state.gold = 100;
     const ownedBefore = [...state.ownedWeapons];
     const result = sellWeapon(state, "nonexistent_weapon");
     expect(result).toBe(false);
-    expect(state.gil).toBe(100);
+    expect(state.gold).toBe(100);
     expect(state.ownedWeapons).toEqual(ownedBefore);
   });
 
-  it("does not duplicate gil on repeated calls to sell the same id", () => {
+  it("does not duplicate gold on repeated calls to sell the same id", () => {
     const state = createGameState();
     state.ownedWeapons.push("rapier");
-    state.gil = 0;
+    state.gold = 0;
     sellWeapon(state, "rapier");
-    const gilAfterFirst = state.gil;
+    const gilAfterFirst = state.gold;
     const result = sellWeapon(state, "rapier");
     expect(result).toBe(false);
-    expect(state.gil).toBe(gilAfterFirst);
+    expect(state.gold).toBe(gilAfterFirst);
   });
 
   it("only blocks sell for the equipped unit, allows sell of a different owned weapon", () => {
@@ -217,7 +217,7 @@ describe("sellWeapon", () => {
 describe("ownedWeapons - save/load round-trip", () => {
   it("persists ownedWeapons through save -> load", () => {
     const state = createGameState();
-    state.gil = 9999;
+    state.gold = 9999;
     buyWeapon(state, "greatsword");
     buyWeapon(state, "longbow");
     saveGame(state);

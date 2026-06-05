@@ -16,8 +16,8 @@ export interface GameState {
   phaseIndex: number;
   /** Selected difficulty; scales enemy levels. */
   difficulty: Difficulty;
-  /** Party treasury in gil. Earned by defeating enemies. */
-  gil: number;
+  /** Party treasury in gold. Earned by defeating enemies. */
+  gold: number;
   /** Equipment pieces the party has purchased; only owned gear may be equipped. */
   ownedEquipment: string[];
   /** Weapons the party has purchased; only owned weapons may be equipped. */
@@ -37,7 +37,7 @@ export function createGameState(): GameState {
     inventory: startingInventory(),
     phaseIndex: 0,
     difficulty: "normal",
-    gil: 0,
+    gold: 0,
     ownedEquipment: [],
     // Seed with the starting party's equipped weapons so they are always owned.
     ownedWeapons: [...new Set(party.map((u) => u.weaponId))],
@@ -60,13 +60,21 @@ export function survivorsAfterBattle(party: Unit[], permadeath: boolean): Unit[]
 /** Total number of save slots. */
 export const SAVE_SLOTS = 3;
 
-/** Flat gil awarded per enemy defeated in battle. */
-export const GIL_PER_KILL = 18;
+/** Base gold awarded per enemy defeated in the opening chapter (phase 0). */
+export const GOLD_PER_KILL = 18;
+/** Extra gold per defeated foe for each chapter advanced — later fights pay more,
+ *  keeping the treasury growing in step with the pricier late-game catalogue. */
+export const GOLD_PER_PHASE = 3;
+
+/** Gold bounty for a single kill in a given chapter (0-based phase index). */
+export function goldForKill(phaseIndex: number): number {
+  return GOLD_PER_KILL + Math.max(0, phaseIndex) * GOLD_PER_PHASE;
+}
 
 /**
  * Attempt to purchase one unit of an item from the camp shop.
- * Deducts the item's price from `state.gil` and increments the inventory count.
- * Returns true on success; false if gil is insufficient or the item is unknown.
+ * Deducts the item's price from `state.gold` and increments the inventory count.
+ * Returns true on success; false if gold is insufficient or the item is unknown.
  */
 export function buyItem(state: GameState, itemId: string): boolean {
   let item;
@@ -75,8 +83,8 @@ export function buyItem(state: GameState, itemId: string): boolean {
   } catch {
     return false;
   }
-  if (state.gil < item.price) return false;
-  state.gil -= item.price;
+  if (state.gold < item.price) return false;
+  state.gold -= item.price;
   state.inventory[itemId] = (state.inventory[itemId] ?? 0) + 1;
   return true;
 }
@@ -90,9 +98,9 @@ export function ownsEquipment(state: GameState, id: string): boolean {
 
 /**
  * Attempt to purchase an equipment piece from the gear shop.
- * Deducts the item's price from `state.gil` and adds its id to `ownedEquipment`.
+ * Deducts the item's price from `state.gold` and adds its id to `ownedEquipment`.
  * Returns true on success; false if the equipment is unknown, already owned,
- * or gil is insufficient (no mutation occurs on false).
+ * or gold is insufficient (no mutation occurs on false).
  */
 export function buyEquipment(state: GameState, id: string): boolean {
   let equipment;
@@ -102,15 +110,15 @@ export function buyEquipment(state: GameState, id: string): boolean {
     return false;
   }
   if (ownsEquipment(state, id)) return false;
-  if (state.gil < equipment.price) return false;
-  state.gil -= equipment.price;
+  if (state.gold < equipment.price) return false;
+  state.gold -= equipment.price;
   state.ownedEquipment.push(id);
   return true;
 }
 
 /**
  * Attempt to sell one unit of a consumable item back to the camp shop.
- * Increments `state.gil` by half the item's price (floored) and decrements
+ * Increments `state.gold` by half the item's price (floored) and decrements
  * the inventory count. Returns true on success; false if the item is unknown
  * or the party has none in stock (no mutation on false).
  */
@@ -124,14 +132,14 @@ export function sellItem(state: GameState, itemId: string): boolean {
   const count = state.inventory[itemId] ?? 0;
   if (count <= 0) return false;
   state.inventory[itemId] = count - 1;
-  state.gil += Math.floor(item.price / 2);
+  state.gold += Math.floor(item.price / 2);
   return true;
 }
 
 /**
  * Attempt to sell an owned equipment piece back to the gear shop.
  * Removes it from `ownedEquipment`, unequips it from any party unit currently
- * wearing it (recomputing their stats), and increments `state.gil` by half the
+ * wearing it (recomputing their stats), and increments `state.gold` by half the
  * equipment's price (floored). Returns true on success; false if the equipment
  * is unknown or not currently owned (no mutation on false).
  */
@@ -149,7 +157,7 @@ export function sellEquipment(state: GameState, id: string): boolean {
     if (unit.armorId === id) equip(unit, "armor", null);
     if (unit.accessoryId === id) equip(unit, "accessory", null);
   }
-  state.gil += Math.floor(equipment.price / 2);
+  state.gold += Math.floor(equipment.price / 2);
   return true;
 }
 
@@ -162,9 +170,9 @@ export function ownsWeapon(state: GameState, id: string): boolean {
 
 /**
  * Attempt to purchase a weapon from the weapon shop.
- * Deducts the weapon's price from `state.gil` and adds its id to `ownedWeapons`.
+ * Deducts the weapon's price from `state.gold` and adds its id to `ownedWeapons`.
  * Returns true on success; false if the weapon is unknown, already owned,
- * or gil is insufficient (no mutation occurs on false).
+ * or gold is insufficient (no mutation occurs on false).
  */
 export function buyWeapon(state: GameState, id: string): boolean {
   let weapon;
@@ -174,8 +182,8 @@ export function buyWeapon(state: GameState, id: string): boolean {
     return false;
   }
   if (ownsWeapon(state, id)) return false;
-  if (state.gil < weapon.price) return false;
-  state.gil -= weapon.price;
+  if (state.gold < weapon.price) return false;
+  state.gold -= weapon.price;
   state.ownedWeapons.push(id);
   return true;
 }
@@ -184,7 +192,7 @@ export function buyWeapon(state: GameState, id: string): boolean {
  * Attempt to sell an owned weapon back to the weapon shop.
  * Refuses (returns false) if any party unit currently has this weapon equipped —
  * a unit can never be left unarmed.
- * On a valid sell, removes from `ownedWeapons` and adds floor(price/2) gil.
+ * On a valid sell, removes from `ownedWeapons` and adds floor(price/2) gold.
  * Returns false if the weapon is unknown, not owned, or currently equipped by
  * any unit.
  */
@@ -199,7 +207,7 @@ export function sellWeapon(state: GameState, id: string): boolean {
   // Refuse to sell a weapon currently equipped by any party unit (no disarming).
   if (state.party.some((u) => u.weaponId === id)) return false;
   state.ownedWeapons = state.ownedWeapons.filter((owned) => owned !== id);
-  state.gil += Math.floor(weapon.price / 2);
+  state.gold += Math.floor(weapon.price / 2);
   return true;
 }
 
@@ -224,7 +232,7 @@ export function enemyLevelFor(baseLevel: number, difficulty: Difficulty, ngPlus 
 /**
  * Begin a New Game+ run: increment the NG+ cycle counter, reset the phase to
  * the start, refresh the consumable inventory, and keep everything else
- * (party levels / skills, gil, owned equipment, difficulty, save slot).
+ * (party levels / skills, gold, owned equipment, difficulty, save slot).
  */
 export function startNgPlus(state: GameState): void {
   state.ngPlus += 1;
@@ -290,9 +298,14 @@ export function loadGame(slot = 0): GameState | null {
     if (!VALID_DIFFICULTIES.includes(parsed.difficulty as Difficulty)) {
       parsed.difficulty = "normal" as Difficulty;
     }
-    // Back-compat: old saves lack `gil`; normalise any missing/invalid value.
-    if (typeof parsed.gil !== "number" || !isFinite(parsed.gil) || parsed.gil < 0) {
-      parsed.gil = 0;
+    // Back-compat: pre-rename saves stored the treasury as `gil`; carry it over.
+    const legacyGil = (parsed as { gil?: unknown }).gil;
+    if (parsed.gold === undefined && typeof legacyGil === "number") {
+      parsed.gold = legacyGil;
+    }
+    // Back-compat: old saves lack `gold`; normalise any missing/invalid value.
+    if (typeof parsed.gold !== "number" || !isFinite(parsed.gold) || parsed.gold < 0) {
+      parsed.gold = 0;
     }
     // Back-compat: old saves lack `ownedEquipment`; normalise to [].
     if (!Array.isArray(parsed.ownedEquipment)) {
