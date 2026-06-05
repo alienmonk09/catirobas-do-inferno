@@ -1,4 +1,4 @@
-import type { ClassId, RaceId, Unit } from "./types";
+import type { ClassId, Difficulty, RaceId, Unit } from "./types";
 import { createStartingParty } from "../data/party";
 import { startingInventory } from "../data/items";
 import { CLASSES } from "../data/classes";
@@ -13,6 +13,8 @@ export interface GameState {
   inventory: Record<string, number>;
   /** 0-based index of the current phase. */
   phaseIndex: number;
+  /** Selected difficulty; scales enemy levels. */
+  difficulty: Difficulty;
 }
 
 export function createGameState(): GameState {
@@ -20,7 +22,22 @@ export function createGameState(): GameState {
     party: createStartingParty(),
     inventory: startingInventory(),
     phaseIndex: 0,
+    difficulty: "normal",
   };
+}
+
+const VALID_DIFFICULTIES: Difficulty[] = ["easy", "normal", "hard"];
+
+/**
+ * Adjust an enemy's authored level by the selected difficulty.
+ * easy  → level - 1 (floored at 1)
+ * normal → unchanged
+ * hard  → level + 2
+ */
+export function enemyLevelFor(baseLevel: number, difficulty: Difficulty): number {
+  if (difficulty === "easy") return Math.max(1, baseLevel - 1);
+  if (difficulty === "hard") return baseLevel + 2;
+  return baseLevel;
 }
 
 const SAVE_KEY = "tactics-mvp-save";
@@ -63,6 +80,10 @@ export function loadGame(): GameState | null {
     if (!isValidSave(parsed)) {
       clearSave();
       return null;
+    }
+    // Back-compat: old saves lack `difficulty`; normalise any missing/invalid value.
+    if (!VALID_DIFFICULTIES.includes(parsed.difficulty as Difficulty)) {
+      parsed.difficulty = "normal" as Difficulty;
     }
     return parsed;
   } catch {

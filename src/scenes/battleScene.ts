@@ -1,7 +1,7 @@
 import type { MapDef, Point, SkillDef, Unit } from "../core/types";
 import { RNG } from "../core/rng";
 import { grantJp, grantXp, createUnit } from "../core/unit";
-import { refreshForBattle } from "../core/state";
+import { enemyLevelFor, refreshForBattle } from "../core/state";
 import { Grid, moveBlockers, samePoint } from "../battle/grid";
 import { pathTo, reachable } from "../battle/pathfinding";
 import { aoeTiles, knockbackTo, leapLanding, tilesInRange } from "../battle/targeting";
@@ -112,7 +112,7 @@ export class BattleScene implements Scene {
           name: e.name,
           team: "enemy",
           classId: e.classId,
-          level: e.level,
+          level: enemyLevelFor(e.level, this.ctx.state.difficulty),
           pos: e.pos,
           weaponId: e.weaponId,
           learnedSkillIds: e.skillIds ?? [],

@@ -248,3 +248,5 @@ export interface EnemySpawn {
 }
 
 export const CT_THRESHOLD = 100;
+
+export type Difficulty = "easy" | "normal" | "hard";

@@ -195,6 +195,15 @@ const CSS = `
 .party-footer { text-align: center; margin: 24px 0 8px; }
 .inv-line { text-align:center; font-size: 13px; opacity: 0.85; margin-top: 10px; }
 .crit { color: #ffd34d; }
+
+/* Difficulty selector on the New Game / party-select screen */
+.difficulty-row { display: flex; gap: 8px; justify-content: center; margin: 14px 0 4px; }
+.diff-btn { background: rgba(30,36,58,0.9); border: 1px solid rgba(120,140,200,0.4); color: #c8c8e0; font-size: 13px; font-weight: 600; padding: 7px 18px; border-radius: 6px; cursor: pointer; transition: background 0.12s, border-color 0.12s; }
+.diff-btn:hover { background: rgba(60,74,120,0.95); border-color: rgba(160,180,230,0.7); }
+.diff-btn.active.easy { border-color: #5fbf72; color: #8fe39a; box-shadow: 0 0 0 1px #5fbf72; }
+.diff-btn.active.normal { border-color: #ffd34d; color: #ffd34d; box-shadow: 0 0 0 1px #ffd34d; }
+.diff-btn.active.hard { border-color: #e85a5a; color: #ff9a9a; box-shadow: 0 0 0 1px #e85a5a; }
+.diff-desc { text-align: center; font-size: 12px; opacity: 0.65; margin-bottom: 6px; min-height: 16px; }
 `;
 
 let injected = false;

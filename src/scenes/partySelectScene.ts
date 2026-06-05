@@ -1,6 +1,7 @@
 import { ROSTER, PARTY_SIZE, createParty, type HeroDef } from "../data/party";
 import { startingInventory } from "../data/items";
 import { clearSave } from "../core/state";
+import type { Difficulty } from "../core/types";
 import { getClass } from "../data/classes";
 import { getRace } from "../data/races";
 import { statsForLevel } from "../core/unit";
@@ -9,10 +10,23 @@ import { el, clear } from "../ui/dom";
 import { iconImg } from "../ui/icons";
 import type { GameContext, Scene } from "./sceneManager";
 
+const DIFFICULTY_LABELS: Record<Difficulty, string> = {
+  easy: "Easy",
+  normal: "Normal",
+  hard: "Hard",
+};
+
+const DIFFICULTY_DESCS: Record<Difficulty, string> = {
+  easy: "Easy — enemies are one level lower",
+  normal: "Normal — as designed",
+  hard: "Hard — enemies are two levels higher and tougher",
+};
+
 /** New Game flow: pick PARTY_SIZE heroes from the roster, then march to Phase I. */
 export class PartySelectScene implements Scene {
   private root: HTMLDivElement;
   private selected = new Set<string>();
+  private difficulty: Difficulty = "normal";
 
   constructor(private ctx: GameContext) {
     this.ctx.renderer.clear();
@@ -30,12 +44,18 @@ export class PartySelectScene implements Scene {
     this.render();
   }
 
+  private setDifficulty(d: Difficulty): void {
+    this.difficulty = d;
+    this.render();
+  }
+
   private begin(): void {
     if (this.selected.size !== PARTY_SIZE) return;
     const order = ROSTER.filter((h) => this.selected.has(h.id)).map((h) => h.id);
     this.ctx.state.party = createParty(order);
     this.ctx.state.inventory = startingInventory();
     this.ctx.state.phaseIndex = 0;
+    this.ctx.state.difficulty = this.difficulty;
     clearSave();
     this.ctx.nav.toBattle(0);
   }
@@ -97,6 +117,23 @@ export class PartySelectScene implements Scene {
         text: `Chosen ${this.selected.size}/${PARTY_SIZE}`,
       }),
     );
+
+    // Difficulty selector
+    footer.appendChild(el("div", { attrs: { style: "font-size:13px;font-weight:700;opacity:0.7;margin-bottom:6px" }, text: "Difficulty" }));
+    const diffRow = el("div", { className: "difficulty-row" });
+    for (const d of ["easy", "normal", "hard"] as Difficulty[]) {
+      const active = this.difficulty === d;
+      diffRow.appendChild(
+        el("button", {
+          className: `diff-btn ${d}${active ? " active" : ""}`,
+          text: DIFFICULTY_LABELS[d],
+          onClick: () => this.setDifficulty(d),
+        }),
+      );
+    }
+    footer.appendChild(diffRow);
+    footer.appendChild(el("div", { className: "diff-desc", text: DIFFICULTY_DESCS[this.difficulty] }));
+
     footer.appendChild(
       el("button", {
         className: "btn",
