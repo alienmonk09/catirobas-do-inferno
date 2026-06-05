@@ -89,25 +89,29 @@ Living task list for the autonomous build. The roadmap (`ROADMAP.md`) is the
   unitHasReaction = innate ∪ equipped. FFT reaction system complete. `88b598b`.
 - **Sell** (v0.5) — sell consumables & owned gear for half price; selling gear unequips it. `1f5ba27`.
 
-## Next up (prioritized)
+## Next up (prioritized — what actually remains)
 1. **Skill charge time** (v0.4, FFT casting) — powerful magic resolves a few CT ticks later;
-   charging state on Unit + turn-loop awareness + indicator + interrupt. HIGHEST RISK (core
-   turn loop). ⚠ Do this when the Codex reviewer recovers (need the review backstop); lean
-   hard on the AI-vs-AI sim + browser smoke.
-2. **Recruitable units** (v0.5) — turn a beaten foe into a party member (capture + roster).
-3. **Weapon shop / ownership** — like the Gear Shop but weapons are class-locked + never-unarmed,
-   so the dropdown/migration is fiddlier; decide the model.
-4. **Save slots**, **battle log / replay**, **undo-move** (v1.0 QoL); **job mastery** (v0.5);
-   content: dialogue/portraits (v0.6), fog of war, weather. See `ROADMAP.md`.
-2. **Cover-ally reaction** — intercept a hit for an adjacent ally. Needs: `ClassDef.reaction`
-   → `reactions[]` refactor (so a tank can have counter + cover), an attack target-redirect at
-   resolution (weapon + single-skill, player + AI paths), and ideally honest forecast.
-3. **Zone of control** — entering a tile adjacent to a living enemy stops further movement
-   (BFS change in pathfinding `reachable`). ⚠ may change the AI-vs-AI sim dynamics — watch that test.
-4. **Skill charge time** (v0.4, FFT casting) — powerful magic resolves a few CT ticks later;
-   charging state on Unit + turn-loop awareness + UI + interrupt. Highest risk (turn loop).
-5. Escort objective (needs NPC unit concept). Job mastery, recruitable enemies, dialogue/
-   portraits, fog of war — see `ROADMAP.md`.
+   needs a charging state on Unit + turn-loop awareness + a charging indicator + interrupt.
+   HIGHEST RISK (it touches the core turn loop). Codex review is back, so it's doable — lean
+   hard on the AI-vs-AI sim + browser smoke + a review pass.
+2. **Recruitable units** (v0.5) — turn a beaten foe into a party member (a capture action +
+   mid-battle team switch + persistent roster addition).
+3. **Weapon shop / ownership** — like the Gear Shop, but weapons are class-locked and a unit
+   is never unarmed, so the dropdown gating + starting-weapon migration is fiddlier.
+4. **Job mastery** (v0.5) — master a class (learn all its skills) for a carried passive; note
+   it would touch the fragile stat pipeline (statsForUnit).
+5. **Content** (v0.6) — in-engine dialogue/cutscenes, character portraits, named-enemy intros,
+   optional skirmish maps. (Agent-authored map balance/art is the risk here.)
+6. **Niche / later** — escort objective (needs an NPC unit concept), fog of war, weather/
+   day-night, large/multi-tile units & mounts, bravery/faith, weapon triangle, accessibility
+   pass, performance pass, rebalance. See `ROADMAP.md`.
+
+## Done this session — also (post the list above)
+- AI personalities, knockback fall damage, enemy races + recruit-timing, equipment ownership +
+  Gear Shop, Cover reaction, Zone of control, equippable reactions, sell, battle log, undo-move,
+  save slots, settings menu, New Game+ — plus ~12 Codex review fixes (forecast clamp, completed-
+  turn counting, counter-kill rewards, fall-kill credit, instant mute, leap forecast, AI leap LoS…).
+  Run `git log main..HEAD` for the full ordered list.
 
 ## Known issues / cleanups
 - AI doesn't account for walking into a Counter when scoring attacks (minor; counters
