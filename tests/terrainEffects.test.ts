@@ -3,6 +3,7 @@ import { terrainEffect } from "../src/data/terrain";
 import { applyTerrainEffect } from "../src/battle/combat";
 import { createUnit } from "../src/core/unit";
 import { cinderFields } from "../src/data/maps/cinderFields";
+import { phase3 } from "../src/data/maps/phase3";
 import type { Unit } from "../src/core/types";
 
 function makeUnit(overrides: Partial<Parameters<typeof createUnit>[0]> = {}): Unit {
@@ -24,14 +25,18 @@ describe("terrainEffect", () => {
     const eff = terrainEffect("lava");
     expect(eff).not.toBeNull();
     expect(eff?.kind).toBe("damage");
-    expect(eff?.fracMaxHp).toBe(0.15);
+    if (eff?.kind === "damage" || eff?.kind === "heal") {
+      expect(eff.fracMaxHp).toBe(0.15);
+    }
   });
 
   it("returns heal 0.12 for spring", () => {
     const eff = terrainEffect("spring");
     expect(eff).not.toBeNull();
     expect(eff?.kind).toBe("heal");
-    expect(eff?.fracMaxHp).toBe(0.12);
+    if (eff?.kind === "damage" || eff?.kind === "heal") {
+      expect(eff.fracMaxHp).toBe(0.12);
+    }
   });
 
   it("returns null for grass", () => {
@@ -56,6 +61,17 @@ describe("terrainEffect", () => {
 
   it("returns null for wood", () => {
     expect(terrainEffect("wood")).toBeNull();
+  });
+
+  it("returns status slow for mire", () => {
+    const eff = terrainEffect("mire");
+    expect(eff).not.toBeNull();
+    expect(eff?.kind).toBe("status");
+    // narrow the type so TS knows these fields exist
+    if (eff?.kind === "status") {
+      expect(eff.status).toBe("slow");
+      expect(eff.turns).toBe(2);
+    }
   });
 });
 
@@ -144,6 +160,38 @@ describe("applyTerrainEffect", () => {
     const unit = makeUnit();
     expect(applyTerrainEffect(unit, "water")).toBeNull();
   });
+
+  it("applies Slow to a living unit on mire and returns a status HitResult", () => {
+    const unit = makeUnit();
+    const result = applyTerrainEffect(unit, "mire");
+    expect(result).not.toBeNull();
+    expect(result?.kind).toBe("status");
+    expect(result?.status).toBe("slow");
+    expect(result?.amount).toBe(0);
+    expect(result?.crit).toBe(false);
+    expect(result?.killed).toBe(false);
+    expect(result?.revived).toBe(false);
+    expect(unit.statuses.some((s) => s.kind === "slow")).toBe(true);
+  });
+
+  it("does not re-apply Slow if the unit already has it (returns null)", () => {
+    const unit = makeUnit();
+    // Apply once — should succeed.
+    applyTerrainEffect(unit, "mire");
+    expect(unit.statuses.some((s) => s.kind === "slow")).toBe(true);
+    // Apply again on the same turn — should be a no-op.
+    const result = applyTerrainEffect(unit, "mire");
+    expect(result).toBeNull();
+    // Status is still present but not duplicated.
+    expect(unit.statuses.filter((s) => s.kind === "slow").length).toBe(1);
+  });
+
+  it("returns null for a dead unit on mire", () => {
+    const unit = makeUnit();
+    unit.alive = false;
+    unit.stats.hp = 0;
+    expect(applyTerrainEffect(unit, "mire")).toBeNull();
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -206,6 +254,58 @@ describe("cinderFields terrain", () => {
     for (let y = 0; y < cinderFields.height; y++) {
       for (let x = 0; x < cinderFields.width; x++) {
         if (terrain![y][x] === "lava") {
+          expect(enemyKeys.has(`${x},${y}`)).toBe(false);
+        }
+      }
+    }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Map sanity: phase3 mire tiles
+// ---------------------------------------------------------------------------
+
+describe("phase3 terrain (mire)", () => {
+  it("has at least one mire tile in its terrain grid", () => {
+    const { terrain } = phase3;
+    expect(terrain).toBeDefined();
+    const hasMire = terrain!.some((row) => row.includes("mire"));
+    expect(hasMire).toBe(true);
+  });
+
+  it("no mire tile is blocked", () => {
+    const { terrain, blocked, width, height } = phase3;
+    expect(terrain).toBeDefined();
+    for (let y = 0; y < height; y++) {
+      for (let x = 0; x < width; x++) {
+        if (terrain![y][x] === "mire") {
+          const isBlocked = blocked?.[y][x] ?? false;
+          expect(isBlocked).toBe(false);
+        }
+      }
+    }
+  });
+
+  it("no mire tile sits on a player spawn", () => {
+    const { terrain, playerSpawns, height, width } = phase3;
+    expect(terrain).toBeDefined();
+    const spawnKeys = new Set(playerSpawns.map((s) => `${s.x},${s.y}`));
+    for (let y = 0; y < height; y++) {
+      for (let x = 0; x < width; x++) {
+        if (terrain![y][x] === "mire") {
+          expect(spawnKeys.has(`${x},${y}`)).toBe(false);
+        }
+      }
+    }
+  });
+
+  it("no mire tile sits on an enemy spawn", () => {
+    const { terrain, enemies, height, width } = phase3;
+    expect(terrain).toBeDefined();
+    const enemyKeys = new Set(enemies.map((e) => `${e.pos.x},${e.pos.y}`));
+    for (let y = 0; y < height; y++) {
+      for (let x = 0; x < width; x++) {
+        if (terrain![y][x] === "mire") {
           expect(enemyKeys.has(`${x},${y}`)).toBe(false);
         }
       }

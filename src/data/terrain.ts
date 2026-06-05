@@ -1,4 +1,4 @@
-import type { TerrainType } from "../core/types";
+import type { StatusKind, TerrainType } from "../core/types";
 
 /**
  * Per-terrain HSL base. The renderer shades the tile top brighter with height
@@ -22,6 +22,7 @@ export const TERRAIN: Record<TerrainType, TerrainStyle> = {
   wood: { h: 28, s: 42, l: 36 },
   lava: { h: 14, s: 85, l: 46 },
   spring: { h: 168, s: 58, l: 52 },
+  mire: { h: 80, s: 25, l: 25 },
 };
 
 /**
@@ -39,12 +40,15 @@ export function defaultTerrain(blocked: boolean, height: number): TerrainType {
 }
 
 /**
- * Per-turn HP effect a unit suffers when it ends its turn on this terrain.
+ * Per-turn effect a unit suffers or gains when it ends its turn on this terrain.
  * Returns null for terrain types with no hazard/benefit (the common case).
- * `fracMaxHp` is the fraction of the unit's maxHp used to compute the delta.
+ * `fracMaxHp` is the fraction of the unit's maxHp used to compute the HP delta.
  */
-export function terrainEffect(t: TerrainType): { kind: "damage" | "heal"; fracMaxHp: number } | null {
+export function terrainEffect(
+  t: TerrainType,
+): { kind: "damage" | "heal"; fracMaxHp: number } | { kind: "status"; status: StatusKind; turns: number } | null {
   if (t === "lava") return { kind: "damage", fracMaxHp: 0.15 };
   if (t === "spring") return { kind: "heal", fracMaxHp: 0.12 };
+  if (t === "mire") return { kind: "status", status: "slow", turns: 2 };
   return null;
 }

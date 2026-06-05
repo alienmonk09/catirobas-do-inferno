@@ -382,9 +382,10 @@ export function resolveSkillOnTarget(
 }
 
 /**
- * Apply the terrain's per-turn HP effect (lava damage, spring heal) to a unit
- * that just ended its turn on that tile. Returns null if no effect applies
- * (terrain is neutral, unit is dead, or healer is already at full HP).
+ * Apply the terrain's per-turn effect (lava damage, spring heal, mire slow) to a
+ * unit that just ended its turn on that tile. Returns null if no effect applies
+ * (terrain is neutral, unit is dead, healer is already at full HP, or the unit
+ * already carries the terrain's status).
  * Called after tickStatuses so status ticks happen first.
  */
 export function applyTerrainEffect(unit: Unit, terrain: TerrainType): HitResult | null {
@@ -395,13 +396,17 @@ export function applyTerrainEffect(unit: Unit, terrain: TerrainType): HitResult 
     const dmg = Math.max(1, Math.round(unit.stats.maxHp * eff.fracMaxHp));
     const { killed } = dealDamage(unit, dmg);
     return { unitId: unit.id, kind: "damage", amount: dmg, crit: false, killed, revived: false };
-  } else {
-    // heal
+  } else if (eff.kind === "heal") {
     if (unit.stats.hp >= unit.stats.maxHp) return null;
     const before = unit.stats.hp;
     healHp(unit, Math.max(1, Math.round(unit.stats.maxHp * eff.fracMaxHp)));
     return { unitId: unit.id, kind: "heal", amount: unit.stats.hp - before, crit: false, killed: false, revived: false };
+  } else if (eff.kind === "status") {
+    if (hasStatus(unit, eff.status)) return null;
+    addStatus(unit, { kind: eff.status, turnsLeft: eff.turns });
+    return { unitId: unit.id, kind: "status", amount: 0, crit: false, killed: false, revived: false, status: eff.status };
   }
+  return null;
 }
 
 // A fall hurts only past a meaningful ledge, scaling with how far the unit drops.

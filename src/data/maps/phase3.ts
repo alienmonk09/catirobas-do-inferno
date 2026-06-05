@@ -4,14 +4,17 @@ import type { MapDef, TerrainType } from "../../core/types";
 // Two healing springs flank the south riverbank (row 5, columns 1 and 7).
 // They're natural seeps fed by the river — a brief respite for a unit
 // sheltering on the wings before crossing the bridge.
+// A mire patch (row 3, columns 0–1) clings to the north bank approach —
+// boggy ground where the river seeps into the soil.
 const W: TerrainType = "water";
 const G: TerrainType = "grass";
 const S: TerrainType = "spring";
+const M: TerrainType = "mire";
 const terrain: TerrainType[][] = [
   [G, G, G, G, G, G, G, G, G],
   [G, G, G, G, G, G, G, G, G],
   [G, G, G, G, G, G, G, G, G],
-  [G, G, G, G, G, G, G, G, G],
+  [M, M, G, G, G, G, G, G, G], // mire on north bank approach (river seepage)
   [W, W, W, W, G, W, W, W, W], // river row (blocked tiles read as water)
   [G, S, G, G, G, G, G, S, G], // spring seeps on south bank flanks
   [G, G, G, G, G, G, G, G, G],
