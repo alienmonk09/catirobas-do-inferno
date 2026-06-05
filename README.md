@@ -61,7 +61,7 @@ npm test           # run the Vitest suite
 - Each battle shows its **objective** (top center). Most are won by routing the
   enemy, but some differ — the finale is won by **defeating the tyrant** himself,
   his guard optional. Between phases, the **Party Camp** screen lets
-  you change classes, swap weapons, spend JP to learn new skills, and **recruit
+  you change classes, swap weapons, spend Skill Points to learn new skills, and **recruit
   reinforcements** from the rest of the roster as the campaign opens deployment
   slots (a fifth hero mid-campaign, a sixth for the finale). Progress is saved
   automatically (localStorage); **Continue** resumes from the camp.

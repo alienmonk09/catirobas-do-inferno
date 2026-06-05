@@ -67,7 +67,7 @@ nothing left to hide behind.
 ## The campaign — seven chapters
 
 The game ships as **seven phases**, played in order, with a Party Camp between
-each for class changes, gear, skill (JP) spending, and — as the war widens —
+each for class changes, gear, skill (Skill Point) spending, and — as the war widens —
 reinforcements: the party starts at four and earns extra deployment slots
 mid-campaign and for the finale. Progress saves automatically.
 

@@ -4,7 +4,7 @@ import {
   statsForLevel,
   createUnit,
   grantXp,
-  grantJp,
+  grantSp,
   nextLearnableSkill,
   nextLearnableSkillForClass,
   learnNextSkill,
@@ -25,20 +25,20 @@ describe("secondary-job skill learning", () => {
     expect(nextLearnableSkillForClass(u, "whiteMage")).toBe(wm[1]);
   });
 
-  it("learnSkillForClass spends JP to learn a secondary job's skill", () => {
+  it("learnSkillForClass spends SP to learn a secondary job's skill", () => {
     const u = mk();
-    u.jp = 100000;
+    u.sp = 100000;
     const wm0 = getClass("whiteMage").skillIds[0];
-    const before = u.jp;
+    const before = u.sp;
     const learned = learnSkillForClass(u, "whiteMage", 100);
     expect(learned).toBe(wm0);
     expect(u.learnedSkillIds).toContain(wm0);
-    expect(u.jp).toBe(before - 100);
+    expect(u.sp).toBe(before - 100);
   });
 
-  it("won't learn across classes without enough JP", () => {
+  it("won't learn across classes without enough SP", () => {
     const u = mk();
-    u.jp = 0;
+    u.sp = 0;
     expect(learnSkillForClass(u, "whiteMage", 100)).toBeNull();
     expect(u.learnedSkillIds).not.toContain(getClass("whiteMage").skillIds[0]);
   });
@@ -47,7 +47,7 @@ describe("secondary-job skill learning", () => {
     const u = mk();
     for (const id of getClass("archer").skillIds) u.learnedSkillIds.push(id);
     expect(nextLearnableSkillForClass(u, "archer")).toBeNull();
-    u.jp = 100000;
+    u.sp = 100000;
     expect(learnSkillForClass(u, "archer", 100)).toBeNull();
   });
 });
@@ -140,7 +140,7 @@ describe("createUnit", () => {
     });
     expect(u.level).toBe(1);
     expect(u.xp).toBe(0);
-    expect(u.jp).toBe(0);
+    expect(u.sp).toBe(0);
     expect(u.alive).toBe(true);
     expect(u.statuses).toEqual([]);
     expect(u.ct).toBe(0);
@@ -361,29 +361,29 @@ describe("grantXp", () => {
   });
 });
 
-describe("grantJp", () => {
-  it("adds JP to the unit", () => {
+describe("grantSp", () => {
+  it("adds SP to the unit", () => {
     const u = createUnit({
       name: "Jp",
       team: "player",
       classId: "knight",
       pos: { x: 0, y: 0 },
     });
-    grantJp(u, 100);
-    expect(u.jp).toBe(100);
-    grantJp(u, 50);
-    expect(u.jp).toBe(150);
+    grantSp(u, 100);
+    expect(u.sp).toBe(100);
+    grantSp(u, 50);
+    expect(u.sp).toBe(150);
   });
 
-  it("granting zero JP leaves the total unchanged", () => {
+  it("granting zero SP leaves the total unchanged", () => {
     const u = createUnit({
       name: "Jp0",
       team: "player",
       classId: "knight",
       pos: { x: 0, y: 0 },
     });
-    grantJp(u, 0);
-    expect(u.jp).toBe(0);
+    grantSp(u, 0);
+    expect(u.sp).toBe(0);
   });
 });
 
@@ -434,7 +434,7 @@ describe("nextLearnableSkill", () => {
 });
 
 describe("learnNextSkill", () => {
-  function knightWithJp(jp: number, learned: string[] = []): Unit {
+  function knightWithSp(sp: number, learned: string[] = []): Unit {
     const u = createUnit({
       name: "Student",
       team: "player",
@@ -442,61 +442,61 @@ describe("learnNextSkill", () => {
       pos: { x: 0, y: 0 },
       learnedSkillIds: learned,
     });
-    grantJp(u, jp);
+    grantSp(u, sp);
     return u;
   }
 
-  it("learns the next skill and spends JP when affordable", () => {
-    const u = knightWithJp(100);
+  it("learns the next skill and spends SP when affordable", () => {
+    const u = knightWithSp(100);
     const learned = learnNextSkill(u, 100);
     expect(learned).toBe("powerStrike");
     expect(u.learnedSkillIds).toContain("powerStrike");
-    expect(u.jp).toBe(0);
+    expect(u.sp).toBe(0);
   });
 
-  it("learns with surplus JP and leaves the remainder", () => {
-    const u = knightWithJp(250);
+  it("learns with surplus SP and leaves the remainder", () => {
+    const u = knightWithSp(250);
     const learned = learnNextSkill(u, 100);
     expect(learned).toBe("powerStrike");
-    expect(u.jp).toBe(150);
+    expect(u.sp).toBe(150);
   });
 
-  it("refuses and returns null when JP is insufficient", () => {
-    const u = knightWithJp(99);
+  it("refuses and returns null when SP is insufficient", () => {
+    const u = knightWithSp(99);
     const learned = learnNextSkill(u, 100);
     expect(learned).toBeNull();
     expect(u.learnedSkillIds).toEqual([]);
-    expect(u.jp).toBe(99); // JP not spent
+    expect(u.sp).toBe(99); // SP not spent
   });
 
-  it("learns when JP exactly equals the cost (boundary)", () => {
-    const u = knightWithJp(100);
+  it("learns when SP exactly equals the cost (boundary)", () => {
+    const u = knightWithSp(100);
     const learned = learnNextSkill(u, 100);
     expect(learned).toBe("powerStrike");
-    expect(u.jp).toBe(0);
+    expect(u.sp).toBe(0);
   });
 
   it("refuses and returns null when nothing is left to learn", () => {
     const c = getClass("knight");
-    const u = knightWithJp(1000, [...c.skillIds]);
+    const u = knightWithSp(1000, [...c.skillIds]);
     const learned = learnNextSkill(u, 0);
     expect(learned).toBeNull();
-    expect(u.jp).toBe(1000); // JP not spent
+    expect(u.sp).toBe(1000); // SP not spent
   });
 
   it("learns skills in class order across multiple calls", () => {
-    const u = knightWithJp(1000);
+    const u = knightWithSp(1000);
     expect(learnNextSkill(u, 100)).toBe("powerStrike");
     expect(learnNextSkill(u, 100)).toBe("guard");
     expect(learnNextSkill(u, 100)).toBeNull(); // all learned
     expect(u.learnedSkillIds).toEqual(["powerStrike", "guard"]);
-    expect(u.jp).toBe(800); // only two skills cost 100 each
+    expect(u.sp).toBe(800); // only two skills cost 100 each
   });
 
-  it("checks 'nothing left' before checking JP", () => {
+  it("checks 'nothing left' before checking SP", () => {
     const c = getClass("knight");
-    // No JP, but also nothing left to learn -> null regardless of cost.
-    const u = knightWithJp(0, [...c.skillIds]);
+    // No SP, but also nothing left to learn -> null regardless of cost.
+    const u = knightWithSp(0, [...c.skillIds]);
     expect(learnNextSkill(u, 100)).toBeNull();
   });
 });

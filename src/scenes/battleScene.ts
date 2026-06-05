@@ -1,6 +1,6 @@
-import type { ClassId, Direction, MapDef, Point, SkillDef, Unit } from "../core/types";
+import type { Direction, MapDef, Point, SkillDef, Unit } from "../core/types";
 import { RNG } from "../core/rng";
-import { grantJp, grantXp, createUnit, recomputeStats, xpForLevel } from "../core/unit";
+import { grantSp, grantXp, createUnit } from "../core/unit";
 import { enemyLevelFor, refreshForBattle, survivorsAfterBattle, goldForKill } from "../core/state";
 import { Grid, manhattan, moveBlockers, samePoint, zoneOfControl } from "../battle/grid";
 import { pathTo, reachable } from "../battle/pathfinding";
@@ -32,7 +32,7 @@ import type { ActiveEffect, BattleView, FloatingText, ForecastTag, OverlaySet } 
 import { getWeapon } from "../data/weapons";
 import { getSkill } from "../data/skills";
 import { getItem } from "../data/items";
-import { CLASSES, getClass } from "../data/classes";
+import { getClass } from "../data/classes";
 import { getVfx, vfxKeyForSkill, vfxKeyForWeapon } from "../data/sprites";
 import { PHASES } from "../data/maps";
 import { dialogueFor, outroFor } from "../data/dialogue";
@@ -105,104 +105,13 @@ export class BattleScene implements Scene {
     this.ui = new BattleUI(ctx.uiParent);
     this.buildUnits();
     this.bindInput();
-    this.setupDevBar();
+    // Dev cheat bar — loaded only on the local Vite dev server. The guard folds
+    // to `false` in a production build, so Vite tree-shakes both the dynamic
+    // import and the entire battleDevTools module out of the shipped bundle.
+    if ((import.meta as { env?: { DEV?: boolean } }).env?.DEV) {
+      void import("./battleDevTools").then((m) => m.setupDevBar(this));
+    }
     this.showIntro();
-  }
-
-  // --- Dev tools (rapid playtesting; never shown in a normal player build) ---
-
-  /** True when the dev shortcut bar should appear: Vite dev server, or a `dev`
-   *  query string on a deployed build (e.g. ?dev). */
-  private devEnabled(): boolean {
-    try {
-      const env = (import.meta as { env?: { DEV?: boolean } }).env;
-      if (env?.DEV) return true;
-    } catch {
-      /* import.meta unavailable */
-    }
-    return typeof location !== "undefined" && /[?&]dev\b/.test(location.search);
-  }
-
-  /** A living player unit to target with dev actions — the active one, else the first. */
-  private devTargetUnit(): Unit | null {
-    if (this.active?.team === "player" && this.active.alive) return this.active;
-    return this.units.find((u) => u.team === "player" && u.alive) ?? null;
-  }
-
-  private setupDevBar(): void {
-    if (!this.devEnabled()) return;
-    this.ui.showDevBar([
-      { label: "Win", title: "Win this battle instantly", onClick: () => { if (this.phase !== "over") this.endBattle("player"); } },
-      { label: "Lose", title: "Lose this battle instantly", onClick: () => { if (this.phase !== "over") this.endBattle("enemy"); } },
-      { label: "Kill foe", title: "Remove one living enemy", onClick: () => this.devKillEnemy() },
-      { label: "+Lvl", title: "Level up the active/first hero", onClick: () => this.devLevelUp() },
-      { label: "Class▸", title: "Cycle the active/first hero's class", onClick: () => this.devCycleClass() },
-      { label: "+500g", title: "Add 500 gold", onClick: () => { this.ctx.state.gold += 500; this.ui.toast(`Gold: ${this.ctx.state.gold}`); } },
-      { label: "Heal", title: "Fully restore the party", onClick: () => this.devHealParty() },
-    ]);
-  }
-
-  private devKillEnemy(): void {
-    if (this.phase === "over") return;
-    const foe = this.units.find((u) => u.alive && u.team === "enemy");
-    if (!foe) return;
-    foe.stats.hp = 0;
-    foe.alive = false;
-    foe.statuses = [];
-    this.pushLog(`[dev] removed ${foe.name}`);
-    this.refreshTurnBar();
-    const winner = this.outcome();
-    if (winner) this.endBattle(winner);
-  }
-
-  private devLevelUp(): void {
-    if (this.phase === "over") return;
-    const u = this.devTargetUnit();
-    if (!u) return;
-    grantXp(u, Math.max(1, xpForLevel(u.level) - u.xp));
-    this.ui.toast(`${u.name} → Lv ${u.level}`);
-    if (this.active === u) this.ui.setActiveUnit(u);
-  }
-
-  private devCycleClass(): void {
-    if (this.phase === "over") return;
-    const u = this.devTargetUnit();
-    if (!u) return;
-    const ids = Object.keys(CLASSES) as ClassId[];
-    const next = ids[(ids.indexOf(u.classId) + 1) % ids.length];
-    const c = getClass(next);
-    u.classId = next;
-    u.subClassId = undefined;
-    u.weaponId = c.weaponIds[0];
-    u.learnedSkillIds = c.skillIds.slice(0, 1);
-    recomputeStats(u, true);
-    this.ui.toast(`${u.name} → ${c.name}`);
-    if (this.active === u) {
-      this.ui.setActiveUnit(u);
-      // The old class's skill selection / open submenu / target highlights are now
-      // stale — drop them and return to a clean action menu while in player control
-      // (covers menu AND the *Target sub-phases, not just "menu").
-      if (this.playerInControl) {
-        this.selectedSkill = null;
-        this.selectedItemId = null;
-        this.rangeTiles = [];
-        this.ui.hideSubmenu();
-        this.phase = "menu";
-        this.refreshMenu();
-      }
-    }
-  }
-
-  private devHealParty(): void {
-    if (this.phase === "over") return;
-    for (const u of this.units) {
-      if (u.team === "player" && u.alive) {
-        u.stats.hp = u.stats.maxHp;
-        u.stats.mp = u.stats.maxMp;
-      }
-    }
-    if (this.active) this.ui.setActiveUnit(this.active);
-    this.ui.toast("Party fully restored");
   }
 
   // --- Setup ---
@@ -1069,7 +978,7 @@ export class BattleScene implements Scene {
     return Math.max(0.5, Math.min(1.5, 1 + 0.08 * (enemyLevel - unit.level)));
   }
 
-  /** Credit a kill (gold + offensive XP/JP) to a PLAYER unit that wasn't the active
+  /** Credit a kill (gold + offensive XP/SP) to a PLAYER unit that wasn't the active
    *  actor — e.g. a counterattacker on the enemy's turn. No-op for enemies. */
   private creditKill(killer: Unit, enemyLevel?: number): void {
     if (killer.team !== "player") return;
@@ -1077,7 +986,7 @@ export class BattleScene implements Scene {
     // offensive (13) + kill bonus (14), matching awardForAction, then level-scaled.
     const xp = Math.max(1, Math.round(27 * this.xpLevelMult(killer, enemyLevel)));
     const levels = grantXp(killer, xp);
-    grantJp(killer, 20);
+    grantSp(killer, 20);
     if (levels > 0) this.ui.toast(`${killer.name} reached Lv ${killer.level}!`);
   }
 
@@ -1090,13 +999,13 @@ export class BattleScene implements Scene {
     // Flatter awards than before — the kill bonus is trimmed so a single carry
     // can't snowball, and the whole party climbs at a steadier cadence.
     let xp = opts.offensive ? 13 : opts.support ? 10 : 8;
-    let jp = opts.offensive ? 8 : opts.support ? 8 : 6;
+    let sp = opts.offensive ? 8 : opts.support ? 8 : 6;
     if (opts.killed) {
       xp += 14;
-      jp += 12;
+      sp += 12;
     }
     const levels = grantXp(unit, Math.max(1, Math.round(xp * this.xpLevelMult(unit, enemyLevel))));
-    grantJp(unit, jp);
+    grantSp(unit, sp);
     if (levels > 0) {
       this.ui.toast(`${unit.name} reached Lv ${unit.level}!`);
       this.ui.setActiveUnit(this.active);

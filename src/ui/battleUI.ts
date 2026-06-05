@@ -349,7 +349,7 @@ export class BattleUI {
     clear(this.submenu);
     this.submenu.appendChild(el("div", { className: "submenu-title", text: "Skills" }));
     if (skills.length === 0) {
-      this.submenu.appendChild(el("div", { text: "No skills learned. Spend JP at the Party Camp.", attrs: { style: "opacity:0.7;font-size:12px" } }));
+      this.submenu.appendChild(el("div", { text: "No skills learned. Spend Skill Points at the Party Camp.", attrs: { style: "opacity:0.7;font-size:12px" } }));
     }
     for (const s of skills) {
       const affordable = unit.stats.mp >= s.mpCost;

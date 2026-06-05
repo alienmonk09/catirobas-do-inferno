@@ -26,7 +26,7 @@ phases to a decisive result.
 - ✅ Status effects: Guard, Slow, Haste
 - ✅ Damage/heal **forecast** preview (shared by UI and AI)
 - ✅ Enemy AI: heal-priority, damage maximization, pursuit
-- ✅ Progression: XP/leveling, JP skill unlocks, free class change, weapon swap
+- ✅ Progression: XP/leveling, Skill-Point unlocks, free class change, weapon swap
 - ✅ 5-phase campaign + Party Camp interstitial, with title/victory flow
 - ✅ Save/load to localStorage (with shape validation)
 - ✅ Code-defined pixel-art sprites (no asset pipeline) + VFX + combat juice
@@ -67,7 +67,7 @@ The next push: grow the party, make the UI teach itself, and widen the campaign.
 - ✅ **Two more classes** — Thief (Enzo) and Druid (Penelope)
 - ✅ **Secondary job / ability pool** — equip a second class's skill set at the camp;
   its learned skills are usable alongside the primary's (FFT-style). Learn across both
-  jobs with JP; the first sub-job skill is granted on equip.
+  jobs with Skill Points; the first sub-job skill is granted on equip.
 - ✅ **More classes** — Time Mage (tempo control), Summoner (wide-AoE glass cannon),
   Geomancer (durable earth control caster), and Lancer (Jump leap-strike), all
   retrainable at camp. (11 classes at this milestone — 14 after v0.5.5.)

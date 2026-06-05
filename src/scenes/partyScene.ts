@@ -42,7 +42,7 @@ const REACTION_OPTIONS: [string, string][] = [
   ["cover", "Cover"],
 ];
 
-/** Between-phase screen: class change, equipment, and spending JP on skills. */
+/** Between-phase screen: class change, equipment, and spending SP on skills. */
 type CampTab = "party" | "reinforcements" | "shop";
 
 export class PartyScene implements Scene {
@@ -115,20 +115,20 @@ export class PartyScene implements Scene {
   private learnFrom(unit: Unit, classId: ClassId): void {
     const next = nextLearnableSkillForClass(unit, classId);
     if (!next) return;
-    if (learnSkillForClass(unit, classId, getSkill(next).jpCost)) this.render();
+    if (learnSkillForClass(unit, classId, getSkill(next).spCost)) this.render();
   }
 
-  /** A "JP / Learn next" row for a given class (primary or secondary job). */
+  /** A "SP / Learn next" row for a given class (primary or secondary job). */
   private learnRow(unit: Unit, classId: ClassId, labelPrefix: string): HTMLElement {
     const next = nextLearnableSkillForClass(unit, classId);
     const row = el("div", { className: "jpline" });
     if (next) {
       const skill = getSkill(next);
-      const affordable = unit.jp >= skill.jpCost;
+      const affordable = unit.sp >= skill.spCost;
       row.appendChild(
         el("button", {
           className: "btn small",
-          text: `${labelPrefix}Learn ${skill.name} (${skill.jpCost} JP)`,
+          text: `${labelPrefix}Learn ${skill.name} (${skill.spCost} SP)`,
           attrs: affordable ? {} : { disabled: "true" },
           onClick: affordable ? () => this.learnFrom(unit, classId) : undefined,
         }),
@@ -351,8 +351,8 @@ export class PartyScene implements Scene {
       card.appendChild(srow);
     }
 
-    // Spend JP: learn the next skill of the primary class and (if set) the sub-job.
-    card.appendChild(el("div", { text: `JP: ${unit.jp}`, attrs: { style: "font-size:13px;margin-top:6px" } }));
+    // Spend SP: learn the next skill of the primary class and (if set) the sub-job.
+    card.appendChild(el("div", { text: `Skill Points: ${unit.sp}`, attrs: { style: "font-size:13px;margin-top:6px" } }));
     card.appendChild(this.learnRow(unit, unit.classId, ""));
     if (unit.subClassId) card.appendChild(this.learnRow(unit, unit.subClassId, `${getClass(unit.subClassId).name}: `));
     return card;

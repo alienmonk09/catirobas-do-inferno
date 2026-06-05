@@ -12,7 +12,7 @@ function mkUnit(over: Partial<Unit["stats"]> = {}): Unit {
     raceId: "human",
     level: 1,
     xp: 0,
-    jp: 0,
+    sp: 0,
     weaponId: "sword",
     learnedSkillIds: [],
     ct: 0,
@@ -29,7 +29,7 @@ const magWeapon: WeaponDef = { id: "m", name: "M", power: 3, range: 1, kind: "ma
 
 function skill(over: Partial<SkillDef>): SkillDef {
   return {
-    id: "s", name: "S", description: "", mpCost: 0, jpCost: 0, range: 1, aoe: "single",
+    id: "s", name: "S", description: "", mpCost: 0, spCost: 0, range: 1, aoe: "single",
     power: 10, element: "none", effect: "damage", scaling: "magical", ...over,
   };
 }

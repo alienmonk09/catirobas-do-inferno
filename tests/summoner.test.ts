@@ -60,7 +60,7 @@ describe("Summoner summon skills", () => {
     it(`${sid} has meaningful power and cost`, () => {
       expect(skill.power).toBeGreaterThanOrEqual(15);
       expect(skill.mpCost).toBeGreaterThanOrEqual(12);
-      expect(skill.jpCost).toBeGreaterThanOrEqual(100);
+      expect(skill.spCost).toBeGreaterThanOrEqual(100);
     });
   }
 
@@ -80,8 +80,8 @@ describe("Summoner summon skills", () => {
     expect(SKILLS.callTitan.element).toBe("nature");
   });
 
-  it("skills unlock in ascending JP order", () => {
-    const costs = SUMMON_SKILL_IDS.map((sid) => SKILLS[sid].jpCost);
+  it("skills unlock in ascending SP order", () => {
+    const costs = SUMMON_SKILL_IDS.map((sid) => SKILLS[sid].spCost);
     for (let i = 1; i < costs.length; i++) {
       expect(costs[i]).toBeGreaterThanOrEqual(costs[i - 1]);
     }

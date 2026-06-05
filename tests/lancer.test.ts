@@ -138,8 +138,8 @@ describe("Lancer skills", () => {
     expect(s.range).toBe(2);
   });
 
-  it("skills unlock in ascending JP order", () => {
-    const costs = LANCER_SKILL_IDS.map((sid) => SKILLS[sid].jpCost);
+  it("skills unlock in ascending SP order", () => {
+    const costs = LANCER_SKILL_IDS.map((sid) => SKILLS[sid].spCost);
     for (let i = 1; i < costs.length; i++) {
       expect(costs[i]).toBeGreaterThanOrEqual(costs[i - 1]);
     }

@@ -76,7 +76,7 @@ export interface ClassDef {
   description: string;
   base: BaseStats;
   growth: StatGrowth;
-  /** Skills in unlock order. JP spent learns the next one. */
+  /** Skills in unlock order. SP spent learns the next one. */
   skillIds: string[];
   /** Weapon ids this class can equip. */
   weaponIds: string[];
@@ -102,7 +102,7 @@ export interface SkillDef {
   name: string;
   description: string;
   mpCost: number;
-  jpCost: number;
+  spCost: number;
   range: number;
   aoe: AoeShape;
   power: number;
@@ -203,7 +203,7 @@ export interface Unit {
   raceId: RaceId;
   level: number;
   xp: number;
-  jp: number;
+  sp: number;
   learnedSkillIds: string[];
   /** Optional secondary job: its learned skills are usable alongside the primary's. */
   subClassId?: ClassId;

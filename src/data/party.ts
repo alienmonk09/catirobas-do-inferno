@@ -53,7 +53,7 @@ export function getHero(id: string): HeroDef | undefined {
 function buildHero(hero: HeroDef, level = 3): Unit {
   const c = getClass(hero.classId);
   // Learn one class skill per 3 levels so a recruit joining mid-campaign isn't
-  // a blank slate (lv3→1 skill, lv6→2, lv9→3); JP is banked toward the next.
+  // a blank slate (lv3→1 skill, lv6→2, lv9→3); SP is banked toward the next.
   const skillCount = Math.max(1, Math.floor(level / 3));
   const unit = createUnit({
     // Use the roster id as the unit id so the renderer/menus resolve the hero's
@@ -67,7 +67,7 @@ function buildHero(hero: HeroDef, level = 3): Unit {
     pos: { x: 0, y: 0 },
     learnedSkillIds: c.skillIds.slice(0, skillCount),
   });
-  unit.jp = 100;
+  unit.sp = 100;
   return unit;
 }
 

@@ -186,7 +186,7 @@ export function createUnit(opts: CreateUnitOpts): Unit {
     raceId,
     level,
     xp: 0,
-    jp: 0,
+    sp: 0,
     learnedSkillIds: [...(opts.learnedSkillIds ?? [])],
     weaponId: finalWeapon,
     pos: { ...opts.pos },
@@ -220,9 +220,9 @@ export function grantXp(unit: Unit, amount: number): number {
   return gained;
 }
 
-/** Grant JP toward learning skills. */
-export function grantJp(unit: Unit, amount: number): void {
-  unit.jp += amount;
+/** Grant SP toward learning skills. */
+export function grantSp(unit: Unit, amount: number): void {
+  unit.sp += amount;
 }
 
 /** The next skill the unit can learn for a given class, or null if all learned. */
@@ -239,18 +239,18 @@ export function nextLearnableSkill(unit: Unit): string | null {
 }
 
 /**
- * Try to learn the next skill in a class's order, spending JP. Works for the
+ * Try to learn the next skill in a class's order, spending SP. Works for the
  * primary class or a secondary job. Returns the learned skill id, or null.
  */
-export function learnSkillForClass(unit: Unit, classId: ClassId, jpCost: number): string | null {
+export function learnSkillForClass(unit: Unit, classId: ClassId, spCost: number): string | null {
   const next = nextLearnableSkillForClass(unit, classId);
-  if (!next || unit.jp < jpCost) return null;
-  unit.jp -= jpCost;
+  if (!next || unit.sp < spCost) return null;
+  unit.sp -= spCost;
   unit.learnedSkillIds.push(next);
   return next;
 }
 
-/** Try to learn the next primary-class skill, spending JP. */
-export function learnNextSkill(unit: Unit, jpCost: number): string | null {
-  return learnSkillForClass(unit, unit.classId, jpCost);
+/** Try to learn the next primary-class skill, spending SP. */
+export function learnNextSkill(unit: Unit, spCost: number): string | null {
+  return learnSkillForClass(unit, unit.classId, spCost);
 }
