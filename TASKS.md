@@ -14,9 +14,10 @@ Living task list for the autonomous build. The roadmap (`ROADMAP.md`) is the
 
 ## Current state (resume point)
 - Branch: **`feat/tactics-depth-and-progression`** (off `main`; not merged, not pushed).
-- Build: clean. Tests: **1021 passing across 50 files**. Working tree: clean.
-- Last commit: `d468134 feat(v0.6): in-engine story dialogue`. Recently shipped: skill charge
-  time, weapon shop/ownership, recruitable units, job mastery, and per-phase story dialogue.
+- Build: clean. Tests: **1046 passing across 53 files**. Working tree: clean.
+- Last commit: `17a5ef5 feat(v0.5): Classic mode (permadeath)`. Recently shipped: skill charge
+  time, weapon shop, recruitable units, job mastery, dialogue + speaker portraits, accessibility
+  (text scale + high contrast), Classic mode. ~33 features this session (499 → 1046 tests).
 - ~26 features this session. The Codex `codex-companion review` is INTERMITTENT — it
   alternates between producing verdicts and "Reviewer failed to output a response" (a
   transient runtime fault, not a code signal). Across its ~5 working `review --base main`
