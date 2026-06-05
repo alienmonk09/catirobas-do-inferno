@@ -14,8 +14,8 @@ Living task list for the autonomous build. The roadmap (`ROADMAP.md`) is the
 
 ## Current state (resume point)
 - Branch: **`feat/tactics-depth-and-progression`** (off `main`; not merged, not pushed).
-- Build: clean. Tests: **786 passing across 34 files**. Working tree: clean.
-- Last commit: `380c5a7 feat(v0.5): AI personalities + 3 review fixes`.
+- Build: clean. Tests: **791 passing across 35 files**. Working tree: clean.
+- Last commit: `6740882 fix: final review — recruit timing & enemy races`.
 - Commits: v0.2+v0.3 base → Counter → Time Mage → objectives(rout/defeat/survive)
   → secondary job → **audio → equipment slots → terrain effects → Summoner →
   objective variety(seize/defend)**.
