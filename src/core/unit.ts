@@ -1,4 +1,4 @@
-import type { ClassId, Direction, EquipMod, EquipSlot, Point, RaceId, Stats, Team, Unit } from "./types";
+import type { AIPersonality, ClassId, Direction, EquipMod, EquipSlot, Point, RaceId, Stats, Team, Unit } from "./types";
 import { getClass } from "../data/classes";
 import { getRace } from "../data/races";
 import { getWeapon } from "../data/weapons";
@@ -133,6 +133,8 @@ export interface CreateUnitOpts {
   /** Initial facing; defaults to south. Battle setup overrides toward the foe. */
   facing?: Direction;
   id?: string;
+  /** AI behavioral archetype; only meaningful for enemy units. */
+  personality?: AIPersonality;
 }
 
 export function createUnit(opts: CreateUnitOpts): Unit {
@@ -147,6 +149,7 @@ export function createUnit(opts: CreateUnitOpts): Unit {
     id: opts.id ?? nextUnitId(opts.team === "player" ? "p" : "e"),
     name: opts.name,
     team: opts.team,
+    personality: opts.personality,
     classId: opts.classId,
     raceId,
     level,

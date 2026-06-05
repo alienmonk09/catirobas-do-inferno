@@ -14,8 +14,8 @@ Living task list for the autonomous build. The roadmap (`ROADMAP.md`) is the
 
 ## Current state (resume point)
 - Branch: **`feat/tactics-depth-and-progression`** (off `main`; not merged, not pushed).
-- Build: clean. Tests: **755 passing across 32 files**. Working tree: clean.
-- Last commit: `f7bedd2 feat(v0.6): background music`.
+- Build: clean. Tests: **769 passing across 33 files**. Working tree: clean.
+- Last commit: `d1ed01a fix: branch-review findings (Counter/gil/save)`.
 - Commits: v0.2+v0.3 base → Counter → Time Mage → objectives(rout/defeat/survive)
   → secondary job → **audio → equipment slots → terrain effects → Summoner →
   objective variety(seize/defend)**.
@@ -58,7 +58,12 @@ Living task list for the autonomous build. The roadmap (`ROADMAP.md`) is the
   ignoring, lands adjacent; validates victim+landing, routs-on-no-cost). `4297798` (+`f51b1f9`).
 - **Difficulty modes** (v0.5) — Easy/Normal/Hard scale enemy level at New Game; save back-compat. `2eb3d3f`.
 - **Music** (v0.6) — soft code-synth battle/camp/victory themes on the SFX engine. `f7bedd2`.
-- Combat smoke-tested in-browser twice (Cinder Fields defend → Victory at 7/7, with music; no errors).
+- **Gil economy + consumables shop** (v0.5) — enemies drop gil; buy potions at camp. `4188faa`.
+- **Branch-review fixes** (`d1ed01a`): Counter now fires on melee SKILLS + gates on real
+  adjacency (range-2 spear), gil paid per AoE kill, save resets clear gil/difficulty. Also
+  fixed `applyLoaded` dropping difficulty/gil on Continue.
+- Combat smoke-tested in-browser 3× (Cinder Fields defend → Victory 7/7, with music; no errors).
+- A consolidated Codex branch review (vs main) caught the above before merge.
 
 ## Next up (prioritized — all that remain are higher-risk or need a design decision)
 1. **Shop & economy** (v0.5) — START with gil drops (per enemy defeat, level-scaled) + a

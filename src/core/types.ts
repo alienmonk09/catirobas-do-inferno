@@ -2,6 +2,8 @@
 
 export type Team = "player" | "enemy";
 
+export type AIPersonality = "balanced" | "aggressive" | "defensive" | "support";
+
 export interface Point {
   x: number;
   y: number;
@@ -182,6 +184,8 @@ export interface Unit {
   id: string;
   name: string;
   team: Team;
+  /** AI behavioral archetype; only set on enemy units. Absent = "balanced". */
+  personality?: AIPersonality;
   classId: ClassId;
   raceId: RaceId;
   level: number;
@@ -247,6 +251,8 @@ export interface EnemySpawn {
   pos: Point;
   /** Skills this enemy knows (subset of class skills). */
   skillIds?: string[];
+  /** AI behavioral archetype for this spawn. Absent = "balanced". */
+  personality?: AIPersonality;
 }
 
 export const CT_THRESHOLD = 100;

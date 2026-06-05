@@ -117,6 +117,7 @@ export class BattleScene implements Scene {
           pos: e.pos,
           weaponId: e.weaponId,
           learnedSkillIds: e.skillIds ?? [],
+          personality: e.personality,
         }),
       );
     }
@@ -222,6 +223,10 @@ export class BattleScene implements Scene {
     this.active = advanceToNextActor(this.units);
     if (!this.active) return;
     this.turnCount++;
+    // A timed objective (survive/defend) can be met the instant the count ticks
+    // up — end now, before the active actor acts on the winning turn.
+    const timedWinner = this.outcome();
+    if (timedWinner) return this.endBattle(timedWinner);
     this.ui.setObjective(this.objectiveText());
     this.hasMoved = false;
     this.hasActed = false;
@@ -556,6 +561,8 @@ export class BattleScene implements Scene {
     this.lunge = { id: defender.id, tx: attacker.pos.x, ty: attacker.pos.y, age: 0 };
     this.pushEffect(attacker.pos, vfxKeyForWeapon(w));
     this.pushPopup(res);
+    // Counter damage can drop a player attacker low enough to auto-potion.
+    this.tryAutoPotion(attacker);
   }
 
   private trySkill(tile: Point): void {
@@ -789,14 +796,15 @@ export class BattleScene implements Scene {
           cast = true;
         }
       }
-      if (cast) {
-        unit.stats.mp = Math.max(0, unit.stats.mp - skill.mpCost);
-        if (knockbackTarget) this.applyKnockback(skill, unit, knockbackTarget);
-      }
-      // An adjacent single-target melee skill lets the struck player unit counter.
+      // An adjacent single-target melee skill lets the struck player unit counter —
+      // resolved BEFORE knockback so the victim is still next to the attacker.
       if (isOffensive && skill.aoe === "single") {
         const victim = this.units.find((u) => u.alive && u.team !== unit.team && samePoint(u.pos, center));
         if (victim) this.tryCounter(victim, unit);
+      }
+      if (cast) {
+        unit.stats.mp = Math.max(0, unit.stats.mp - skill.mpCost);
+        if (knockbackTarget) this.applyKnockback(skill, unit, knockbackTarget);
       }
     }
 

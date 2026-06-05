@@ -1,4 +1,4 @@
-import type { Point, SkillDef, Unit } from "../core/types";
+import type { AIPersonality, Point, SkillDef, Unit } from "../core/types";
 import { Grid, manhattan, moveBlockers, samePoint } from "./grid";
 import { pathTo, reachable } from "./pathfinding";
 import { aoeTiles, tilesInRange } from "./targeting";
@@ -23,10 +23,51 @@ export interface AIPlan {
   action: AIAction;
 }
 
+type OptionKind = "damage" | "heal" | "buff" | "debuff" | "move";
+
 interface Option {
   score: number;
   destination: Point;
   action: AIAction;
+  kind: OptionKind;
+}
+
+/**
+ * Score multiplier applied to an option based on the unit's AI personality.
+ * "balanced" (or undefined) returns 1.0 everywhere — no change to existing behavior.
+ */
+export function personalityWeight(personality: AIPersonality | undefined, kind: OptionKind): number {
+  switch (personality) {
+    case "aggressive":
+      switch (kind) {
+        case "damage": return 1.5;
+        case "move":   return 1.3;
+        case "heal":   return 0.4;
+        case "buff":   return 0.6;
+        case "debuff": return 0.9;
+      }
+      break;
+    case "defensive":
+      switch (kind) {
+        case "damage": return 0.9;
+        case "move":   return 0.7;
+        case "heal":   return 1.1;
+        case "buff":   return 1.3;
+        case "debuff": return 1.1;
+      }
+      break;
+    case "support":
+      switch (kind) {
+        case "heal":   return 1.8;
+        case "buff":   return 1.6;
+        case "debuff": return 1.2;
+        case "damage": return 0.7;
+        case "move":   return 0.9;
+      }
+      break;
+    default:
+      return 1.0;
+  }
 }
 
 /** Positional context for an attack launched from `stand` against `target`. */
@@ -123,6 +164,7 @@ export function planEnemyTurn(unit: Unit, units: Unit[], grid: Grid): AIPlan {
           score: 200 + heal, // healing prioritized over attacking
           destination: stand,
           action: { kind: "skill", skillId: skill.id, targetTile: { ...ally.pos } },
+          kind: "heal",
         });
       }
     }
@@ -135,6 +177,7 @@ export function planEnemyTurn(unit: Unit, units: Unit[], grid: Grid): AIPlan {
           score: 300,
           destination: stand,
           action: { kind: "skill", skillId: skill.id, targetTile: { ...ally.pos } },
+          kind: "heal",
         });
       }
     }
@@ -153,6 +196,7 @@ export function planEnemyTurn(unit: Unit, units: Unit[], grid: Grid): AIPlan {
         score: scoreTarget(dmg, target),
         destination: stand,
         action: { kind: "attack", targetTile: { ...target.pos } },
+        kind: "damage",
       });
     }
     // Damage skills (incl. AoE).
@@ -179,6 +223,7 @@ export function planEnemyTurn(unit: Unit, units: Unit[], grid: Grid): AIPlan {
           score: total + kills * 50 - penalty,
           destination: stand,
           action: { kind: "skill", skillId: skill.id, targetTile: { ...center } },
+          kind: "damage",
         });
       }
     }
@@ -194,6 +239,7 @@ export function planEnemyTurn(unit: Unit, units: Unit[], grid: Grid): AIPlan {
           score: debuffScore(skill) + lowHp,
           destination: stand,
           action: { kind: "skill", skillId: skill.id, targetTile: { ...target.pos } },
+          kind: "debuff",
         });
       }
     }
@@ -206,13 +252,17 @@ export function planEnemyTurn(unit: Unit, units: Unit[], grid: Grid): AIPlan {
           score: buffScore(skill),
           destination: stand,
           action: { kind: "skill", skillId: skill.id, targetTile: { ...ally.pos } },
+          kind: "buff",
         });
       }
     }
   }
 
   if (options.length > 0) {
-    options.sort((a, b) => b.score - a.score);
+    options.sort((a, b) =>
+      b.score * personalityWeight(unit.personality, b.kind) -
+      a.score * personalityWeight(unit.personality, a.kind),
+    );
     const best = options[0];
     return {
       path: pathTo(reach, best.destination) ?? [unit.pos],
