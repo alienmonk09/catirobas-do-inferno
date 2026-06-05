@@ -14,6 +14,7 @@ export const SKILLS: Record<string, SkillDef> = {
     element: "none",
     effect: "damage",
     scaling: "physical",
+    knockback: 1,
   },
   guard: {
     id: "guard",
@@ -150,6 +151,7 @@ export const SKILLS: Record<string, SkillDef> = {
     element: "none",
     effect: "damage",
     scaling: "physical",
+    knockback: 1,
   },
   chakra: {
     id: "chakra",

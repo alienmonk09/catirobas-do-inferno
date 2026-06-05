@@ -4,7 +4,7 @@ import { grantJp, grantXp, createUnit } from "../core/unit";
 import { refreshForBattle } from "../core/state";
 import { Grid, moveBlockers, samePoint } from "../battle/grid";
 import { pathTo, reachable } from "../battle/pathfinding";
-import { aoeTiles, tilesInRange } from "../battle/targeting";
+import { aoeTiles, knockbackTo, tilesInRange } from "../battle/targeting";
 import {
   applyTerrainEffect,
   isStopped,
@@ -595,6 +595,14 @@ export class BattleScene implements Scene {
       const u = this.units.find((x) => x.id === r.unitId);
       if (u) this.pushEffect(u.pos, skillVfx);
     }
+    // Apply knockback (single-target offensive skills only) before afterAction so
+    // the new position is evaluated for terrain effects and objective checks.
+    if (skill.effect === "damage" && skill.knockback) {
+      const damagedTarget = results.find((r) => r.kind === "damage")
+        ? this.units.find((u) => u.id === results.find((r) => r.kind === "damage")!.unitId)
+        : undefined;
+      if (damagedTarget) this.applyKnockback(skill, this.active, damagedTarget);
+    }
     this.awardForAction(this.active, { offensive: skill.effect === "damage", killed: anyKilled, support });
     this.afterAction();
   }
@@ -617,6 +625,15 @@ export class BattleScene implements Scene {
     this.pushPopup(res);
     this.awardForAction(this.active, { support: true });
     this.afterAction();
+  }
+
+  /** Shove a living single-target skill's victim directly away from the caster. */
+  private applyKnockback(skill: SkillDef, caster: Unit, target: Unit): void {
+    if (!skill.knockback || skill.aoe !== "single" || !target.alive) return;
+    const dest = knockbackTo(this.grid, this.units, caster.pos, target.pos, skill.knockback);
+    if (samePoint(dest, target.pos)) return;
+    void this.ctx.animator.moveAlong(target.id, [target.pos, dest]);
+    target.pos = { ...dest };
   }
 
   private afterAction(): void {
@@ -697,6 +714,7 @@ export class BattleScene implements Scene {
         this.units.filter((u) => samePoint(u.pos, t)),
       );
       let cast = false;
+      let knockbackTarget: Unit | undefined;
       for (const target of affected) {
         if (isOffensive && target.team === unit.team) continue;
         if (!isOffensive && target.team !== unit.team) continue;
@@ -705,11 +723,17 @@ export class BattleScene implements Scene {
           this.pushEffect(target.pos, skillVfx);
           this.pushPopup(r);
           // A surviving low-HP player unit hit by an offensive skill may auto-heal.
-          if (r.kind === "damage") this.tryAutoPotion(target);
+          if (r.kind === "damage") {
+            this.tryAutoPotion(target);
+            if (!knockbackTarget) knockbackTarget = target;
+          }
           cast = true;
         }
       }
-      if (cast) unit.stats.mp = Math.max(0, unit.stats.mp - skill.mpCost);
+      if (cast) {
+        unit.stats.mp = Math.max(0, unit.stats.mp - skill.mpCost);
+        if (knockbackTarget) this.applyKnockback(skill, unit, knockbackTarget);
+      }
     }
 
     this.ui.setActiveUnit(unit);

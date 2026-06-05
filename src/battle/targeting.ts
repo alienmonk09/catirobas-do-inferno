@@ -1,5 +1,6 @@
-import type { AoeShape, Point } from "../core/types";
-import { Grid, manhattan } from "./grid";
+import type { AoeShape, Point, Unit } from "../core/types";
+import { Grid, key, manhattan, samePoint } from "./grid";
+import { directionTo, dirVector } from "./facing";
 
 /** All in-bounds tiles within manhattan `range` of origin (excludes origin for range>0 attacks if requested). */
 export function tilesInRange(
@@ -53,4 +54,35 @@ export function aoeTiles(grid: Grid, center: Point, shape: AoeShape): Point[] {
 
 export function inRange(origin: Point, target: Point, range: number): boolean {
   return manhattan(origin, target) <= range && manhattan(origin, target) > 0;
+}
+
+/**
+ * Compute the landing tile when a unit at `target` is shoved `distance` tiles
+ * directly away from `caster`. Steps are blocked by the grid edge, blocked
+ * tiles, and tiles occupied by other living units. Returns the last valid tile
+ * (may equal `target` if every step is blocked).
+ */
+export function knockbackTo(
+  grid: Grid,
+  units: Unit[],
+  caster: Point,
+  target: Point,
+  distance: number,
+): Point {
+  const dir = directionTo(caster, target);
+  const step = dirVector(dir);
+  // Occupancy of all living units except the unit being shoved.
+  const occ = new Set(
+    units.filter((u) => u.alive && !samePoint(u.pos, target)).map((u) => key(u.pos)),
+  );
+  let cur = { ...target };
+  for (let i = 0; i < distance; i++) {
+    const nx = cur.x + step.x;
+    const ny = cur.y + step.y;
+    if (!grid.inBounds(nx, ny)) break;
+    if (grid.isBlocked(nx, ny)) break;
+    if (occ.has(key({ x: nx, y: ny }))) break;
+    cur = { x: nx, y: ny };
+  }
+  return cur;
 }

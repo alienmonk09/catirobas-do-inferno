@@ -112,6 +112,8 @@ export interface SkillDef {
   statusKind?: StatusKind;
   /** For buff/debuff: how many turns the status lasts (defaults: buff 2, debuff 3). */
   statusDuration?: number;
+  /** Tiles to shove the target directly away from the caster after the hit resolves (single-target only). */
+  knockback?: number;
 }
 
 export type EquipSlot = "armor" | "accessory";

@@ -434,6 +434,7 @@ function skillTags(s: SkillDef): Array<{ text: string; cls: string }> {
   }
   tags.push({ text: s.range === 0 ? "self" : `rng ${s.range}`, cls: "t-meta" });
   if (s.aoe !== "single") tags.push({ text: s.aoe === "cross" ? "cross" : "3×3", cls: "t-meta" });
+  if (s.knockback) tags.push({ text: `knockback ${s.knockback}`, cls: "t-meta" });
   if (s.element !== "none") tags.push({ text: s.element, cls: `t-elem t-${s.element}` });
   return tags;
 }
