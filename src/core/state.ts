@@ -215,18 +215,36 @@ const VALID_DIFFICULTIES: Difficulty[] = ["easy", "normal", "hard"];
 const VALID_REACTIONS: Reaction[] = ["counter", "autoPotion", "cover"];
 
 /**
- * Adjust an enemy's authored level by the selected difficulty and NG+ cycle.
- * easy  → level - 1 (floored at 1)
- * normal → unchanged
- * hard  → level + 2
- * Each NG+ cycle adds an additional +3 levels on top of difficulty scaling.
+ * Enemy level, scaled to the PARTY so a fight can never become an unwinnable
+ * wall (the old fixed per-map levels meant an under-levelled party hit a brick
+ * wall — e.g. a level-1 party meeting level-3 enemies in phase 2). Enemies now
+ * track the party's average level and sit a notch below it on Normal — a small,
+ * deliberate player edge ("slightly weaker than the players"). A per-enemy
+ * `offset` (0 = the map's weakest, clamped to keep the band tight) preserves
+ * each map's grunt-vs-elite spread without ever spiking far above the party.
+ *
+ * difficulty shifts the whole band (easy −2, normal −1, hard +0); each NG+ cycle
+ * adds a flat +3 for replay challenge.
+ *
+ * @param partyAvgLevel rounded mean level of the player party
+ * @param offset 0-based rank of this enemy within its map (0 = weakest tier)
  */
-export function enemyLevelFor(baseLevel: number, difficulty: Difficulty, ngPlus = 0): number {
-  let level: number;
-  if (difficulty === "easy") level = Math.max(1, baseLevel - 1);
-  else if (difficulty === "hard") level = baseLevel + 2;
-  else level = baseLevel;
-  return level + ngPlus * 3;
+export function enemyLevelFor(partyAvgLevel: number, offset: number, difficulty: Difficulty, ngPlus = 0): number {
+  const diffDelta = difficulty === "easy" ? -2 : difficulty === "hard" ? 0 : -1;
+  return Math.max(1, Math.round(partyAvgLevel) + diffDelta + offset + ngPlus * 3);
+}
+
+/** Average party level (rounded, floored at 1) — the anchor enemies scale to. */
+export function partyAverageLevel(party: { level: number }[]): number {
+  if (party.length === 0) return 1;
+  return Math.max(1, Math.round(party.reduce((s, u) => s + u.level, 0) / party.length));
+}
+
+/** A map enemy's tier offset (0 = weakest), clamped to a tight band so the
+ *  toughest foe sits only one tier above the grunts — i.e. at the party's level
+ *  on Normal (grunts a level below). Keeps enemies reliably "slightly weaker". */
+export function enemyTierOffset(authoredLevel: number, mapMinLevel: number): number {
+  return Math.min(1, Math.max(0, authoredLevel - mapMinLevel));
 }
 
 /**

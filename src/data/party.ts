@@ -77,7 +77,7 @@ export function createParty(heroIds: string[]): Unit[] {
   return heroIds.map(getHero).filter((h): h is HeroDef => Boolean(h)).map((h) => buildHero(h));
 }
 
-/** Default party: the first PARTY_SIZE heroes of the roster (level 3). */
+/** Default party: the first PARTY_SIZE heroes of the roster, at level 1. */
 export function createStartingParty(): Unit[] {
   return createParty(ROSTER.slice(0, PARTY_SIZE).map((h) => h.id));
 }

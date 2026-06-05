@@ -1,7 +1,7 @@
 import type { Direction, MapDef, Point, SkillDef, Unit } from "../core/types";
 import { RNG } from "../core/rng";
 import { grantSp, grantXp, createUnit } from "../core/unit";
-import { enemyLevelFor, refreshForBattle, survivorsAfterBattle, goldForKill } from "../core/state";
+import { enemyLevelFor, partyAverageLevel, enemyTierOffset, refreshForBattle, survivorsAfterBattle, goldForKill } from "../core/state";
 import { Grid, manhattan, moveBlockers, samePoint, zoneOfControl } from "../battle/grid";
 import { pathTo, reachable } from "../battle/pathfinding";
 import { aoeTiles, knockbackTo, leapLanding, tilesInRange } from "../battle/targeting";
@@ -114,13 +114,19 @@ export class BattleScene implements Scene {
       u.pos = { ...spawn };
       this.units.push(u);
     });
+    // Enemies scale to the party so the fight is always winnable: their level
+    // tracks the party average (a notch below on Normal), and a per-enemy tier
+    // offset (relative to the map's weakest authored level) keeps the grunt/elite
+    // spread without spiking far above the party.
+    const partyAvg = partyAverageLevel(party);
+    const mapMin = this.map.enemies.length ? Math.min(...this.map.enemies.map((e) => e.level)) : 1;
     for (const e of this.map.enemies) {
       this.units.push(
         createUnit({
           name: e.name,
           team: "enemy",
           classId: e.classId,
-          level: enemyLevelFor(e.level, this.ctx.state.difficulty, this.ctx.state.ngPlus),
+          level: enemyLevelFor(partyAvg, enemyTierOffset(e.level, mapMin), this.ctx.state.difficulty, this.ctx.state.ngPlus),
           pos: e.pos,
           weaponId: e.weaponId,
           learnedSkillIds: e.skillIds ?? [],
@@ -344,6 +350,9 @@ export class BattleScene implements Scene {
     this.ui.setTargetInfo(null);
     stopMusic();
     if (winner === "player") {
+      // Share battle XP evenly across the whole party before recruits join /
+      // the dead are pruned, so every hero that fought gets their cut.
+      this.distributeBattleXp();
       // Surviving recruited units join the persistent party (up to MAX_PARTY).
       for (const u of this.units) {
         if (!u.recruited || !u.alive) continue;
@@ -666,7 +675,7 @@ export class BattleScene implements Scene {
     this.pushPopup(res);
     // Scale XP by the unit actually struck — Cover may have redirected the hit
     // onto `actual` rather than the originally-aimed `target`.
-    this.awardForAction(this.active, { offensive: true, killed: res.killed }, actual.level);
+    this.awardForAction(this.active, { offensive: true, killed: res.killed });
     this.awardGold(res.killed ? 1 : 0);
     // A surviving melee-struck defender may strike back.
     this.tryCounter(actual, this.active);
@@ -700,7 +709,7 @@ export class BattleScene implements Scene {
     this.tryAutoPotion(attacker);
     // A counter kill still earns the defender its kill rewards (the active actor
     // is the attacker, so the normal award path would miss it).
-    if (res.killed) this.creditKill(defender, attacker.level);
+    if (res.killed) this.creditKill(defender);
   }
 
   private trySkill(tile: Point): void {
@@ -820,16 +829,7 @@ export class BattleScene implements Scene {
       if (damagedTarget) fellKill = this.applyKnockback(skill, caster, damagedTarget);
     }
     if (fellKill) this.awardGold(1);
-    // Level the XP scaling off enemies actually DAMAGED this cast (from results),
-    // not every unit standing on an AoE tile — so a support cast near a foe, or a
-    // corpse on a hit tile, can't skew the multiplier.
-    const damagedEnemyLevels = results
-      .filter((r) => r.kind === "damage")
-      .map((r) => this.units.find((u) => u.id === r.unitId))
-      .filter((u): u is Unit => !!u && u.team !== caster.team)
-      .map((u) => u.level);
-    const enemyLvl = damagedEnemyLevels.length ? Math.max(...damagedEnemyLevels) : undefined;
-    this.awardForAction(caster, { offensive: skill.effect === "damage", killed: anyKilled || fellKill, support }, enemyLvl);
+    this.awardForAction(caster, { offensive: skill.effect === "damage", killed: anyKilled || fellKill, support });
     if (fromCharge) {
       // The charge resolution IS the full turn — end it directly (no menu re-open).
       this.endActiveTurn();
@@ -949,47 +949,52 @@ export class BattleScene implements Scene {
     }
   }
 
-  /**
-   * Anti-grind XP scaling: punching above your level pays a premium, farming
-   * weaklings pays a pittance. Keeps progression steady instead of letting a fed
-   * unit snowball off low-level kills. Returns 1 when no foe level is supplied.
-   */
-  private xpLevelMult(unit: Unit, enemyLevel?: number): number {
-    if (enemyLevel === undefined) return 1;
-    return Math.max(0.5, Math.min(1.5, 1 + 0.08 * (enemyLevel - unit.level)));
-  }
-
-  /** Credit a kill (gold + offensive XP/SP) to a PLAYER unit that wasn't the active
-   *  actor — e.g. a counterattacker on the enemy's turn. No-op for enemies. */
-  private creditKill(killer: Unit, enemyLevel?: number): void {
+  /** Gold + SP for a kill landed outside the actor's own action (e.g. a
+   *  counterattack on the enemy's turn). XP is pooled and shared at battle end,
+   *  so it isn't credited here. No-op for enemies. */
+  private creditKill(killer: Unit): void {
     if (killer.team !== "player") return;
     this.ctx.state.gold += goldForKill(this.ctx.state.phaseIndex);
-    // offensive (13) + kill bonus (14), matching awardForAction, then level-scaled.
-    const xp = Math.max(1, Math.round(27 * this.xpLevelMult(killer, enemyLevel)));
-    const levels = grantXp(killer, xp);
     grantSp(killer, 20);
-    if (levels > 0) this.ui.toast(`${killer.name} reached Lv ${killer.level}!`);
   }
 
-  private awardForAction(
-    unit: Unit,
-    opts: { offensive?: boolean; killed?: boolean; support?: boolean },
-    enemyLevel?: number,
-  ): void {
+  /** Skill points for an action, credited immediately to the acting unit. XP is
+   *  no longer per-action — it's pooled and split evenly at battle end (so the
+   *  whole party climbs together rather than just the unit that lands hits). */
+  private awardForAction(unit: Unit, opts: { offensive?: boolean; killed?: boolean; support?: boolean }): void {
     if (unit.team !== "player") return;
-    // Flatter awards than before — the kill bonus is trimmed so a single carry
-    // can't snowball, and the whole party climbs at a steadier cadence.
-    let xp = opts.offensive ? 13 : opts.support ? 10 : 8;
     let sp = opts.offensive ? 8 : opts.support ? 8 : 6;
-    if (opts.killed) {
-      xp += 14;
-      sp += 12;
-    }
-    const levels = grantXp(unit, Math.max(1, Math.round(xp * this.xpLevelMult(unit, enemyLevel))));
+    if (opts.killed) sp += 12;
     grantSp(unit, sp);
-    if (levels > 0) {
-      this.ui.toast(`${unit.name} reached Lv ${unit.level}!`);
-      this.ui.setActiveUnit(this.active);
+  }
+
+  /** XP a defeated enemy adds to the shared battle pool. Scales with the enemy's
+   *  level (which tracks the party) so each battle keeps the party climbing. */
+  private enemyXpValue(level: number): number {
+    return 12 + level * 5;
+  }
+
+  /**
+   * On victory, total the XP from every enemy in the battle and grant it EQUALLY
+   * to every party member — present or fallen, attacker or healer — so the team
+   * levels together and no one is ever left behind the curve. Counts all foes
+   * (not just kills) so objective wins (seize/survive) still pay out fully.
+   */
+  private distributeBattleXp(): void {
+    const pool = this.units
+      .filter((u) => u.team === "enemy")
+      .reduce((sum, e) => sum + this.enemyXpValue(e.level), 0);
+    if (pool <= 0) return;
+    const leveled: string[] = [];
+    for (const member of this.ctx.state.party) {
+      if (grantXp(member, pool) > 0) leveled.push(member.name);
+    }
+    this.pushLog(`The party shares the spoils: +${pool} XP each.`);
+    if (leveled.length > 0) {
+      this.pushLog(`Leveled up: ${leveled.join(", ")}.`);
+      this.ui.toast(`+${pool} XP · ${leveled.length} hero${leveled.length > 1 ? "es" : ""} leveled up!`);
+    } else {
+      this.ui.toast(`Party gained +${pool} XP`);
     }
   }
 

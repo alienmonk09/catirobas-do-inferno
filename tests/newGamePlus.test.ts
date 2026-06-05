@@ -28,35 +28,36 @@ function store(value: unknown): void {
 // ---------------------------------------------------------------------------
 
 describe("enemyLevelFor — ngPlus", () => {
-  it("ngPlus 0 leaves level unchanged (normal difficulty)", () => {
-    expect(enemyLevelFor(5, "normal", 0)).toBe(5);
+  // signature: enemyLevelFor(partyAvgLevel, offset, difficulty, ngPlus)
+  it("ngPlus 0 is party-1 on normal", () => {
+    expect(enemyLevelFor(5, 0, "normal", 0)).toBe(4);
   });
 
-  it("ngPlus 0 is the default — results match two-arg call", () => {
-    expect(enemyLevelFor(5, "normal")).toBe(enemyLevelFor(5, "normal", 0));
-    expect(enemyLevelFor(5, "hard")).toBe(enemyLevelFor(5, "hard", 0));
-    expect(enemyLevelFor(5, "easy")).toBe(enemyLevelFor(5, "easy", 0));
+  it("ngPlus 0 is the default — results match the explicit call", () => {
+    expect(enemyLevelFor(5, 0, "normal")).toBe(enemyLevelFor(5, 0, "normal", 0));
+    expect(enemyLevelFor(5, 0, "hard")).toBe(enemyLevelFor(5, 0, "hard", 0));
+    expect(enemyLevelFor(5, 0, "easy")).toBe(enemyLevelFor(5, 0, "easy", 0));
   });
 
-  it("ngPlus 1 adds 3 to the result (normal difficulty)", () => {
-    expect(enemyLevelFor(5, "normal", 1)).toBe(8);
+  it("ngPlus 1 adds 3 (normal: party-1 + 3)", () => {
+    expect(enemyLevelFor(5, 0, "normal", 1)).toBe(7);
   });
 
-  it("ngPlus 2 adds 6 to the result (normal difficulty)", () => {
-    expect(enemyLevelFor(5, "normal", 2)).toBe(11);
+  it("ngPlus 2 adds 6 (normal)", () => {
+    expect(enemyLevelFor(5, 0, "normal", 2)).toBe(10);
   });
 
-  it("ngPlus stacks on top of hard difficulty (+2 hard, +3 ngPlus = +5 over base)", () => {
-    expect(enemyLevelFor(5, "hard", 1)).toBe(10);
+  it("ngPlus stacks on top of hard difficulty (party + 0 + 3)", () => {
+    expect(enemyLevelFor(5, 0, "hard", 1)).toBe(8);
   });
 
-  it("ngPlus stacks on top of easy difficulty (easy -1, ngPlus 1 +3 = net +2 over base)", () => {
-    expect(enemyLevelFor(5, "easy", 1)).toBe(7);
+  it("ngPlus stacks on top of easy difficulty (party - 2 + 3)", () => {
+    expect(enemyLevelFor(5, 0, "easy", 1)).toBe(6);
   });
 
-  it("easy floor still applies before ngPlus is added", () => {
-    // base 1 easy → floored at 1, then +3 for ngPlus 1 → 4
-    expect(enemyLevelFor(1, "easy", 1)).toBe(4);
+  it("the floor applies to the whole sum", () => {
+    // party 1, easy (-2), ngPlus 1 (+3) -> max(1, 1-2+3) = 2
+    expect(enemyLevelFor(1, 0, "easy", 1)).toBe(2);
   });
 });
 

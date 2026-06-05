@@ -26,27 +26,32 @@ function store(value: unknown): void {
 // enemyLevelFor
 // ---------------------------------------------------------------------------
 
-describe("enemyLevelFor", () => {
-  it("easy lowers by 1", () => {
-    expect(enemyLevelFor(5, "easy")).toBe(4);
+describe("enemyLevelFor (party-relative)", () => {
+  // signature: enemyLevelFor(partyAvgLevel, offset, difficulty, ngPlus)
+  it("normal sits one level below the party average", () => {
+    expect(enemyLevelFor(5, 0, "normal")).toBe(4);
+    expect(enemyLevelFor(8, 0, "normal")).toBe(7);
   });
 
-  it("easy is floored at 1 (level 1 stays 1)", () => {
-    expect(enemyLevelFor(1, "easy")).toBe(1);
+  it("easy is two below the party, hard matches it", () => {
+    expect(enemyLevelFor(5, 0, "easy")).toBe(3);
+    expect(enemyLevelFor(5, 0, "hard")).toBe(5);
   });
 
-  it("easy floor: level 0 edge case stays at 1", () => {
-    expect(enemyLevelFor(0, "easy")).toBe(1);
+  it("the per-enemy tier offset raises that foe within the band", () => {
+    expect(enemyLevelFor(5, 1, "normal")).toBe(5); // an elite: party-1 + 1 = party
+    expect(enemyLevelFor(5, 1, "hard")).toBe(6);
   });
 
-  it("normal leaves level unchanged", () => {
-    expect(enemyLevelFor(5, "normal")).toBe(5);
-    expect(enemyLevelFor(1, "normal")).toBe(1);
+  it("floors at 1 for a low-level party", () => {
+    expect(enemyLevelFor(1, 0, "easy")).toBe(1); // 1-2 -> floored
+    expect(enemyLevelFor(1, 0, "normal")).toBe(1); // 1-1 = 0 -> floored
+    expect(enemyLevelFor(2, 0, "easy")).toBe(1); // 2-2 = 0 -> floored
   });
 
-  it("hard raises by 2", () => {
-    expect(enemyLevelFor(5, "hard")).toBe(7);
-    expect(enemyLevelFor(1, "hard")).toBe(3);
+  it("tracks the party as it levels up", () => {
+    expect(enemyLevelFor(3, 0, "normal")).toBe(2);
+    expect(enemyLevelFor(10, 0, "normal")).toBe(9);
   });
 });
 
