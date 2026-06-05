@@ -7,6 +7,9 @@ export interface Point {
   y: number;
 }
 
+/** Cardinal facing on the grid (n = -y, s = +y, e = +x, w = -x). */
+export type Direction = "n" | "e" | "s" | "w";
+
 /** Mutable stat block for a unit. */
 export interface Stats {
   hp: number;
@@ -35,6 +38,10 @@ export interface RaceDef {
   description: string;
   /** Additive modifiers applied to every level's stat block. */
   mod: RaceMod;
+  /** Elements this race takes extra damage from (×1.5). */
+  weak?: Element[];
+  /** Elements this race shrugs off (×0.5). */
+  resist?: Element[];
 }
 
 /** Per-level stat growth applied on level up. */
@@ -97,8 +104,10 @@ export interface SkillDef {
   effect: SkillEffect;
   /** physical skills scale on ATK, magical on MAG. */
   scaling: "physical" | "magical";
-  /** For buff/debuff: which stat and amount + duration. */
+  /** For buff/debuff: which status this skill applies. */
   statusKind?: StatusKind;
+  /** For buff/debuff: how many turns the status lasts (defaults: buff 2, debuff 3). */
+  statusDuration?: number;
 }
 
 export type WeaponKind = "physical" | "magical";
@@ -112,7 +121,7 @@ export interface WeaponDef {
   classes: ClassId[];
 }
 
-export type ItemEffect = "healHp" | "healMp" | "revive";
+export type ItemEffect = "healHp" | "healMp" | "revive" | "buff";
 
 export interface ItemDef {
   id: string;
@@ -121,9 +130,25 @@ export interface ItemDef {
   effect: ItemEffect;
   amount: number;
   range: number;
+  /** For buff items: which status to grant and for how long. */
+  statusKind?: StatusKind;
+  statusDuration?: number;
 }
 
-export type StatusKind = "guard" | "slow" | "haste";
+/**
+ * Combat statuses. `guard` (+def, self), `slow`/`haste` (turn speed),
+ * `poison` (HP drain each turn), `regen` (HP heal each turn), `stop` (lose
+ * turns), `protect` (−physical taken), `shell` (−magical taken).
+ */
+export type StatusKind =
+  | "guard"
+  | "slow"
+  | "haste"
+  | "poison"
+  | "regen"
+  | "stop"
+  | "protect"
+  | "shell";
 
 export interface ActiveStatus {
   kind: StatusKind;
@@ -142,6 +167,8 @@ export interface Unit {
   learnedSkillIds: string[];
   weaponId: string;
   pos: Point;
+  /** Which way the unit faces; drives flank/rear attack bonuses. Per-battle volatile. */
+  facing: Direction;
   ct: number;
   stats: Stats;
   statuses: ActiveStatus[];

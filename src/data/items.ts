@@ -33,6 +33,16 @@ export const ITEMS: Record<string, ItemDef> = {
     amount: 20,
     range: 1,
   },
+  hourglass: {
+    id: "hourglass",
+    name: "Hourglass",
+    description: "Hasten an ally, speeding its turns for a few rounds.",
+    effect: "buff",
+    amount: 0,
+    range: 1,
+    statusKind: "haste",
+    statusDuration: 3,
+  },
 };
 
 export function getItem(id: string): ItemDef {
@@ -43,5 +53,5 @@ export function getItem(id: string): ItemDef {
 
 /** Default shared party inventory: id -> count. */
 export function startingInventory(): Record<string, number> {
-  return { potion: 5, hiPotion: 2, ether: 2, phoenixDown: 1 };
+  return { potion: 5, hiPotion: 2, ether: 2, phoenixDown: 1, hourglass: 2 };
 }

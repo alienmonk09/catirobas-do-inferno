@@ -1,4 +1,4 @@
-import type { ItemDef, SkillDef, Unit } from "../core/types";
+import type { ItemDef, SkillDef, StatusKind, Unit } from "../core/types";
 import { getClass } from "../data/classes";
 import { getWeapon } from "../data/weapons";
 import { getSkill } from "../data/skills";
@@ -114,7 +114,7 @@ export class BattleUI {
               .join(", ")
           : "",
       }),
-      el("div", { className: "statuses", text: unit.statuses.map((s) => `${s.kind}(${s.turnsLeft})`).join(" ") }),
+      statusChips(unit),
     ];
   }
 
@@ -226,20 +226,29 @@ export class BattleUI {
   showActions(state: ActionState): void {
     this.hideSubmenu();
     clear(this.actionMenu);
-    const mk = (label: string, enabled: boolean, fn: () => void, extra = "") =>
-      el("button", {
-        className: extra ? `btn ${extra}` : "btn",
-        text: label,
-        attrs: enabled ? {} : { disabled: "true" },
+    const mk = (
+      label: string,
+      enabled: boolean,
+      fn: () => void,
+      opts: { accent: string; tip: string; key?: string; extra?: string },
+    ) => {
+      const b = el("button", {
+        className: `btn act ${opts.accent}${opts.extra ? " " + opts.extra : ""}`,
+        attrs: { title: opts.tip, ...(enabled ? {} : { disabled: "true" }) },
         onClick: enabled ? fn : undefined,
       });
-    this.actionMenu.appendChild(mk("Move", state.canMove, state.onMove));
-    this.actionMenu.appendChild(mk("Attack", state.canAct, state.onAttack));
-    this.actionMenu.appendChild(mk("Skill", state.canAct, state.onSkill));
-    this.actionMenu.appendChild(mk("Item", state.canAct, state.onItem));
+      b.appendChild(el("span", { className: "act-dot" }));
+      b.appendChild(el("span", { className: "act-label", text: label }));
+      if (opts.key) b.appendChild(el("span", { className: "key-hint", text: opts.key }));
+      return b;
+    };
+    this.actionMenu.appendChild(mk("Move", state.canMove, state.onMove, { accent: "a-move", tip: "Walk to a highlighted tile (respects range, terrain & jump)" }));
+    this.actionMenu.appendChild(mk("Attack", state.canAct, state.onAttack, { accent: "a-attack", tip: "Strike an enemy in weapon range — flank or rear for bonus damage" }));
+    this.actionMenu.appendChild(mk("Skill", state.canAct, state.onSkill, { accent: "a-skill", tip: "Cast a learned class skill (costs MP)" }));
+    this.actionMenu.appendChild(mk("Item", state.canAct, state.onItem, { accent: "a-item", tip: "Use a shared consumable" }));
     // "End Turn" (genre-standard "Wait"), detached from the offensive actions to
     // avoid a reflex misclick forfeiting the whole turn.
-    this.actionMenu.appendChild(mk("End Turn", true, state.onWait, "end-turn"));
+    this.actionMenu.appendChild(mk("End Turn", true, state.onWait, { accent: "a-end", extra: "end-turn", key: "E", tip: "Finish this unit's turn (Enter / E)" }));
     this.actionMenu.style.display = "flex";
     this.placeFloating(this.actionMenu);
   }
@@ -252,25 +261,27 @@ export class BattleUI {
 
   showSkillMenu(skills: SkillDef[], unit: Unit, onPick: (s: SkillDef) => void, onBack: () => void): void {
     clear(this.submenu);
+    this.submenu.appendChild(el("div", { className: "submenu-title", text: "Skills" }));
     if (skills.length === 0) {
-      this.submenu.appendChild(el("div", { text: "No skills learned.", attrs: { style: "opacity:0.7" } }));
+      this.submenu.appendChild(el("div", { text: "No skills learned. Spend JP at the Party Camp.", attrs: { style: "opacity:0.7;font-size:12px" } }));
     }
     for (const s of skills) {
       const affordable = unit.stats.mp >= s.mpCost;
-      const row = el("div", { className: "row" });
-      const left = el("div", { className: "row-left" });
-      left.appendChild(iconImg(getSkillSprite(s.id), 22));
-      left.appendChild(
-        el("button", {
-          className: "btn small",
-          text: s.name,
-          attrs: affordable ? {} : { disabled: "true" },
-          onClick: affordable ? () => onPick(s) : undefined,
-        }),
-      );
-      row.appendChild(left);
-      row.appendChild(el("span", { className: "cost", text: `MP ${s.mpCost} · ${describeSkill(s)}` }));
-      this.submenu.appendChild(row);
+      const card = el("button", {
+        className: `skill-card${affordable ? "" : " disabled"}`,
+        attrs: affordable ? {} : { disabled: "true" },
+        onClick: affordable ? () => onPick(s) : undefined,
+      });
+      const head = el("div", { className: "sk-head" });
+      head.appendChild(iconImg(getSkillSprite(s.id), 24));
+      head.appendChild(el("span", { className: "sk-name", text: s.name }));
+      head.appendChild(el("span", { className: `sk-mp${affordable ? "" : " short"}`, text: `${s.mpCost} MP` }));
+      card.appendChild(head);
+      const tags = el("div", { className: "sk-tags" });
+      for (const t of skillTags(s)) tags.appendChild(el("span", { className: `tag ${t.cls}`, text: t.text }));
+      card.appendChild(tags);
+      card.appendChild(el("div", { className: "sk-desc", text: s.description }));
+      this.submenu.appendChild(card);
     }
     this.submenu.appendChild(el("button", { className: "btn small", text: "← Back", onClick: onBack }));
     this.submenu.style.display = "flex";
@@ -351,4 +362,47 @@ function describeSkill(s: SkillDef): string {
   const verb =
     s.effect === "heal" ? "heal" : s.effect === "revive" ? "revive" : s.effect === "damage" ? "dmg" : s.effect;
   return `rng ${s.range}${shape} · ${verb}`;
+}
+
+const STATUS_INFO: Record<StatusKind, { label: string; tip: string; cls: string }> = {
+  guard: { label: "Guard", tip: "Raised defense (takes less physical damage)", cls: "st-buff" },
+  protect: { label: "Protect", tip: "Takes 25% less physical damage", cls: "st-buff" },
+  shell: { label: "Shell", tip: "Takes 25% less magic damage", cls: "st-buff" },
+  haste: { label: "Haste", tip: "Acts more often (turn speed ×1.5)", cls: "st-buff" },
+  regen: { label: "Regen", tip: "Recovers HP at the end of each of its turns", cls: "st-buff" },
+  slow: { label: "Slow", tip: "Acts less often (turn speed ×0.5)", cls: "st-debuff" },
+  poison: { label: "Poison", tip: "Loses HP at the end of each of its turns", cls: "st-debuff" },
+  stop: { label: "Stop", tip: "Frozen — forfeits its turns until it wears off", cls: "st-debuff" },
+};
+
+/** A row of readable status chips (with hover tooltips) for the info panels. */
+function statusChips(unit: Unit): HTMLElement {
+  const row = el("div", { className: "statuses" });
+  for (const s of unit.statuses) {
+    const info = STATUS_INFO[s.kind];
+    row.appendChild(
+      el("span", {
+        className: `st-chip ${info.cls}`,
+        text: `${info.label} ${s.turnsLeft}`,
+        attrs: { title: info.tip },
+      }),
+    );
+  }
+  return row;
+}
+
+/** Compact, color-coded tags describing a skill for the cast menu. */
+function skillTags(s: SkillDef): Array<{ text: string; cls: string }> {
+  const tags: Array<{ text: string; cls: string }> = [];
+  if (s.effect === "damage") tags.push({ text: `${s.power} pow · ${s.scaling === "magical" ? "MAG" : "ATK"}`, cls: "t-dmg" });
+  else if (s.effect === "heal") tags.push({ text: `${s.power} pow heal`, cls: "t-heal" });
+  else if (s.effect === "revive") tags.push({ text: "revive", cls: "t-heal" });
+  else if (s.statusKind) {
+    const info = STATUS_INFO[s.statusKind];
+    tags.push({ text: `${info.label}${s.statusDuration ? ` ${s.statusDuration}t` : ""}`, cls: s.effect === "buff" ? "t-buff" : "t-debuff" });
+  }
+  tags.push({ text: s.range === 0 ? "self" : `rng ${s.range}`, cls: "t-meta" });
+  if (s.aoe !== "single") tags.push({ text: s.aoe === "cross" ? "cross" : "3×3", cls: "t-meta" });
+  if (s.element !== "none") tags.push({ text: s.element, cls: `t-elem t-${s.element}` });
+  return tags;
 }

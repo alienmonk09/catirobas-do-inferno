@@ -1,5 +1,7 @@
-import type { ActiveStatus, SkillDef, StatusKind, Unit, WeaponDef } from "../core/types";
+import type { ActiveStatus, Element, ItemEffect, SkillDef, StatusKind, Unit, WeaponDef, WeaponKind } from "../core/types";
 import { RNG } from "../core/rng";
+import { attackAngle, type AttackAngle } from "./facing";
+import { getRace } from "../data/races";
 
 export type HitKind = "damage" | "heal" | "mp" | "revive" | "status";
 
@@ -14,15 +16,54 @@ export interface HitResult {
   status?: StatusKind;
 }
 
+/**
+ * Positional context for an attack: where it comes from and the elevation gap.
+ * Omitted entirely for low-level/raw resolution (no facing/elevation bonus);
+ * the live game and AI always supply it so flanks and high ground matter.
+ */
+export interface AttackContext {
+  /** Tile the attack originates from (defaults to the attacker's own tile). */
+  fromPos?: { x: number; y: number };
+  /** Attacker-tile height minus target-tile height (in level units). */
+  heightDelta?: number;
+}
+
 const VARIANCE = 0.15;
 const CRIT_CHANCE = 0.08;
 const CRIT_MULT = 1.5;
 const GUARD_DEF_BONUS = 0.5; // +50% def while guarding
 
+// Flank/rear damage and crit bonuses (physical only).
+const FACING_DMG: Record<AttackAngle, number> = { front: 1.0, flank: 1.1, rear: 1.25 };
+const FACING_CRIT: Record<AttackAngle, number> = { front: 0, flank: 0.1, rear: 0.2 };
+// High-ground advantage: ±damage per level (clamped) and a crit edge from above.
+const ELEV_DMG_PER = 0.07;
+const ELEV_CLAMP = 2;
+const ELEV_CRIT_HIGH = 0.05;
+// Protective statuses cut incoming damage of their type.
+const PROTECT_REDUCTION = 0.25; // physical
+const SHELL_REDUCTION = 0.25; // magical
+// Per-turn HP swing from damage/heal-over-time statuses (fraction of maxHp).
+const POISON_FRAC = 0.1;
+const REGEN_FRAC = 0.1;
+
+function clamp(v: number, lo: number, hi: number): number {
+  return Math.max(lo, Math.min(hi, v));
+}
+
+export function hasStatus(unit: Unit, kind: StatusKind): boolean {
+  return unit.statuses.some((s) => s.kind === kind);
+}
+
+/** A stopped unit forfeits its turns until the status wears off. */
+export function isStopped(unit: Unit): boolean {
+  return hasStatus(unit, "stop");
+}
+
 /** Defense after status modifiers (Guard). */
 export function effectiveDef(unit: Unit): number {
   let def = unit.stats.def;
-  if (unit.statuses.some((s) => s.kind === "guard")) {
+  if (hasStatus(unit, "guard")) {
     def = Math.round(def * (1 + GUARD_DEF_BONUS));
   }
   return def;
@@ -31,16 +72,86 @@ export function effectiveDef(unit: Unit): number {
 /** Speed after status modifiers (Slow/Haste) — used by the turn manager. */
 export function effectiveSpd(unit: Unit): number {
   let spd = unit.stats.spd;
-  if (unit.statuses.some((s) => s.kind === "slow")) spd = Math.round(spd * 0.5);
-  if (unit.statuses.some((s) => s.kind === "haste")) spd = Math.round(spd * 1.5);
+  if (hasStatus(unit, "slow")) spd = Math.round(spd * 0.5);
+  if (hasStatus(unit, "haste")) spd = Math.round(spd * 1.5);
   return Math.max(1, spd);
 }
 
-function applyVarianceAndCrit(base: number, rng: RNG, allowCrit: boolean): { value: number; crit: boolean } {
+/**
+ * Damage multiplier from the attacker's position: flank/rear bonus plus a
+ * high/low-ground edge. Physical only — magic ignores facing and elevation.
+ * Returns 1 when no context is supplied.
+ */
+export function positionalDamageMult(
+  attacker: Unit,
+  target: Unit,
+  kind: WeaponKind,
+  ctx?: AttackContext,
+): number {
+  if (!ctx || kind !== "physical") return 1;
+  const from = ctx.fromPos ?? attacker.pos;
+  let m = FACING_DMG[attackAngle(from, target.pos, target.facing)];
+  m *= 1 + clamp(ctx.heightDelta ?? 0, -ELEV_CLAMP, ELEV_CLAMP) * ELEV_DMG_PER;
+  return m;
+}
+
+/** Crit-chance bonus from position (physical only); 0 without context. */
+export function positionalCritBonus(
+  attacker: Unit,
+  target: Unit,
+  kind: WeaponKind,
+  ctx?: AttackContext,
+): number {
+  if (!ctx || kind !== "physical") return 0;
+  const from = ctx.fromPos ?? attacker.pos;
+  let b = FACING_CRIT[attackAngle(from, target.pos, target.facing)];
+  if ((ctx.heightDelta ?? 0) > 0) b += ELEV_CRIT_HIGH;
+  return b;
+}
+
+/**
+ * Incoming-damage multiplier from the defender's protective statuses (always
+ * applied, like Guard's defense bonus): Protect softens physical, Shell magical.
+ */
+export function defenseDamageMult(target: Unit, kind: WeaponKind): number {
+  if (kind === "physical" && hasStatus(target, "protect")) return 1 - PROTECT_REDUCTION;
+  if (kind === "magical" && hasStatus(target, "shell")) return 1 - SHELL_REDUCTION;
+  return 1;
+}
+
+export type Affinity = "weak" | "resist" | "neutral";
+
+/** The target race's stance toward an element (drives elemental damage scaling). */
+export function elementAffinity(target: Unit, element: Element): Affinity {
+  if (element === "none") return "neutral";
+  const race = getRace(target.raceId);
+  if (race.weak?.includes(element)) return "weak";
+  if (race.resist?.includes(element)) return "resist";
+  return "neutral";
+}
+
+/** Elemental damage multiplier: weakness ×1.5, resistance ×0.5, else ×1. */
+export function elementDamageMult(target: Unit, element: Element): number {
+  switch (elementAffinity(target, element)) {
+    case "weak":
+      return 1.5;
+    case "resist":
+      return 0.5;
+    default:
+      return 1;
+  }
+}
+
+function applyVarianceAndCrit(
+  base: number,
+  rng: RNG,
+  allowCrit: boolean,
+  critChance: number = CRIT_CHANCE,
+): { value: number; crit: boolean } {
   const v = 1 - VARIANCE + rng.next() * (2 * VARIANCE);
   let value = base * v;
   let crit = false;
-  if (allowCrit && rng.chance(CRIT_CHANCE)) {
+  if (allowCrit && rng.chance(critChance)) {
     value *= CRIT_MULT;
     crit = true;
   }
@@ -67,10 +178,15 @@ export function resolveWeaponAttack(
   target: Unit,
   weapon: WeaponDef,
   rng: RNG,
+  ctx?: AttackContext,
 ): HitResult {
   const power = weapon.kind === "magical" ? attacker.stats.mag : attacker.stats.atk;
-  const base = Math.max(1, power + weapon.power - effectiveDef(target));
-  const { value, crit } = applyVarianceAndCrit(base, rng, weapon.kind === "physical");
+  let base = Math.max(1, power + weapon.power - effectiveDef(target));
+  base *= positionalDamageMult(attacker, target, weapon.kind, ctx);
+  base *= defenseDamageMult(target, weapon.kind);
+  base = Math.max(1, base);
+  const critChance = CRIT_CHANCE + positionalCritBonus(attacker, target, weapon.kind, ctx);
+  const { value, crit } = applyVarianceAndCrit(base, rng, weapon.kind === "physical", critChance);
   const { killed } = dealDamage(target, value);
   return { unitId: target.id, kind: "damage", amount: value, crit, killed, revived: false };
 }
@@ -81,11 +197,29 @@ export function addStatus(unit: Unit, status: ActiveStatus): void {
   else unit.statuses.push({ ...status });
 }
 
-/** Reduce status durations by one turn and drop expired ones. */
-export function tickStatuses(unit: Unit): void {
+/**
+ * Process a unit's statuses at the end of its turn: apply damage/heal-over-time
+ * (Poison, Regen), then reduce every status by one turn and drop expired ones.
+ * Returns the HP-change results so the caller can show popups / detect a death.
+ */
+export function tickStatuses(unit: Unit): HitResult[] {
+  const out: HitResult[] = [];
+  for (const s of unit.statuses) {
+    if (!unit.alive) break; // poison may have already killed the unit mid-loop
+    if (s.kind === "poison") {
+      const dmg = Math.max(1, Math.round(unit.stats.maxHp * POISON_FRAC));
+      const { killed } = dealDamage(unit, dmg);
+      out.push({ unitId: unit.id, kind: "damage", amount: dmg, crit: false, killed, revived: false, status: "poison" });
+    } else if (s.kind === "regen" && unit.stats.hp < unit.stats.maxHp) {
+      const before = unit.stats.hp;
+      healHp(unit, Math.max(1, Math.round(unit.stats.maxHp * REGEN_FRAC)));
+      out.push({ unitId: unit.id, kind: "heal", amount: unit.stats.hp - before, crit: false, killed: false, revived: false, status: "regen" });
+    }
+  }
   unit.statuses = unit.statuses
     .map((s) => ({ ...s, turnsLeft: s.turnsLeft - 1 }))
     .filter((s) => s.turnsLeft > 0);
+  return out;
 }
 
 /**
@@ -98,14 +232,20 @@ export function resolveSkillOnTarget(
   target: Unit,
   skill: SkillDef,
   rng: RNG,
+  ctx?: AttackContext,
 ): HitResult | null {
   const power = skill.scaling === "magical" ? caster.stats.mag : caster.stats.atk;
 
   switch (skill.effect) {
     case "damage": {
       if (!target.alive) return null;
-      const base = Math.max(1, (power * skill.power) / 10 - (skill.scaling === "magical" ? target.stats.res : effectiveDef(target)));
-      const { value, crit } = applyVarianceAndCrit(base, rng, skill.scaling === "physical");
+      let base = Math.max(1, (power * skill.power) / 10 - (skill.scaling === "magical" ? target.stats.res : effectiveDef(target)));
+      base *= positionalDamageMult(caster, target, skill.scaling, ctx);
+      base *= defenseDamageMult(target, skill.scaling);
+      base *= elementDamageMult(target, skill.element);
+      base = Math.max(1, base);
+      const critChance = CRIT_CHANCE + positionalCritBonus(caster, target, skill.scaling, ctx);
+      const { value, crit } = applyVarianceAndCrit(base, rng, skill.scaling === "physical", critChance);
       const { killed } = dealDamage(target, value);
       return { unitId: target.id, kind: "damage", amount: value, crit, killed, revived: false };
     }
@@ -128,22 +268,24 @@ export function resolveSkillOnTarget(
     }
     case "buff": {
       if (!target.alive || !skill.statusKind) return null;
-      addStatus(target, { kind: skill.statusKind, turnsLeft: 2 });
+      addStatus(target, { kind: skill.statusKind, turnsLeft: skill.statusDuration ?? 2 });
       return { unitId: target.id, kind: "status", amount: 0, crit: false, killed: false, revived: false, status: skill.statusKind };
     }
     case "debuff": {
       if (!target.alive || !skill.statusKind) return null;
-      addStatus(target, { kind: skill.statusKind, turnsLeft: 3 });
+      addStatus(target, { kind: skill.statusKind, turnsLeft: skill.statusDuration ?? 3 });
       return { unitId: target.id, kind: "status", amount: 0, crit: false, killed: false, revived: false, status: skill.statusKind };
     }
   }
 }
 
-/** Restore HP/MP/revive from a consumable item. */
+/** Restore HP/MP/revive, or grant a buff, from a consumable item. */
 export function resolveItem(
   target: Unit,
-  effect: "healHp" | "healMp" | "revive",
+  effect: ItemEffect,
   amount: number,
+  statusKind?: StatusKind,
+  statusDuration?: number,
 ): HitResult | null {
   switch (effect) {
     case "healHp": {
@@ -164,5 +306,10 @@ export function resolveItem(
       target.alive = true;
       target.stats.hp = Math.min(target.stats.maxHp, amount);
       return { unitId: target.id, kind: "revive", amount, crit: false, killed: false, revived: true };
+    case "buff": {
+      if (!target.alive || !statusKind) return null;
+      addStatus(target, { kind: statusKind, turnsLeft: statusDuration ?? 3 });
+      return { unitId: target.id, kind: "status", amount: 0, crit: false, killed: false, revived: false, status: statusKind };
+    }
   }
 }

@@ -5,13 +5,14 @@ class progression, magic, weapons, and items. Built in **TypeScript + HTML5
 Canvas**, no game engine, no art assets — every sprite is code-defined pixel art.
 
 > *The old kingdom burned. All that's left of it is a scorched banner, and five
-> who still carry it.* — Five survivors of the realm of Calenmark carry the
-> Ashen Banner from the border wilds to the tyrant Maldrath's shattered throne,
-> across a five-chapter campaign. Full story → **[STORY.md](STORY.md)**.
+> who still carry it.* — A band of survivors carries the Ashen Banner from the
+> border wilds to the tyrant Maldrath's shattered throne, across a seven-chapter
+> campaign. Full story → **[STORY.md](STORY.md)**.
 
-Seven classes across five races, five playable phases, a charge-time turn
-system, and an enemy AI that heals, focuses, and pursues. At the start you
-**choose a party of four** from a roster of seven named heroes.
+Seven classes across five races, seven playable phases, a charge-time turn
+system, and an enemy AI that heals, focuses, flanks, and pursues. At the start
+you **choose a party of four** from a roster of seven named heroes, then gather
+**reinforcements** as the campaign opens deployment slots.
 
 ## Run it
 
@@ -40,16 +41,25 @@ npm test           # run the Vitest suite
   - **Skill** — pick a learned class skill (costs MP); click a target tile.
     Area skills show an AoE preview (orange). Support skills can target allies
     or yourself.
-  - **Item** — use a shared consumable (Potion, Hi-Potion, Ether, Phoenix Down).
+  - **Item** — use a shared consumable (Potion, Hi-Potion, Ether, Phoenix Down,
+    Hourglass — grants Haste).
   - **Wait** — end the turn.
 - **Right-click** cancels back to the menu. **Enter** / **E** ends the turn.
 - **Rotate the camera** to see the map from another angle: the **⟲ / ⟳**
   buttons (top-right) or the **,** / **.** keys spin the board in 90° steps.
   Works any time, including the enemy's turn.
 - Turn order (top bar) is driven by Speed (a charge-time system).
+- **Position matters.** Striking a foe from the flank or rear, or from higher
+  ground, hits harder and crits more often (a small ground arrow shows each unit's
+  facing). Ranged attacks and offensive spells need **line of sight** — walls and
+  tall terrain block the shot. Watch for **status pips** above a unit: Poison and
+  Regen tick HP each turn, Stop costs turns, Protect/Shell blunt physical/magical
+  damage, Haste/Slow bend turn speed.
 - Win by defeating all enemies. Between phases, the **Party Camp** screen lets
-  you change classes, swap weapons, and spend JP to learn new skills. Progress
-  is saved automatically (localStorage); **Continue** resumes from the camp.
+  you change classes, swap weapons, spend JP to learn new skills, and **recruit
+  reinforcements** from the rest of the roster as the campaign opens deployment
+  slots (a fifth hero mid-campaign, a sixth for the finale). Progress is saved
+  automatically (localStorage); **Continue** resumes from the camp.
 
 ## Classes
 
@@ -57,17 +67,20 @@ npm test           # run the Vitest suite
 |-------|------|--------|
 | Knight | Melee tank | Power Strike, Guard |
 | Archer | Ranged physical | Aimed Shot, Cripple |
-| Black Mage | Offensive magic | Fire, Bolt, Fireball (AoE) |
-| White Mage | Support / heal | Cure, Cura (AoE), Raise |
+| Black Mage | Offensive magic | Fire, Bolt, Fireball (AoE), Poison, Stop |
+| White Mage | Support / heal | Cure, Cura (AoE), Raise, Protect, Shell, Haste |
 | Monk | Melee bruiser | Palm Strike, Chakra (heal), Earth Shake (AoE) |
 | Thief | Fast skirmisher | Backstab, Hamstring (slow), Fan of Knives (AoE) |
-| Druid | Nature hybrid | Regrowth (heal), Thorn Lash, Entangle (slow) |
+| Druid | Nature hybrid | Regrowth (heal), Thorn Lash, Entangle (slow), Rejuvenate (Regen) |
 
 ### Races
 
-Each hero also has a race, applying a small flat stat modifier: **Human**
-(balanced), **Elf** (+MAG/RES/SPD, −HP), **Dwarf** (+HP/DEF, −SPD), **Halfling**
-(+SPD/MOVE/JUMP, −HP/ATK), **Orc** (+ATK/HP, −MAG/RES).
+Each hero also has a race, applying a small flat stat modifier **and an elemental
+affinity** (weakness ×1.5 / resistance ×0.5 to that element's spells): **Human**
+(balanced, no affinity), **Elf** (+MAG/RES/SPD, −HP; weak fire, resists nature),
+**Dwarf** (+HP/DEF, −SPD; weak nature, resists fire), **Halfling** (+SPD/MOVE/JUMP,
+−HP/ATK; weak fire, resists bolt), **Orc** (+ATK/HP, −MAG/RES; weak bolt, resists
+nature). The damage forecast flags **weak/resist** so you can aim spells where they bite.
 
 The seven heroes: Garan (Knight, Dwarf), Lyra (Archer, Elf), Vex (Black Mage,
 Human), Mira (White Mage, Human), Bron (Monk, Orc), **Enzo** (Thief, Halfling),
@@ -75,7 +88,7 @@ and **Penelope** (Druid, Elf).
 
 ## The campaign
 
-Five phases of rising difficulty, from a border skirmish to the tyrant's keep.
+Seven phases of rising difficulty, from a border skirmish to the tyrant's keep.
 See **[STORY.md](STORY.md)** for the full narrative.
 
 | # | Chapter | Setting |
@@ -83,8 +96,10 @@ See **[STORY.md](STORY.md)** for the full narrative.
 | I | Tutorial Skirmish | Grassy field, brigand camp — learn the basics |
 | II | Ambush in the Hills | Enemies on high ground, a sorcerer behind them |
 | III | The Bridge | A river chasm crossed by one narrow stone bridge |
-| IV | Sorcerer's Court | Tiered terraces, a mage cabal and a healer |
-| V | The Tyrant's Stand | Maldrath the Unbowed and his throne-guard |
+| IV | The Cinder Fields | Open burned farmland — a roving company tries to surround you |
+| V | Sorcerer's Court | Tiered terraces, a mage cabal and a healer |
+| VI | The Outer Ramparts | The keep's fortified wall — archers and a mage on the high stone |
+| VII | The Tyrant's Stand | Maldrath the Unbowed and his throne-guard |
 
 ## Project layout
 
@@ -95,23 +110,25 @@ src/
   engine/   isometric projection + picking, canvas renderer, input, loop, animator
   ui/       DOM battle HUD, menus, party screen styles
   scenes/   battle scene (turn state machine), party camp, title/victory
-  data/     classes, skills, weapons, items, party, maps/phase1..5, sprites
+  data/     classes, skills, weapons, items, party, maps/ (seven chapters), sprites
 tests/      unit tests per module + a full AI-vs-AI battle simulation
 docs/superpowers/specs/  design spec
 ```
 
 ## Tests
 
-`npm test` runs **404 tests across 17 files**: per-module unit tests (RNG,
-pathfinding, targeting, combat, turn order, AI, grid, movement/pass-through, iso
-projection, save/load, races, hero roster) plus map-data invariants and a
-**full battle simulation** that auto-plays all five phases to a decisive winner
-while asserting HP/stat invariants every turn.
+`npm test` runs **461 tests across 21 files**: per-module unit tests (RNG,
+pathfinding, targeting, combat, facing/back-attacks, line of sight, elevation &
+status modifiers, turn order, AI, grid, movement/pass-through, iso projection,
+save/load, races, hero roster) plus map-data invariants and a **full battle
+simulation** that auto-plays all five phases to a decisive winner while asserting
+HP/stat invariants every turn.
 
 ## Roadmap
 
-See **[ROADMAP.md](ROADMAP.md)**. Short version: facing/back-attacks and line of
-sight next, then a secondary-job system and more content, then narrative/audio.
+See **[ROADMAP.md](ROADMAP.md)**. Short version: v0.2 tactics depth shipped
+(facing/back-attacks, line of sight, elevation modifiers, the full status kit) —
+next is a secondary-job system and more content, then narrative/audio.
 
 ## Known minor limitations
 

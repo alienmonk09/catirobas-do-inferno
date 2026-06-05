@@ -3,9 +3,10 @@ import { PHASES } from "../src/data/maps";
 import { CLASSES } from "../src/data/classes";
 import { WEAPONS } from "../src/data/weapons";
 import { SKILLS } from "../src/data/skills";
+import { partyCapForPhase } from "../src/data/party";
 
 describe("map data invariants", () => {
-  for (const map of PHASES) {
+  PHASES.forEach((map, index) => {
     describe(map.id, () => {
       it("has rectangular heights matching width/height", () => {
         expect(map.heights.length).toBe(map.height);
@@ -21,8 +22,10 @@ describe("map data invariants", () => {
         for (const row of map.blocked) expect(row.length).toBe(map.width);
       });
 
-      it("has exactly 5 in-bounds, non-blocked, distinct player spawns", () => {
-        expect(map.playerSpawns.length).toBe(5);
+      it("offers enough in-bounds, non-blocked, distinct spawns for the party cap", () => {
+        // Every map must seat at least the chapter's party cap, and stay sane.
+        expect(map.playerSpawns.length).toBeGreaterThanOrEqual(partyCapForPhase(index));
+        expect(map.playerSpawns.length).toBeLessThanOrEqual(8);
         const seen = new Set<string>();
         for (const s of map.playerSpawns) {
           expect(s.x).toBeGreaterThanOrEqual(0);
@@ -59,5 +62,5 @@ describe("map data invariants", () => {
         }
       });
     });
-  }
+  });
 });

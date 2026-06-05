@@ -96,7 +96,7 @@ export class TitleScene extends BannerScene {
 
     this.showCard(
       "TACTICS",
-      "An isometric, turn-based tactics campaign. Choose four heroes from seven — knight, archer, black mage, white mage, monk, thief, and druid, each of a distinct race — and lead them through five battles of rising peril. Move, strike, cast, and grow.",
+      "An isometric, turn-based tactics campaign. Choose four heroes from seven — knight, archer, black mage, white mage, monk, thief, and druid, each of a distinct race — and lead them through seven battles of rising peril, gathering reinforcements as you march. Move, strike, cast, and grow.",
       buttons,
       selector,
     );

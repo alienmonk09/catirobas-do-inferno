@@ -223,6 +223,98 @@ describe("planEnemyTurn: waiting / advancing when no target is reachable", () =>
   });
 });
 
+/** A grid from an explicit height map (optionally with a blocked mask). */
+function gridFrom(heights: number[][], blocked?: boolean[][]): Grid {
+  const h = heights.length;
+  const w = heights[0].length;
+  return new Grid({
+    id: "t",
+    name: "T",
+    intro: "",
+    width: w,
+    height: h,
+    heights,
+    blocked,
+    playerSpawns: [],
+    enemies: [],
+  });
+}
+
+describe("planEnemyTurn: status & line of sight", () => {
+  it("a stopped unit forfeits its turn even with a foe adjacent", () => {
+    const grid = flatGrid();
+    const me = createUnit({ name: "Frozen", team: "enemy", classId: "knight", pos: { x: 3, y: 3 } });
+    me.statuses.push({ kind: "stop", turnsLeft: 2 });
+    const foe = createUnit({ name: "Hero", team: "player", classId: "knight", pos: { x: 4, y: 3 } });
+
+    const plan = planEnemyTurn(me, [me, foe], grid);
+
+    expect(plan.action.kind).toBe("wait");
+    expect(samePt(plan.destination, me.pos)).toBe(true);
+    expect(plan.path.length).toBe(1);
+  });
+
+  it("does not fire a ranged shot through a tall wall (no line of sight)", () => {
+    // 1-row map; an impassable height-9 wall at x=2 sits between archer and foe.
+    const heights = [[0, 0, 9, 0, 0]];
+    const blocked = [[false, false, true, false, false]];
+    const grid = gridFrom(heights, blocked);
+    const me = createUnit({ name: "Sniper", team: "enemy", classId: "archer", pos: { x: 0, y: 0 } });
+    const foe = createUnit({ name: "Hero", team: "player", classId: "knight", pos: { x: 3, y: 0 } });
+
+    const plan = planEnemyTurn(me, [me, foe], grid);
+
+    // The foe is within bow range but blocked by the wall — no attack is possible.
+    expect(plan.action.kind).not.toBe("attack");
+  });
+
+  it("does fire when the wall is removed (control for the LOS test)", () => {
+    const grid = gridFrom([[0, 0, 0, 0, 0]]);
+    const me = createUnit({ name: "Sniper", team: "enemy", classId: "archer", pos: { x: 0, y: 0 } });
+    const foe = createUnit({ name: "Hero", team: "player", classId: "knight", pos: { x: 3, y: 0 } });
+
+    const plan = planEnemyTurn(me, [me, foe], grid);
+
+    expect(plan.action.kind).toBe("attack");
+    expect(samePt(plan.action.targetTile!, foe.pos)).toBe(true);
+  });
+
+  it("casts a debuff (Poison) on an in-range foe when it has nothing better", () => {
+    const grid = flatGrid();
+    const me = createUnit({ name: "Hexer", team: "enemy", classId: "blackMage", learnedSkillIds: ["poison"], pos: { x: 3, y: 5 } });
+    const foe = createUnit({ name: "Hero", team: "player", classId: "knight", pos: { x: 3, y: 3 } });
+
+    const plan = planEnemyTurn(me, [me, foe], grid);
+
+    expect(plan.action.kind).toBe("skill");
+    expect(plan.action.skillId).toBe("poison");
+    expect(samePt(plan.action.targetTile!, foe.pos)).toBe(true);
+  });
+
+  it("does not re-apply a debuff a foe already carries", () => {
+    const grid = flatGrid();
+    const me = createUnit({ name: "Hexer", team: "enemy", classId: "blackMage", learnedSkillIds: ["poison"], pos: { x: 3, y: 5 } });
+    const foe = createUnit({ name: "Hero", team: "player", classId: "knight", pos: { x: 3, y: 3 } });
+    foe.statuses.push({ kind: "poison", turnsLeft: 2 });
+
+    const plan = planEnemyTurn(me, [me, foe], grid);
+
+    expect(plan.action.kind).not.toBe("skill");
+  });
+
+  it("grants a buff (Haste) to an ally when no attack is available", () => {
+    const grid = flatGrid(20, 20);
+    const me = createUnit({ name: "Chanter", team: "enemy", classId: "whiteMage", learnedSkillIds: ["haste"], pos: { x: 3, y: 3 } });
+    const ally = createUnit({ name: "Brute", team: "enemy", classId: "knight", pos: { x: 3, y: 4 } });
+    const foe = createUnit({ name: "Hero", team: "player", classId: "knight", pos: { x: 18, y: 18 } });
+
+    const plan = planEnemyTurn(me, [me, ally, foe], grid);
+
+    expect(plan.action.kind).toBe("skill");
+    expect(plan.action.skillId).toBe("haste");
+  });
+});
+
 describe("planEnemyTurn: healer behavior", () => {
   it("a White Mage knowing Cure heals a hurt ally instead of attacking", () => {
     const grid = flatGrid();

@@ -64,11 +64,12 @@ props the regime up: the pyromancer **Velis**, the stormcaller **Dane**, the
 fallen abbess **Mirelle**, and their guards. Break the court and the throne has
 nothing left to hide behind.
 
-## The campaign — five chapters
+## The campaign — seven chapters
 
-The game ships as **five phases**, played in order, with a Party Camp between
-each for class changes, gear, and skill (JP) spending. Progress saves
-automatically.
+The game ships as **seven phases**, played in order, with a Party Camp between
+each for class changes, gear, skill (JP) spending, and — as the war widens —
+reinforcements: the party starts at four and earns extra deployment slots
+mid-campaign and for the finale. Progress saves automatically.
 
 ### Chapter I — Tutorial Skirmish
 *A grassy field, a brigand camp, and the first lesson of the war.*
@@ -93,7 +94,17 @@ Archer** and a **Cliffside Mage** hold the far side of a chasm crossed by a
 single span. Funnel, hold, and break through — or be picked apart on the
 approach.
 
-### Chapter IV — Sorcerer's Court
+### Chapter IV — The Cinder Fields
+*A wide plain of burned farmland; nowhere to hide and a company that means to surround you.*
+
+Past the bridge the land opens into black stubble and broken fences — a
+larger, open battlefield with no chokepoint to hold. A roving company under a
+**Cinder Marauder** spreads to flank: an **Ash Archer** and **Scorch Mage** at
+range, a **Field Cleric** keeping them up, a **Brigand Lieutenant** circling for
+the back. The lesson is space: hold the rubble for cover, watch your facing, and
+don't get enveloped on open ground.
+
+### Chapter V — Sorcerer's Court
 *Tiered stone terraces, a stack of mages, a healer who won't let them die.*
 
 The inner court that keeps the regime standing: **Pyromancer Velis**,
@@ -101,7 +112,17 @@ The inner court that keeps the regime standing: **Pyromancer Velis**,
 terraces, raining AoE and mending each other. A war of attrition against a team
 that fights like one.
 
-### Chapter V — The Tyrant's Stand
+### Chapter VI — The Outer Ramparts
+*The keep's fortified wall: merlons, archers on the high stone, and a single gate.*
+
+Before the throne stands the outer rampart — a raised stone wall ringing a
+courtyard killing-floor. A **Rampart Captain** holds the gate while a **Siege
+Mage**, two wall sentries, and a **Gate Cleric** fire down from the high stone.
+Force the gate or scale the ends, but the longer you stand in the open, the more
+the wall whittles you down — line of sight and the high ground are the whole
+fight here.
+
+### Chapter VII — The Tyrant's Stand
 *A shattered keep, two chasms, and the throne at the end of it all.*
 
 **Maldrath the Unbowed** and his throne-guard make their last stand on a broken

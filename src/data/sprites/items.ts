@@ -78,4 +78,23 @@ export const ITEM_SPRITES: Record<string, SpriteDef> = {
       ".......A......",
     ],
   },
+  hourglass: {
+    palette: { A: "#2a1a08", B: "#d4b06a", C: "#ffe9b0", D: "#ff9f4d" },
+    rows: [
+      "..AAAAAAAAAA..",
+      "..ABBBBBBBBA..",
+      "...ACCCCCCA...",
+      "...ACDDDDCA...",
+      "....ACDDCA....",
+      ".....ACCA.....",
+      "......AA......",
+      "......AA......",
+      ".....ACCA.....",
+      "....ACDDCA....",
+      "...ACDDDDCA...",
+      "...ACDDDDCA...",
+      "..ABBBBBBBBA..",
+      "..AAAAAAAAAA..",
+    ],
+  },
 };

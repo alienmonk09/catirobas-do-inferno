@@ -1,5 +1,6 @@
-import type { Point, TerrainType, Unit } from "../core/types";
+import type { Point, StatusKind, TerrainType, Unit } from "../core/types";
 import type { Grid } from "../battle/grid";
+import { dirVector } from "../battle/facing";
 import { bakeSprite, spriteHeight, type AnimDef, type SpriteDef } from "./sprite";
 import { getUnitSprite } from "../data/sprites";
 import { TERRAIN } from "../data/terrain";
@@ -96,6 +97,20 @@ const COLOR = {
   path: "rgba(245,225,90,0.65)",
   hover: "rgba(255,255,255,0.22)",
   gridLine: "rgba(0,0,0,0.18)",
+};
+
+/** One-glyph badge + color per status, drawn as a pip over the unit's HP bar.
+ *  Letters are picked distinct (slow=L, stop=X, poison=T) so colors + glyphs
+ *  never collide. */
+const STATUS_UI: Record<StatusKind, { letter: string; color: string }> = {
+  guard: { letter: "G", color: "#7fb0ff" },
+  protect: { letter: "P", color: "#5fd0ff" },
+  shell: { letter: "S", color: "#b98cff" },
+  haste: { letter: "H", color: "#ffd34d" },
+  slow: { letter: "L", color: "#ff9f4d" },
+  stop: { letter: "X", color: "#c8ccd6" },
+  poison: { letter: "T", color: "#8fe39a" },
+  regen: { letter: "R", color: "#5fff9a" },
 };
 
 function key(p: Point): string {
@@ -251,12 +266,21 @@ export class Renderer {
       } else {
         const z = grid.heightAt(Math.round(it.dx), Math.round(it.dy));
         const center = this.project(view, it.dx, it.dy, z);
+        // Screen-space facing vector: project one tile ahead and normalize, so the
+        // marker rotates correctly with the camera.
+        const ahead = dirVector(it.unit.facing);
+        const pa = this.project(view, it.dx + ahead.x, it.dy + ahead.y, z);
+        let fx = pa.sx - center.sx;
+        let fy = pa.sy - center.sy;
+        const mag = Math.hypot(fx, fy) || 1;
+        fx /= mag;
+        fy /= mag;
         const off = view.unitOffsets.get(it.unit.id);
         if (off) {
           center.sx += off.dx;
           center.sy += off.dy;
         }
-        this.drawUnit(it.unit, center, it.unit.id === view.activeUnitId, view.time, view.deathFade.get(it.unit.id));
+        this.drawUnit(it.unit, center, it.unit.id === view.activeUnitId, view.time, view.deathFade.get(it.unit.id), { x: fx, y: fy });
       }
     }
   }
@@ -332,6 +356,7 @@ export class Renderer {
     active: boolean,
     time: number,
     deathAge: number | undefined,
+    facingDir: { x: number; y: number },
   ): void {
     const ctx = this.ctx;
     const def = getUnitSprite(unit);
@@ -364,6 +389,19 @@ export class Renderer {
     ctx.ellipse(center.sx, center.sy + 2, TILE_W * 0.28, TILE_H * 0.28, 0, 0, Math.PI * 2);
     ctx.stroke();
 
+    // Facing arrowhead on the ring — shows which way the unit looks (for flanks).
+    const tipX = center.sx + facingDir.x * TILE_W * 0.32;
+    const tipY = center.sy + 2 + facingDir.y * TILE_H * 0.32;
+    const perpX = -facingDir.y;
+    const perpY = facingDir.x;
+    ctx.fillStyle = unit.team === "player" ? "#aef0ff" : "#ffb0b0";
+    ctx.beginPath();
+    ctx.moveTo(tipX + facingDir.x * 4, tipY + facingDir.y * 4);
+    ctx.lineTo(tipX + perpX * 4, tipY + perpY * 4);
+    ctx.lineTo(tipX - perpX * 4, tipY - perpY * 4);
+    ctx.closePath();
+    ctx.fill();
+
     ctx.drawImage(canvas, drawX, drawY);
 
     const topY = drawY;
@@ -377,13 +415,26 @@ export class Renderer {
     ctx.fillStyle = hpFrac > 0.5 ? "#5fbf72" : hpFrac > 0.25 ? "#d6cf5f" : "#d65f5f";
     ctx.fillRect(barX, barY, barW * hpFrac, 3);
 
-    // Status pips.
+    // Status pips: one colored badge per active status.
     if (unit.statuses.length > 0) {
-      ctx.font = "9px system-ui";
-      ctx.fillStyle = "#fff";
+      const pipW = 9;
+      const gap = 1;
+      const total = unit.statuses.length * pipW + (unit.statuses.length - 1) * gap;
+      let px = center.sx - total / 2;
+      const py = barY - 11;
+      ctx.font = "bold 8px system-ui";
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
-      ctx.fillText(unit.statuses.map((s) => s.kind[0].toUpperCase()).join(""), center.sx, barY - 6);
+      for (const s of unit.statuses) {
+        const ui = STATUS_UI[s.kind];
+        ctx.fillStyle = "rgba(0,0,0,0.6)";
+        ctx.fillRect(px - 0.5, py - 0.5, pipW + 1, 9);
+        ctx.fillStyle = ui.color;
+        ctx.fillRect(px, py, pipW, 8);
+        ctx.fillStyle = "#14151c";
+        ctx.fillText(ui.letter, px + pipW / 2, py + 4.5);
+        px += pipW + gap;
+      }
     }
 
     // Active indicator: bobbing arrow above the sprite.

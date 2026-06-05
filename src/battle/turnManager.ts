@@ -1,5 +1,5 @@
 import { CT_THRESHOLD, type Team, type Unit } from "../core/types";
-import { effectiveSpd, tickStatuses } from "./combat";
+import { effectiveSpd, tickStatuses, type HitResult } from "./combat";
 
 /** Living units only, in their array order. */
 function living(units: Unit[]): Unit[] {
@@ -30,11 +30,14 @@ export function advanceToNextActor(units: Unit[]): Unit | null {
   return null;
 }
 
-/** End the active unit's turn: spend charge time and tick its statuses. */
-export function endTurn(unit: Unit): void {
+/**
+ * End the active unit's turn: spend charge time and tick its statuses. Returns
+ * any HP changes from damage/heal-over-time so the caller can show them.
+ */
+export function endTurn(unit: Unit): HitResult[] {
   unit.ct -= CT_THRESHOLD;
   if (unit.ct < 0) unit.ct = 0;
-  tickStatuses(unit);
+  return tickStatuses(unit);
 }
 
 /** Winner if the battle is decided, else null. */

@@ -1,4 +1,4 @@
-import type { ClassId, Point, RaceId, Stats, Team, Unit } from "./types";
+import type { ClassId, Direction, Point, RaceId, Stats, Team, Unit } from "./types";
 import { getClass } from "../data/classes";
 import { getRace } from "../data/races";
 import { getWeapon } from "../data/weapons";
@@ -54,6 +54,8 @@ export interface CreateUnitOpts {
   weaponId?: string;
   /** Skills already learned; defaults to none. */
   learnedSkillIds?: string[];
+  /** Initial facing; defaults to south. Battle setup overrides toward the foe. */
+  facing?: Direction;
   id?: string;
 }
 
@@ -77,6 +79,7 @@ export function createUnit(opts: CreateUnitOpts): Unit {
     learnedSkillIds: [...(opts.learnedSkillIds ?? [])],
     weaponId: finalWeapon,
     pos: { ...opts.pos },
+    facing: opts.facing ?? "s",
     ct: 0,
     stats: statsForLevel(opts.classId, level, raceId),
     statuses: [],

@@ -19,6 +19,7 @@ function mkUnit(over: Partial<Unit["stats"]> = {}): Unit {
     alive: true,
     statuses: [],
     pos: { x: 0, y: 0 },
+    facing: "s",
     stats: { hp: 100, maxHp: 100, mp: 50, maxMp: 50, atk: 20, def: 5, mag: 16, res: 10, spd: 10, move: 4, jump: 2, ...over },
   } as Unit;
 }

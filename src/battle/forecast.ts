@@ -1,5 +1,13 @@
 import type { SkillDef, Unit, WeaponDef } from "../core/types";
-import { effectiveDef } from "./combat";
+import {
+  effectiveDef,
+  defenseDamageMult,
+  elementAffinity,
+  elementDamageMult,
+  positionalDamageMult,
+  type AttackContext,
+  type Affinity,
+} from "./combat";
 
 export interface Forecast {
   kind: "damage" | "heal" | "revive" | "status";
@@ -7,25 +15,35 @@ export interface Forecast {
   amount: number;
   /** True if the expected hit would drop the target to 0 HP. */
   lethal: boolean;
+  /** Elemental stance of the target vs this hit (for a UI weak/resist hint). */
+  affinity?: Affinity;
 }
 
 /**
  * No-variance expected results, mirroring combat.ts resolution minus the RNG
- * roll. Single source of truth for both the UI damage preview and the AI.
+ * roll (crit included). The same positional context the attack will use feeds
+ * in here, so the preview and the AI see the real flank/elevation-adjusted
+ * number. Single source of truth for both the UI damage preview and the AI.
  */
-export function forecastWeapon(attacker: Unit, target: Unit, weapon: WeaponDef): Forecast {
+export function forecastWeapon(attacker: Unit, target: Unit, weapon: WeaponDef, ctx?: AttackContext): Forecast {
   const stat = weapon.kind === "magical" ? attacker.stats.mag : attacker.stats.atk;
-  const amount = Math.max(1, Math.round(stat + weapon.power - effectiveDef(target)));
+  let amount = Math.max(1, stat + weapon.power - effectiveDef(target));
+  amount *= positionalDamageMult(attacker, target, weapon.kind, ctx);
+  amount *= defenseDamageMult(target, weapon.kind);
+  amount = Math.max(1, Math.round(amount));
   return { kind: "damage", amount, lethal: amount >= target.stats.hp };
 }
 
-export function forecastSkill(caster: Unit, target: Unit, skill: SkillDef): Forecast {
+export function forecastSkill(caster: Unit, target: Unit, skill: SkillDef, ctx?: AttackContext): Forecast {
   const power = skill.scaling === "magical" ? caster.stats.mag : caster.stats.atk;
   switch (skill.effect) {
     case "damage": {
-      const base = (power * skill.power) / 10 - (skill.scaling === "magical" ? target.stats.res : effectiveDef(target));
+      let base = (power * skill.power) / 10 - (skill.scaling === "magical" ? target.stats.res : effectiveDef(target));
+      base *= positionalDamageMult(caster, target, skill.scaling, ctx);
+      base *= defenseDamageMult(target, skill.scaling);
+      base *= elementDamageMult(target, skill.element);
       const amount = Math.max(1, Math.round(base));
-      return { kind: "damage", amount, lethal: amount >= target.stats.hp };
+      return { kind: "damage", amount, lethal: amount >= target.stats.hp, affinity: elementAffinity(target, skill.element) };
     }
     case "heal": {
       const amount = Math.max(1, Math.round((power * skill.power) / 10));

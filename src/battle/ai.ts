@@ -3,6 +3,8 @@ import { Grid, manhattan, moveBlockers, samePoint } from "./grid";
 import { pathTo, reachable } from "./pathfinding";
 import { aoeTiles, tilesInRange } from "./targeting";
 import { forecastSkill, forecastWeapon } from "./forecast";
+import { hasStatus, isStopped, type AttackContext } from "./combat";
+import { hasLineOfSight } from "./los";
 import { getWeapon } from "../data/weapons";
 import { getSkill } from "../data/skills";
 
@@ -21,23 +23,68 @@ export interface AIPlan {
   action: AIAction;
 }
 
-/** Deterministic estimate of a basic weapon attack (shared with the UI preview). */
-function estimateWeaponDamage(attacker: Unit, target: Unit): number {
-  return forecastWeapon(attacker, target, getWeapon(attacker.weaponId)).amount;
-}
-
 interface Option {
   score: number;
   destination: Point;
   action: AIAction;
 }
 
+/** Positional context for an attack launched from `stand` against `target`. */
+function ctxFrom(grid: Grid, stand: Point, target: Point): AttackContext {
+  return { fromPos: stand, heightDelta: grid.heightAt(stand.x, stand.y) - grid.heightAt(target.x, target.y) };
+}
+
+/** Deterministic estimate of a basic weapon attack from a candidate stand tile. */
+function estimateWeaponDamage(attacker: Unit, stand: Point, target: Unit, grid: Grid): number {
+  return forecastWeapon(attacker, target, getWeapon(attacker.weaponId), ctxFrom(grid, stand, target.pos)).amount;
+}
+
+function estimateSkillDamage(attacker: Unit, stand: Point, target: Unit, skill: SkillDef, grid: Grid): number {
+  return forecastSkill(attacker, target, skill, ctxFrom(grid, stand, target.pos)).amount;
+}
+
+/** Worth of landing a debuff (no effect if the target already carries it). */
+function debuffScore(skill: SkillDef): number {
+  switch (skill.statusKind) {
+    case "stop":
+      return 95;
+    case "poison":
+      return 75;
+    case "slow":
+      return 60;
+    default:
+      return 50;
+  }
+}
+
+/** Worth of granting a buff to an ally. */
+function buffScore(skill: SkillDef): number {
+  switch (skill.statusKind) {
+    case "haste":
+      return 80;
+    case "protect":
+    case "shell":
+      return 70;
+    case "regen":
+      return 60;
+    default:
+      return 55;
+  }
+}
+
 /**
  * Decide an enemy unit's turn. Returns a move path and an action.
- * Priorities: healers heal hurt allies; everyone else maximizes damage on the
- * most killable enemy; if nothing is reachable, advance toward the nearest foe.
+ * Priorities: a stopped unit forfeits its turn; healers heal hurt allies and
+ * revive the dead; otherwise maximize damage on the most killable foe (valuing
+ * flanks, the high ground, and line of sight), apply control/buffs when no
+ * strong strike is available, and advance toward the nearest foe as a fallback.
  */
 export function planEnemyTurn(unit: Unit, units: Unit[], grid: Grid): AIPlan {
+  // Frozen in time: skip the turn entirely.
+  if (isStopped(unit)) {
+    return { path: [unit.pos], destination: unit.pos, action: { kind: "wait" } };
+  }
+
   const { solid, passThrough } = moveBlockers(units, unit);
   const reach = reachable(grid, unit.pos, unit.stats.move, unit.stats.jump, solid, passThrough);
 
@@ -56,6 +103,8 @@ export function planEnemyTurn(unit: Unit, units: Unit[], grid: Grid): AIPlan {
   const damageSkills = knownSkills.filter((s) => s.effect === "damage" && s.mpCost <= unit.stats.mp);
   const healSkills = knownSkills.filter((s) => s.effect === "heal" && s.mpCost <= unit.stats.mp);
   const reviveSkills = knownSkills.filter((s) => s.effect === "revive" && s.mpCost <= unit.stats.mp);
+  const debuffSkills = knownSkills.filter((s) => s.effect === "debuff" && s.statusKind && s.mpCost <= unit.stats.mp);
+  const buffSkills = knownSkills.filter((s) => s.effect === "buff" && s.statusKind && s.mpCost <= unit.stats.mp);
 
   const options: Option[] = [];
 
@@ -67,7 +116,9 @@ export function planEnemyTurn(unit: Unit, units: Unit[], grid: Grid): AIPlan {
       for (const stand of standTiles) {
         if (manhattan(stand, ally.pos) > skill.range) continue;
         const missing = ally.stats.maxHp - ally.stats.hp;
-        const heal = Math.min(missing, Math.round((unit.stats.mag * skill.power) / 10));
+        // Use the shared forecast so physical-scaling heals (e.g. Monk's Chakra)
+        // are scored off the right stat, matching what resolution will restore.
+        const heal = Math.min(missing, forecastSkill(unit, ally, skill).amount);
         options.push({
           score: 200 + heal, // healing prioritized over attacking
           destination: stand,
@@ -90,22 +141,25 @@ export function planEnemyTurn(unit: Unit, units: Unit[], grid: Grid): AIPlan {
   }
 
   // --- Offensive behavior ---
+  const weapon = getWeapon(unit.weaponId);
   for (const stand of standTiles) {
-    // Basic weapon attack
-    const w = getWeapon(unit.weaponId);
+    // Basic weapon attack.
     for (const target of enemies) {
-      if (manhattan(stand, target.pos) > w.range || manhattan(stand, target.pos) === 0) continue;
-      const dmg = estimateWeaponDamage(unit, target);
+      const d = manhattan(stand, target.pos);
+      if (d > weapon.range || d === 0) continue;
+      if (weapon.range > 1 && !hasLineOfSight(grid, stand, target.pos)) continue;
+      const dmg = estimateWeaponDamage(unit, stand, target, grid);
       options.push({
         score: scoreTarget(dmg, target),
         destination: stand,
         action: { kind: "attack", targetTile: { ...target.pos } },
       });
     }
-    // Damage skills (incl. AoE)
+    // Damage skills (incl. AoE).
     for (const skill of damageSkills) {
       const cells = tilesInRange(grid, stand, skill.range, false);
       for (const center of cells) {
+        if (skill.range > 1 && !hasLineOfSight(grid, stand, center)) continue;
         const affected = aoeTiles(grid, center, skill.aoe);
         let total = 0;
         let kills = 0;
@@ -113,9 +167,9 @@ export function planEnemyTurn(unit: Unit, units: Unit[], grid: Grid): AIPlan {
         for (const cell of affected) {
           const occ = enemies.find((e) => samePoint(e.pos, cell));
           const ally = allies.find((a) => samePoint(a.pos, cell));
-          if (ally && a_isNotSelf(ally, unit)) hitAlly = true;
+          if (ally && ally.id !== unit.id) hitAlly = true;
           if (!occ) continue;
-          const dmg = estimateSkillDamageSafe(unit, occ, skill);
+          const dmg = estimateSkillDamage(unit, stand, occ, skill, grid);
           total += Math.min(dmg, occ.stats.hp);
           if (dmg >= occ.stats.hp) kills += 1;
         }
@@ -125,6 +179,33 @@ export function planEnemyTurn(unit: Unit, units: Unit[], grid: Grid): AIPlan {
           score: total + kills * 50 - penalty,
           destination: stand,
           action: { kind: "skill", skillId: skill.id, targetTile: { ...center } },
+        });
+      }
+    }
+    // Debuffs: afflict a foe that does not already carry the status.
+    for (const skill of debuffSkills) {
+      for (const target of enemies) {
+        if (hasStatus(target, skill.statusKind!)) continue;
+        const d = manhattan(stand, target.pos);
+        if (d === 0 || d > skill.range) continue;
+        if (skill.range > 1 && !hasLineOfSight(grid, stand, target.pos)) continue;
+        const lowHp = (1 - target.stats.hp / target.stats.maxHp) * 10;
+        options.push({
+          score: debuffScore(skill) + lowHp,
+          destination: stand,
+          action: { kind: "skill", skillId: skill.id, targetTile: { ...target.pos } },
+        });
+      }
+    }
+    // Buffs: shore up an ally (or self) that lacks the status.
+    for (const skill of buffSkills) {
+      for (const ally of allies) {
+        if (hasStatus(ally, skill.statusKind!)) continue;
+        if (manhattan(stand, ally.pos) > skill.range) continue;
+        options.push({
+          score: buffScore(skill),
+          destination: stand,
+          action: { kind: "skill", skillId: skill.id, targetTile: { ...ally.pos } },
         });
       }
     }
@@ -159,14 +240,6 @@ export function planEnemyTurn(unit: Unit, units: Unit[], grid: Grid): AIPlan {
     destination: bestTile,
     action: { kind: "wait" },
   };
-}
-
-function a_isNotSelf(ally: Unit, unit: Unit): boolean {
-  return ally.id !== unit.id;
-}
-
-function estimateSkillDamageSafe(attacker: Unit, target: Unit, skill: SkillDef): number {
-  return forecastSkill(attacker, target, skill).amount;
 }
 
 /** Lower-HP targets are worth more; lethal hits get a big bonus. */

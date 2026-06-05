@@ -6,11 +6,15 @@ import { Grid, moveBlockers, samePoint } from "../battle/grid";
 import { pathTo, reachable } from "../battle/pathfinding";
 import { aoeTiles, tilesInRange } from "../battle/targeting";
 import {
+  isStopped,
   resolveItem,
   resolveSkillOnTarget,
   resolveWeaponAttack,
+  type AttackContext,
   type HitResult,
 } from "../battle/combat";
+import { hasLineOfSight } from "../battle/los";
+import { directionTo } from "../battle/facing";
 import { advanceToNextActor, battleWinner, endTurn, previewOrder } from "../battle/turnManager";
 import { planEnemyTurn } from "../battle/ai";
 import { forecastSkill, forecastWeapon } from "../battle/forecast";
@@ -109,6 +113,25 @@ export class BattleScene implements Scene {
         }),
       );
     }
+    // Point everyone toward the enemy they're about to fight.
+    for (const u of this.units) u.facing = this.facingTowardFoes(u);
+  }
+
+  /** Initial facing: aim at the centroid of the opposing team (south if none). */
+  private facingTowardFoes(unit: Unit): Unit["facing"] {
+    const foes = this.units.filter((u) => u.team !== unit.team);
+    if (foes.length === 0) return "s";
+    const cx = foes.reduce((s, f) => s + f.pos.x, 0) / foes.length;
+    const cy = foes.reduce((s, f) => s + f.pos.y, 0) / foes.length;
+    return directionTo(unit.pos, { x: cx, y: cy });
+  }
+
+  /** Positional context (elevation gap) for an attack by the active unit on a tile. */
+  private posCtx(targetPos: Point): AttackContext {
+    if (!this.active) return {};
+    return {
+      heightDelta: this.grid.heightAt(this.active.pos.x, this.active.pos.y) - this.grid.heightAt(targetPos.x, targetPos.y),
+    };
   }
 
   private get origin(): ScreenPoint {
@@ -169,6 +192,15 @@ export class BattleScene implements Scene {
     this.ui.showRotateControl(() => this.rotateView(-1), () => this.rotateView(1));
     this.ui.setRotationLabel(this.rot);
 
+    // Frozen in time: the unit forfeits its turn (the Stop status still ticks).
+    if (isStopped(this.active)) {
+      this.pushTextPopup(this.active.pos, "Stop", POPUP_COLORS.status);
+      this.phase = "resolving";
+      this.ui.hideCombatControls();
+      void this.ctx.animator.wait(0.55).then(() => this.endActiveTurn());
+      return;
+    }
+
     if (this.active.team === "player") {
       this.phase = "menu";
       this.refreshMenu();
@@ -180,7 +212,10 @@ export class BattleScene implements Scene {
   }
 
   private endActiveTurn(): void {
-    if (this.active) endTurn(this.active);
+    if (this.active) {
+      // Damage/heal-over-time (Poison, Regen) resolve as the turn ends.
+      for (const r of endTurn(this.active)) this.pushPopup(r);
+    }
     this.active = null;
     this.phase = "resolving";
     this.ui.hideCombatControls();
@@ -298,7 +333,10 @@ export class BattleScene implements Scene {
     this.ui.clearActions();
     const w = getWeapon(this.active.weaponId);
     this.ui.setHint(`Attack (range ${w.range}). Click an enemy in range.`);
-    this.rangeTiles = tilesInRange(this.grid, this.active.pos, w.range, false);
+    let tiles = tilesInRange(this.grid, this.active.pos, w.range, false);
+    // Ranged attacks respect line of sight (walls and high ground block).
+    if (w.range > 1) tiles = tiles.filter((t) => hasLineOfSight(this.grid, this.active!.pos, t));
+    this.rangeTiles = tiles;
   }
 
   private enterSkillMenu(): void {
@@ -329,8 +367,11 @@ export class BattleScene implements Scene {
     this.phase = "skillTarget";
     this.ui.setHint(`${skill.name}: click a target tile in range.`);
     // Support skills (heal/buff/revive) may target the caster's own tile.
-    const includeSelf = skill.effect !== "damage" && skill.effect !== "debuff";
-    this.rangeTiles = tilesInRange(this.grid, this.active.pos, skill.range, includeSelf);
+    const offensive = skill.effect === "damage" || skill.effect === "debuff";
+    let tiles = tilesInRange(this.grid, this.active.pos, skill.range, !offensive);
+    // Offensive ranged abilities respect line of sight.
+    if (offensive && skill.range > 1) tiles = tiles.filter((t) => hasLineOfSight(this.grid, this.active!.pos, t));
+    this.rangeTiles = tiles;
   }
 
   private enterItemMenu(): void {
@@ -413,6 +454,7 @@ export class BattleScene implements Scene {
     this.rangeTiles = [];
     this.ui.hideCombatControls();
     await this.ctx.animator.moveAlong(this.active.id, path);
+    if (path.length > 1) this.active.facing = directionTo(path[path.length - 2], path[path.length - 1]);
     this.active.pos = { ...tile };
     this.hasMoved = true;
     this.refreshMenu();
@@ -423,8 +465,9 @@ export class BattleScene implements Scene {
     const target = this.unitAt(tile);
     if (!target || target.team === this.active.team) return;
     const weapon = getWeapon(this.active.weaponId);
+    this.active.facing = directionTo(this.active.pos, target.pos);
     this.lunge = { id: this.active.id, tx: target.pos.x, ty: target.pos.y, age: 0 };
-    const res = resolveWeaponAttack(this.active, target, weapon, this.rng);
+    const res = resolveWeaponAttack(this.active, target, weapon, this.rng, this.posCtx(target.pos));
     this.pushEffect(target.pos, vfxKeyForWeapon(weapon));
     this.pushPopup(res);
     this.awardForAction(this.active, { offensive: true, killed: res.killed });
@@ -438,6 +481,11 @@ export class BattleScene implements Scene {
 
   private castSkill(skill: SkillDef, center: Point): void {
     if (!this.active) return;
+    const isOffensive = skill.effect === "damage" || skill.effect === "debuff";
+    // Turn to face an offensive cast (self-targeted casts keep their facing).
+    if (isOffensive && !samePoint(center, this.active.pos)) {
+      this.active.facing = directionTo(this.active.pos, center);
+    }
     // All occupants of every affected tile (a fallen unit may share a tile with
     // a living one); resolveSkillOnTarget null-guards inapplicable targets.
     const affected = aoeTiles(this.grid, center, skill.aoe).flatMap((t) =>
@@ -449,10 +497,9 @@ export class BattleScene implements Scene {
     let support = false;
     for (const target of affected) {
       // Damage hits enemies; heal/buff/revive affect allies.
-      const isOffensive = skill.effect === "damage" || skill.effect === "debuff";
       if (isOffensive && target.team === this.active.team) continue;
       if (!isOffensive && target.team !== this.active.team) continue;
-      const r = resolveSkillOnTarget(this.active, target, skill, this.rng);
+      const r = resolveSkillOnTarget(this.active, target, skill, this.rng, this.posCtx(target.pos));
       if (r) {
         results.push(r);
         if (r.killed) anyKilled = true;
@@ -484,7 +531,7 @@ export class BattleScene implements Scene {
     const target =
       item.effect === "revive" ? occupants.find((u) => !u.alive) : occupants.find((u) => u.alive);
     if (!target) return;
-    const res = resolveItem(target, item.effect, item.amount);
+    const res = resolveItem(target, item.effect, item.amount, item.statusKind, item.statusDuration);
     if (!res) {
       this.ui.toast("That has no effect here.");
       return;
@@ -533,31 +580,39 @@ export class BattleScene implements Scene {
     const plan = planEnemyTurn(unit, this.units, this.grid);
     if (plan.path.length > 1) {
       await this.ctx.animator.moveAlong(unit.id, plan.path);
+      unit.facing = directionTo(plan.path[plan.path.length - 2], plan.path[plan.path.length - 1]);
       unit.pos = { ...plan.destination };
     }
     await this.ctx.animator.wait(0.2);
+
+    const heightDelta = (tp: Point): AttackContext => ({
+      heightDelta: this.grid.heightAt(unit.pos.x, unit.pos.y) - this.grid.heightAt(tp.x, tp.y),
+    });
 
     if (plan.action.kind === "attack" && plan.action.targetTile) {
       const target = this.unitAt(plan.action.targetTile);
       if (target && target.team !== unit.team) {
         const weapon = getWeapon(unit.weaponId);
+        unit.facing = directionTo(unit.pos, target.pos);
         this.lunge = { id: unit.id, tx: target.pos.x, ty: target.pos.y, age: 0 };
-        const res = resolveWeaponAttack(unit, target, weapon, this.rng);
+        const res = resolveWeaponAttack(unit, target, weapon, this.rng, heightDelta(target.pos));
         this.pushEffect(target.pos, vfxKeyForWeapon(weapon));
         this.pushPopup(res);
       }
     } else if (plan.action.kind === "skill" && plan.action.skillId && plan.action.targetTile) {
       const skill = getSkill(plan.action.skillId);
       const skillVfx = vfxKeyForSkill(skill);
-      const affected = aoeTiles(this.grid, plan.action.targetTile, skill.aoe).flatMap((t) =>
+      const center = plan.action.targetTile;
+      const isOffensive = skill.effect === "damage" || skill.effect === "debuff";
+      if (isOffensive && !samePoint(center, unit.pos)) unit.facing = directionTo(unit.pos, center);
+      const affected = aoeTiles(this.grid, center, skill.aoe).flatMap((t) =>
         this.units.filter((u) => samePoint(u.pos, t)),
       );
-      const isOffensive = skill.effect === "damage" || skill.effect === "debuff";
       let cast = false;
       for (const target of affected) {
         if (isOffensive && target.team === unit.team) continue;
         if (!isOffensive && target.team !== unit.team) continue;
-        const r = resolveSkillOnTarget(unit, target, skill, this.rng);
+        const r = resolveSkillOnTarget(unit, target, skill, this.rng, heightDelta(target.pos));
         if (r) {
           this.pushEffect(target.pos, skillVfx);
           this.pushPopup(r);
@@ -579,6 +634,11 @@ export class BattleScene implements Scene {
     const anim = getVfx(vfxKey);
     if (!anim) return;
     this.effects.push({ tile: { ...tile }, anim, age: 0 });
+  }
+
+  /** Floating text not tied to a HitResult (e.g. a "Stop" skip notice). */
+  private pushTextPopup(tile: Point, text: string, color: string): void {
+    this.popups.push({ tile: { ...tile }, text, color, age: 0, ttl: 1.1 });
   }
 
   private pushPopup(res: HitResult): void {
@@ -755,7 +815,7 @@ export class BattleScene implements Scene {
 
     if (this.phase === "attackTarget") {
       if (!enemy) return null;
-      const f = forecastWeapon(this.active, enemy, getWeapon(this.active.weaponId));
+      const f = forecastWeapon(this.active, enemy, getWeapon(this.active.weaponId), this.posCtx(enemy.pos));
       return { tile, text: f.lethal ? `${f.amount} · KO` : `${f.amount}`, color: POPUP_COLORS.damage, strong: f.lethal };
     }
 
@@ -763,8 +823,11 @@ export class BattleScene implements Scene {
       const s = this.selectedSkill;
       if (s.effect === "damage") {
         if (!enemy) return null;
-        const f = forecastSkill(this.active, enemy, s);
-        return { tile, text: f.lethal ? `${f.amount} · KO` : `${f.amount}`, color: POPUP_COLORS.damage, strong: f.lethal };
+        const f = forecastSkill(this.active, enemy, s, this.posCtx(enemy.pos));
+        let text = f.lethal ? `${f.amount} · KO` : `${f.amount}`;
+        if (f.affinity === "weak") text += " · weak";
+        else if (f.affinity === "resist") text += " · resist";
+        return { tile, text, color: POPUP_COLORS.damage, strong: f.lethal || f.affinity === "weak" };
       }
       if (s.effect === "heal") {
         if (!ally) return null;
@@ -799,6 +862,10 @@ export class BattleScene implements Scene {
       if (item.effect === "revive") {
         if (!deadAlly) return null;
         return { tile, text: "Revive", color: POPUP_COLORS.revive, strong: false };
+      }
+      if (item.effect === "buff") {
+        if (!ally || !item.statusKind) return null;
+        return { tile, text: item.statusKind, color: POPUP_COLORS.status, strong: false };
       }
     }
     return null;

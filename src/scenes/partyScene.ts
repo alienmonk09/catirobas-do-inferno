@@ -6,7 +6,13 @@ import { getSkill } from "../data/skills";
 import { statsForLevel, nextLearnableSkill, learnNextSkill, xpForLevel } from "../core/unit";
 import { saveGame } from "../core/state";
 import { PHASES } from "../data/maps";
-import { getUnitSprite, getSkillSprite, getWeaponSprite } from "../data/sprites";
+import {
+  partyCapForPhase,
+  recruitableHeroes,
+  recruitHero,
+  type HeroDef,
+} from "../data/party";
+import { getUnitSprite, getSkillSprite, getWeaponSprite, getCharacterSprite, getHeroSprite } from "../data/sprites";
 import { el, clear } from "../ui/dom";
 import { iconImg } from "../ui/icons";
 import type { GameContext, Scene } from "./sceneManager";
@@ -46,6 +52,44 @@ export class PartyScene implements Scene {
     if (!next) return;
     const cost = getSkill(next).jpCost;
     if (learnNextSkill(unit, cost)) this.render();
+  }
+
+  /** Average party level (floored at 3) — new recruits join at this level. */
+  private recruitLevel(): number {
+    const party = this.ctx.state.party;
+    if (party.length === 0) return 3;
+    return Math.max(3, Math.round(party.reduce((s, u) => s + u.level, 0) / party.length));
+  }
+
+  private recruit(hero: HeroDef): void {
+    const cap = partyCapForPhase(this.ctx.state.phaseIndex);
+    if (this.ctx.state.party.length >= cap) return;
+    if (this.ctx.state.party.some((u) => u.id === hero.id)) return;
+    this.ctx.state.party.push(recruitHero(hero, this.recruitLevel()));
+    saveGame(this.ctx.state);
+    this.render();
+  }
+
+  private recruitCard(hero: HeroDef): HTMLElement {
+    const cls = getClass(hero.classId);
+    const race = getRace(hero.raceId);
+    const s = statsForLevel(hero.classId, this.recruitLevel(), hero.raceId);
+    const card = el("div", { className: "unit-card selectable", onClick: () => this.recruit(hero) });
+    const head = el("div", { className: "card-head" });
+    head.appendChild(iconImg(getHeroSprite(hero.id) ?? getCharacterSprite(hero.classId), 44));
+    const headText = el("div");
+    headText.appendChild(el("h3", { text: hero.name }));
+    headText.appendChild(el("div", { className: "role", text: `${cls.name} · ${race.name} · joins at Lv ${this.recruitLevel()}` }));
+    head.appendChild(headText);
+    head.appendChild(el("div", { className: "pick-badge", attrs: { style: "background:#5fbf72" }, text: "+" }));
+    card.appendChild(head);
+    card.appendChild(
+      el("div", {
+        attrs: { style: "font-size:12px;opacity:0.85" },
+        text: `HP ${s.maxHp} · MP ${s.maxMp} · ATK ${s.atk} · DEF ${s.def} · MAG ${s.mag} · RES ${s.res} · SPD ${s.spd}`,
+      }),
+    );
+    return card;
   }
 
   private unitCard(unit: Unit): HTMLElement {
@@ -151,6 +195,25 @@ export class PartyScene implements Scene {
     const grid = el("div", { className: "party-grid" });
     for (const u of this.ctx.state.party) grid.appendChild(this.unitCard(u));
     screen.appendChild(grid);
+
+    // Reinforcements: fill open deployment slots from the rest of the roster.
+    const cap = partyCapForPhase(idx);
+    const recruits = recruitableHeroes(this.ctx.state.party);
+    const openSlots = cap - this.ctx.state.party.length;
+    if (openSlots > 0 && recruits.length > 0) {
+      screen.appendChild(
+        el("div", {
+          className: "section-title",
+          text: `Reinforcements — ${openSlots} slot${openSlots > 1 ? "s" : ""} open`,
+        }),
+      );
+      screen.appendChild(
+        el("div", { className: "sub", attrs: { style: "margin-bottom:14px" }, text: "Word of the banner spreads. Choose a hero to join your march." }),
+      );
+      const rgrid = el("div", { className: "party-grid" });
+      for (const h of recruits) rgrid.appendChild(this.recruitCard(h));
+      screen.appendChild(rgrid);
+    }
 
     const inv = Object.entries(this.ctx.state.inventory)
       .filter(([, c]) => c > 0)

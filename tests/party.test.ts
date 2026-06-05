@@ -1,5 +1,15 @@
 import { describe, it, expect } from "vitest";
-import { ROSTER, PARTY_SIZE, createParty, createStartingParty, getHero } from "../src/data/party";
+import {
+  ROSTER,
+  PARTY_SIZE,
+  MAX_PARTY,
+  createParty,
+  createStartingParty,
+  getHero,
+  partyCapForPhase,
+  recruitableHeroes,
+  recruitHero,
+} from "../src/data/party";
 import { CLASSES, getClass } from "../src/data/classes";
 import { RACES } from "../src/data/races";
 
@@ -14,6 +24,36 @@ describe("hero roster", () => {
       expect(h.name.length).toBeGreaterThan(0);
     }
     expect(ROSTER.length).toBeGreaterThanOrEqual(PARTY_SIZE);
+  });
+
+  it("grows the party cap across the campaign without exceeding the roster", () => {
+    expect(partyCapForPhase(0)).toBe(PARTY_SIZE);
+    expect(partyCapForPhase(1)).toBe(PARTY_SIZE);
+    expect(partyCapForPhase(2)).toBe(5);
+    expect(partyCapForPhase(3)).toBe(5);
+    expect(partyCapForPhase(4)).toBe(6);
+    expect(partyCapForPhase(9)).toBeLessThanOrEqual(MAX_PARTY);
+    expect(partyCapForPhase(4)).toBeGreaterThan(partyCapForPhase(0));
+  });
+
+  it("offers only un-recruited roster heroes as reinforcements", () => {
+    const party = createStartingParty(); // first PARTY_SIZE heroes
+    const recruits = recruitableHeroes(party);
+    expect(recruits.length).toBe(ROSTER.length - PARTY_SIZE);
+    const partyIds = new Set(party.map((u) => u.id));
+    for (const r of recruits) expect(partyIds.has(r.id)).toBe(false);
+  });
+
+  it("recruits a reinforcement at the requested level (floored at 3) with the right identity", () => {
+    const enzo = getHero("enzo")!;
+    const unit = recruitHero(enzo, 6);
+    expect(unit.id).toBe("enzo");
+    expect(unit.classId).toBe("thief");
+    expect(unit.level).toBe(6);
+    expect(unit.team).toBe("player");
+    expect(unit.learnedSkillIds.length).toBeGreaterThanOrEqual(1);
+    // Floors at level 3 even if asked for less.
+    expect(recruitHero(enzo, 1).level).toBe(3);
   });
 
   it("includes Enzo the Thief and Penelope the Druid", () => {
