@@ -105,6 +105,14 @@ export const WEAPONS: Record<string, WeaponDef> = {
     kind: "magical",
     classes: ["geomancer"],
   },
+  spear: {
+    id: "spear",
+    name: "Spear",
+    power: 6,
+    range: 2,
+    kind: "physical",
+    classes: ["lancer"],
+  },
 };
 
 export function getWeapon(id: string): WeaponDef {

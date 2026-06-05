@@ -104,6 +104,16 @@ export const CLASSES: Record<ClassId, ClassDef> = {
     weaponIds: ["gaiaStaff"],
     color: "#7a6040",
   },
+  lancer: {
+    id: "lancer",
+    name: "Lancer",
+    description: "Mobile spear fighter. Leaps over walls and allies to strike from unexpected angles.",
+    base: { hp: 104, mp: 24, atk: 14, def: 10, mag: 4, res: 7, spd: 11, move: 4, jump: 3 },
+    growth: { hp: 11, mp: 2, atk: 2.1, def: 1.3, mag: 0.4, res: 0.8, spd: 1.0 },
+    skillIds: ["jump", "lanceThrust", "hobble", "sweep"],
+    weaponIds: ["spear"],
+    color: "#bf5f2a",
+  },
 };
 
 export function getClass(id: ClassId): ClassDef {

@@ -25,7 +25,7 @@ export interface Stats {
   jump: number;
 }
 
-export type ClassId = "knight" | "archer" | "blackMage" | "whiteMage" | "monk" | "thief" | "druid" | "timeMage" | "summoner" | "geomancer";
+export type ClassId = "knight" | "archer" | "blackMage" | "whiteMage" | "monk" | "thief" | "druid" | "timeMage" | "summoner" | "geomancer" | "lancer";
 
 export type RaceId = "human" | "elf" | "dwarf" | "halfling" | "orc";
 
@@ -114,6 +114,8 @@ export interface SkillDef {
   statusDuration?: number;
   /** Tiles to shove the target directly away from the caster after the hit resolves (single-target only). */
   knockback?: number;
+  /** Leap skills: the caster jumps adjacent to the target before striking, ignoring line-of-sight. */
+  leap?: boolean;
 }
 
 export type EquipSlot = "armor" | "accessory";

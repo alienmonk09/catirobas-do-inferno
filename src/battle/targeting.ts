@@ -57,6 +57,47 @@ export function inRange(origin: Point, target: Point, range: number): boolean {
 }
 
 /**
+ * Compute the best adjacent landing tile for a leaping caster who wants to
+ * land next to `target`. Candidates are the 4 orthogonal neighbours of
+ * `target`: in-bounds, not grid-blocked, not occupied by another living unit
+ * (the caster's own tile is always a valid candidate). Among valid tiles the
+ * one with smallest manhattan distance to the caster's current position wins
+ * (ties broken by stable insertion order: N, E, S, W).
+ *
+ * Returns `null` when the caster is already adjacent to the target (no leap
+ * needed) or when every neighbouring tile is blocked/occupied.
+ */
+export function leapLanding(grid: Grid, units: Unit[], caster: Unit, target: Point): Point | null {
+  // Already adjacent — strike in place.
+  if (manhattan(caster.pos, target) <= 1) return null;
+  // Occupancy: all living units except the caster itself.
+  const occ = new Set(
+    units.filter((u) => u.alive && u.id !== caster.id).map((u) => key(u.pos)),
+  );
+  const deltas: Point[] = [
+    { x: 0, y: -1 }, // N
+    { x: 1, y: 0 },  // E
+    { x: 0, y: 1 },  // S
+    { x: -1, y: 0 }, // W
+  ];
+  let best: Point | null = null;
+  let bestDist = Infinity;
+  for (const d of deltas) {
+    const nx = target.x + d.x;
+    const ny = target.y + d.y;
+    if (!grid.inBounds(nx, ny)) continue;
+    if (grid.isBlocked(nx, ny)) continue;
+    if (occ.has(key({ x: nx, y: ny }))) continue;
+    const dist = manhattan(caster.pos, { x: nx, y: ny });
+    if (dist < bestDist) {
+      bestDist = dist;
+      best = { x: nx, y: ny };
+    }
+  }
+  return best;
+}
+
+/**
  * Compute the landing tile when a unit at `target` is shoved `distance` tiles
  * directly away from `caster`. Steps are blocked by the grid edge, blocked
  * tiles, and tiles occupied by other living units. Returns the last valid tile

@@ -249,4 +249,23 @@ export const WEAPON_SPRITES: Record<string, SpriteDef> = {
       "....BAB.......",
     ],
   },
+  spear: {
+    palette: { A: "#1a1020", B: "#c8c8d8", C: "#e8e8f8", D: "#8b4a10", E: "#c47a30", F: "#9090a8", G: "#f0f0ff", H: "#d4a860" },
+    rows: [
+      ".....GCC......",
+      "....GCBCG.....",
+      "...GCBBCG.....",
+      "....GCBG......",
+      ".....FBF......",
+      ".....FBF......",
+      ".....FBF......",
+      "....AFBFA.....",
+      "....AFBFA.....",
+      "....AFBFA.....",
+      "...AAFBFAA....",
+      "...ADFBFDA....",
+      "..ADDDBDDDA...",
+      "...ADDDDA.....",
+    ],
+  },
 };
