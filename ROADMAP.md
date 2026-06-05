@@ -88,9 +88,9 @@ Classic mechanics that change how a fight is played, not just its numbers.
   self-heals when low), and ✅ Cover (a guardian intercepts a hit for a wounded adjacent
   ally; classes hold a list of reactions) and ✅ equippable reactions (equip an extra
   Counter/Auto-Potion/Cover at camp on top of innate ones — FFT-style)
-- 🚧 **Knockback / forced movement** — ✅ shoves (single-target skills push the victim N
-  tiles, stopping at walls/edges/units; shove-into-lava synergy) and ✅ fall damage off
-  ledges; ⏳ pulls, throws
+- ✅ **Knockback / forced movement** — shoves (push away), pulls (Lancer Harpoon drags a
+  foe adjacent), throws (Monk Body Slam hurls a foe over units onto clear ground), and fall
+  damage off ledges; all stop at walls/edges and synergize with shove-into-lava
 - ✅ **Zone of control & engagement** — moving into a tile adjacent to a living enemy ends
   your movement there (you can engage but not slip past the line); the AI is bound too
 - ✅ **Spell charge time** (FFT casting) — a charged skill (Black Mage's Meteor) is announced
