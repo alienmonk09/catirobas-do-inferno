@@ -73,6 +73,8 @@ export function vfxKeyForSkill(skill: SkillDef): VfxKey {
   if (skill.effect === "heal") return "heal";
   if (skill.effect === "revive") return "revive";
   if (skill.effect === "buff" || skill.effect === "debuff") return "status";
+  // Non-elemental magic damage (e.g. Time Mage's Comet) reads as arcane.
+  if (skill.scaling === "magical") return "arcane";
   return "physical";
 }
 

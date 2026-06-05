@@ -25,7 +25,7 @@ export interface Stats {
   jump: number;
 }
 
-export type ClassId = "knight" | "archer" | "blackMage" | "whiteMage" | "monk" | "thief" | "druid";
+export type ClassId = "knight" | "archer" | "blackMage" | "whiteMage" | "monk" | "thief" | "druid" | "timeMage";
 
 export type RaceId = "human" | "elf" | "dwarf" | "halfling" | "orc";
 

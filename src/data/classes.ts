@@ -73,6 +73,16 @@ export const CLASSES: Record<ClassId, ClassDef> = {
     weaponIds: ["heartwood"],
     color: "#5fa86f",
   },
+  timeMage: {
+    id: "timeMage",
+    name: "Time Mage",
+    description: "Master of tempo. Bends turn speed — hastes allies, slows and stops foes — and strikes with non-elemental comets.",
+    base: { hp: 72, mp: 64, atk: 5, def: 6, mag: 14, res: 11, spd: 11, move: 3, jump: 2 },
+    growth: { hp: 7, mp: 7, atk: 0.4, def: 0.6, mag: 2.1, res: 1.2, spd: 0.9 },
+    skillIds: ["comet", "timeSlow", "haste", "stop"],
+    weaponIds: ["rod"],
+    color: "#5fb0d6",
+  },
 };
 
 export function getClass(id: ClassId): ClassDef {

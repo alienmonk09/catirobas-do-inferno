@@ -35,11 +35,11 @@ export const WEAPONS: Record<string, WeaponDef> = {
   },
   rod: {
     id: "rod",
-    name: "Fire Rod",
+    name: "Rod",
     power: 3,
     range: 1,
     kind: "magical",
-    classes: ["blackMage"],
+    classes: ["blackMage", "timeMage"],
   },
   staff: {
     id: "staff",

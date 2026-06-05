@@ -9,10 +9,11 @@ Canvas**, no game engine, no art assets — every sprite is code-defined pixel a
 > border wilds to the tyrant Maldrath's shattered throne, across a seven-chapter
 > campaign. Full story → **[STORY.md](STORY.md)**.
 
-Seven classes across five races, seven playable phases, a charge-time turn
-system, and an enemy AI that heals, focuses, flanks, and pursues. At the start
-you **choose a party of four** from a roster of seven named heroes, then gather
-**reinforcements** as the campaign opens deployment slots.
+Eight classes (one unlockable via class change) across five races, seven
+playable phases, a charge-time turn system, and an enemy AI that heals, focuses,
+flanks, and pursues. At the start you **choose a party of four** from a roster of
+seven named heroes, then gather **reinforcements** as the campaign opens
+deployment slots.
 
 ## Run it
 
@@ -74,6 +75,11 @@ npm test           # run the Vitest suite
 | Monk | Melee bruiser | Palm Strike, Chakra (heal), Earth Shake (AoE) |
 | Thief | Fast skirmisher | Backstab, Hamstring (slow), Fan of Knives (AoE) |
 | Druid | Nature hybrid | Regrowth (heal), Thorn Lash, Entangle (slow), Rejuvenate (Regen) |
+| Time Mage | Control caster | Comet (non-elemental), Slow, Haste, Stop |
+
+Knight and Monk also carry the **Counter** reaction (they strike back at melee
+attackers). **Time Mage** has no default hero — retrain any unit into it at the
+Party Camp.
 
 ### Races
 
@@ -119,12 +125,12 @@ docs/superpowers/specs/  design spec
 
 ## Tests
 
-`npm test` runs **461 tests across 21 files**: per-module unit tests (RNG,
-pathfinding, targeting, combat, facing/back-attacks, line of sight, elevation &
-status modifiers, turn order, AI, grid, movement/pass-through, iso projection,
-save/load, races, hero roster) plus map-data invariants and a **full battle
-simulation** that auto-plays all five phases to a decisive winner while asserting
-HP/stat invariants every turn.
+`npm test` runs **489 tests across 21 files**: per-module unit tests (RNG,
+pathfinding, targeting, combat, facing/back-attacks, line of sight, elevation /
+status / elemental / counter modifiers, turn order, AI, grid, movement/pass-through,
+iso projection, save/load, races, hero roster & reinforcements) plus map-data
+invariants and a **full battle simulation** that auto-plays all seven phases to a
+decisive winner while asserting HP/stat invariants every turn.
 
 ## Roadmap
 

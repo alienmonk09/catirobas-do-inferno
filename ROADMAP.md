@@ -9,8 +9,8 @@ The backlog draws on the classics of the genre — **Final Fantasy Tactics**,
 
 ## v0.1 — Playable MVP ✅
 
-The complete core loop ships and is covered by the test suite (461 tests, 21
-files), including a full AI-vs-AI battle simulation that auto-plays all five
+The complete core loop ships and is covered by the test suite (489 tests, 21
+files), including a full AI-vs-AI battle simulation that auto-plays all seven
 phases to a decisive result.
 
 - ✅ Isometric Canvas 2D renderer — elevation, depth-sorting, tile picking, DPR scaling
@@ -66,8 +66,8 @@ The next push: grow the party, make the UI teach itself, and widen the campaign.
 - ✅ **Races** — Human/Elf/Dwarf/Halfling/Orc, each with flat stat modifiers
 - ✅ **Two more classes** — Thief (Enzo) and Druid (Penelope)
 - ⏳ **Secondary job / ability pool** — equip a second class's skills (FFT-style)
-- ⏳ **More classes** — Lancer (jump), Time Mage (haste/slow/stop), Summoner (big AoE),
-  Dragoon, Geomancer — with the skills/weapons to match
+- 🚧 **More classes** — ✅ Time Mage (Comet + haste/slow/stop control), retrainable at
+  camp; ⏳ Lancer (jump), Summoner (big AoE), Geomancer still to come
 - ✅ **Elemental affinities** — races carry fire/bolt/nature weaknesses & resistances
   that scale spell damage (×1.5 / ×0.5); folded into the shared forecast, which flags
   *weak/resist*, so the AI aims spells at weaknesses too. *(Equipment/terrain affinities later.)*
