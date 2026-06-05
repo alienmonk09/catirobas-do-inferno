@@ -1106,7 +1106,11 @@ export class BattleScene implements Scene {
         // its flank/elevation from there rather than the caster's current tile.
         let ctx = this.posCtx(enemy.pos);
         if (s.leap) {
-          const land = leapLanding(this.grid, this.units, this.active, enemy.pos);
+          const adjacent = manhattan(this.active.pos, enemy.pos) <= 1;
+          const land = adjacent ? null : leapLanding(this.grid, this.units, this.active, enemy.pos);
+          // Boxed-in, non-adjacent leap target: the cast would be rejected ("no room
+          // to land"), so don't show a misleading forecast.
+          if (!adjacent && !land) return null;
           if (land) {
             ctx = {
               fromPos: { ...land },

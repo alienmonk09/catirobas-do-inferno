@@ -249,6 +249,9 @@ export function hasCover(unit: Unit): boolean {
  * (highest HP first; ties are left in their original order, stable).
  */
 export function coverFor(target: Unit, units: Unit[]): Unit | null {
+  // A fallen unit can't be covered — and its 0 HP would make any guard "healthier",
+  // so without this a skill aimed at a corpse would redirect onto an adjacent guard.
+  if (!target.alive) return null;
   const candidates = units.filter(
     (u) =>
       u !== target &&

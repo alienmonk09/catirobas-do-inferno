@@ -83,6 +83,16 @@ describe("coverFor", () => {
     expect(result).toBe(guard);
   });
 
+  it("returns null when the target itself is dead (a corpse can't be covered)", () => {
+    const target = monk({ x: 2, y: 2 });
+    target.alive = false;
+    target.stats.hp = 0;
+    const guard = knight({ x: 1, y: 2 }); // adjacent, healthy — would qualify if alive
+    guard.stats.hp = 80;
+
+    expect(coverFor(target, [guard, target])).toBeNull();
+  });
+
   it("returns null when the guard has equal HP to the target (not strictly more)", () => {
     const target = monk({ x: 2, y: 2 });
     target.stats.hp = 50;
