@@ -23,6 +23,7 @@ import {
 import { getUnitSprite, getSkillSprite, getWeaponSprite, getEquipmentSprite, getCharacterSprite, getHeroSprite } from "../data/sprites";
 import { el, clear } from "../ui/dom";
 import { iconImg } from "../ui/icons";
+import { startMusic, stopMusic } from "../engine/music";
 import type { GameContext, Scene } from "./sceneManager";
 
 /** Between-phase screen: class change, equipment, and spending JP on skills. */
@@ -34,6 +35,7 @@ export class PartyScene implements Scene {
     this.ctx.renderer.clear();
     this.root = el("div", { className: "ui-layer" });
     ctx.uiParent.appendChild(this.root);
+    startMusic("camp");
     this.render();
   }
 
@@ -333,6 +335,7 @@ export class PartyScene implements Scene {
   }
 
   dispose(): void {
+    stopMusic();
     this.root.remove();
   }
 }

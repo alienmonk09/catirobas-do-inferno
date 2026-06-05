@@ -64,6 +64,17 @@ function context(): AudioContext | null {
   }
 }
 
+/** Internal accessor for the shared AudioContext — for use by the music engine only. */
+export function getAudioContext(): AudioContext | null {
+  return context();
+}
+
+/** Internal accessor for the shared master GainNode — for use by the music engine only. */
+export function getMasterGain(): GainNode | null {
+  context(); // ensure initialized
+  return master;
+}
+
 function ensureRunning(c: AudioContext): void {
   if (c.state === "suspended") {
     void c.resume().catch(() => {

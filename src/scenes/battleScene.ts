@@ -23,6 +23,7 @@ import { planEnemyTurn } from "../battle/ai";
 import { forecastSkill, forecastWeapon } from "../battle/forecast";
 import { screenToTile, worldToScreen, rotateTile, type Rotation, type ScreenPoint } from "../engine/iso";
 import { sfx } from "../engine/audio";
+import { startMusic, stopMusic } from "../engine/music";
 import type { ActiveEffect, BattleView, FloatingText, ForecastTag, OverlaySet } from "../engine/renderer";
 import { getWeapon } from "../data/weapons";
 import { getSkill } from "../data/skills";
@@ -178,6 +179,7 @@ export class BattleScene implements Scene {
       buttonLabel: "Begin Battle",
       onClick: () => {
         this.ui.hideBanner();
+        startMusic("battle");
         this.beginNextTurn();
       },
     });
@@ -276,7 +278,9 @@ export class BattleScene implements Scene {
     this.ui.setObjective(null);
     this.ui.setActiveUnit(null);
     this.ui.setTargetInfo(null);
+    stopMusic();
     if (winner === "player") {
+      startMusic("victory");
       const last = this.phaseIndex >= PHASES.length - 1;
       this.ui.showBanner({
         title: "Victory!",
@@ -647,13 +651,13 @@ export class BattleScene implements Scene {
     if (!skill.leap || skill.aoe !== "single") return true;
     const victim = this.units.find((u) => u.alive && u.team !== caster.team && samePoint(u.pos, center));
     if (!victim) {
-      this.ui.toast("No valid target there.");
+      if (caster.team === "player") this.ui.toast("No valid target there.");
       return false;
     }
     if (manhattan(caster.pos, victim.pos) <= 1) return true; // already adjacent — strike in place
     const land = leapLanding(this.grid, this.units, caster, victim.pos);
     if (!land) {
-      this.ui.toast("No room to land beside the target.");
+      if (caster.team === "player") this.ui.toast("No room to land beside the target.");
       return false;
     }
     void this.ctx.animator.moveAlong(caster.id, [caster.pos, land]);
@@ -745,11 +749,14 @@ export class BattleScene implements Scene {
       const center = plan.action.targetTile;
       const isOffensive = skill.effect === "damage" || skill.effect === "debuff";
       if (isOffensive && !samePoint(center, unit.pos)) unit.facing = directionTo(unit.pos, center);
-      // Leap skills: relocate the caster adjacent to the target before damage.
-      if (skill.leap && isOffensive) this.resolveLeapMove(skill, unit, center);
-      const affected = aoeTiles(this.grid, center, skill.aoe).flatMap((t) =>
-        this.units.filter((u) => samePoint(u.pos, t)),
-      );
+      // Leap skills: relocate the caster adjacent to the target before damage; if it
+      // can't land (no victim / no room) the cast is aborted — no tiles are affected.
+      const leapOk = !(skill.leap && isOffensive) || this.resolveLeapMove(skill, unit, center);
+      const affected = leapOk
+        ? aoeTiles(this.grid, center, skill.aoe).flatMap((t) =>
+            this.units.filter((u) => samePoint(u.pos, t)),
+          )
+        : [];
       let cast = false;
       let knockbackTarget: Unit | undefined;
       for (const target of affected) {
@@ -1031,6 +1038,7 @@ export class BattleScene implements Scene {
   }
 
   dispose(): void {
+    stopMusic();
     this.ui.destroy();
     this.ctx.input.reset();
     this.ctx.animator.clear();
