@@ -14,7 +14,7 @@ Living task list for the autonomous build. The roadmap (`ROADMAP.md`) is the
 
 ## Current state (resume point)
 - Branch: **`feat/balance-and-terrain`** (off the prior `feat/skill-points-devpanel-explanations`,
-  which is off `main`; neither merged nor pushed). Build: clean. Tests: **1163 passing**.
+  which is off `main`; neither merged nor pushed). Build: clean. Tests: **1173 passing**.
 - Latest session (combat balance overhaul, multi-agent diagnosed + reviewed) — fixes the
   reported wall (L1 party met L3 enemies in phase 2 and fell further behind every chapter):
   - **Enemy levels are now PARTY-RELATIVE** (`enemyLevelFor(partyAvg, offset, difficulty, ngPlus)`
