@@ -14,10 +14,10 @@ Living task list for the autonomous build. The roadmap (`ROADMAP.md`) is the
 
 ## Current state (resume point)
 - Branch: **`feat/tactics-depth-and-progression`** (off `main`; not merged, not pushed).
-- Build: clean. Tests: **1046 passing across 53 files**. Working tree: clean.
-- Last commit: `17a5ef5 feat(v0.5): Classic mode (permadeath)`. Recently shipped: skill charge
-  time, weapon shop, recruitable units, job mastery, dialogue + speaker portraits, accessibility
-  (text scale + high contrast), Classic mode. ~33 features this session (499 → 1046 tests).
+- Build: clean. Tests: **1115 passing across 54 files**. Working tree: clean.
+- Last commit: `3290d50 chore: CI + CONTRIBUTING`. Recently shipped: classic mode, slow
+  mire, knockback pulls + throws (forced-movement line ✅), post-victory outro dialogue,
+  rebindable controls, CI workflow + CONTRIBUTING. ~39 features/items this session (499 → 1115).
 - ~26 features this session. The Codex `codex-companion review` is INTERMITTENT — it
   alternates between producing verdicts and "Reviewer failed to output a response" (a
   transient runtime fault, not a code signal). Across its ~5 working `review --base main`

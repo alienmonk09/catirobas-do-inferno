@@ -145,10 +145,11 @@ Put the [story](STORY.md) on screen.
 
 ## Project hygiene (ongoing)
 
-- ⏳ Add a license (currently unlicensed — all rights reserved by default)
-- ⏳ CI: run `npm run build` + `npm test` on push/PR
-- ⏳ CONTRIBUTING guide and issue templates
-- 💭 Playable build published via GitHub Pages
+- ⏳ Add a license (currently unlicensed — all rights reserved by default; the owner's call)
+- ✅ CI: `tsc` strict + `vite build` + the full Vitest suite on every push/PR
+  (`.github/workflows/ci.yml`)
+- 🚧 CONTRIBUTING guide (✅ `CONTRIBUTING.md`); ⏳ issue templates
+- ✅ Playable build published via GitHub Pages (`.github/workflows/deploy.yml`, on `main`)
 
 ---
 
