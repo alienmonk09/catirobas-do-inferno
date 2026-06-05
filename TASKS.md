@@ -13,9 +13,25 @@ Living task list for the autonomous build. The roadmap (`ROADMAP.md`) is the
 - Commit each finished feature on the branch with a clear message + Co-Authored-By.
 
 ## Current state (resume point)
-- Branch: **`feat/skill-points-devpanel-explanations`** (off `main`; not merged, not pushed).
-- Build: clean. Tests: **1160 passing across 54 files**. Working tree: clean.
-- Last session (terminology + hygiene + refactor pass, multi-agent reviewed):
+- Branch: **`feat/balance-and-terrain`** (off the prior `feat/skill-points-devpanel-explanations`,
+  which is off `main`; neither merged nor pushed). Build: clean. Tests: **1163 passing**.
+- Latest session (balance + terrain pass, multi-agent reviewed):
+  - **Lower HP / faster fights**: all 14 classes' `base.hp` ×0.6 and `growth.hp` ×0.5
+    (sim: avg battle 26→15 turns). Damage stats untouched → ~3-5 hits to kill.
+  - **Start at level 1** (was 3) in `party.ts buildHero` — smaller opening stats, the
+    player feels the early level-ups. Enemy map levels unchanged (phase1 already L1-2).
+  - **Faster leveling**: `xpForLevel` 100+(L-1)·45 → 50+(L-1)·30 (front-loaded); the
+    early party keeps pace via the existing `xpLevelMult` premium on higher-level foes.
+  - **Heal items rescaled** to the new HP (potion 30→18, hiPotion 70→42, xPotion 140→84);
+    revives/MP untouched.
+  - **Terrain visuals**: `renderer.ts` cliffs now gradient-shaded with a contact seam,
+    tile tops get a steeper height ramp + ambient occlusion (taller-neighbor shade) + a
+    sunlit rim on raised edges — elevation reads as 3D mass.
+  - **More elevation**: every campaign map's `heights` grid reworked (one agent per map,
+    Workflow tool) with plateaus/ridges/ramps; a BFS check confirmed spawns/enemies/
+    objectives reachable at jump 2, and `battleSim` still resolves every phase.
+  - Browser-verified (Edge headless) on Cinder Fields & Outer Ramparts.
+- Prior session (terminology + hygiene + refactor pass, multi-agent reviewed):
   - **JP → Skill Points (SP)** everywhere: field `jp`→`sp`, `jpCost`→`spCost`,
     `grantJp`→`grantSp`, all UI copy + playable docs. Saves use a fresh field (pre-release).
   - **Dev cheat bar is local-only / out of the dist**: extracted from `battleScene.ts`
