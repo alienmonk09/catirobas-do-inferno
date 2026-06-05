@@ -1,6 +1,6 @@
 import { ROSTER, PARTY_SIZE, createParty, type HeroDef } from "../data/party";
 import { startingInventory } from "../data/items";
-import { clearSave } from "../core/state";
+import { clearSave, SAVE_SLOTS } from "../core/state";
 import type { Difficulty } from "../core/types";
 import { getClass } from "../data/classes";
 import { getRace } from "../data/races";
@@ -27,6 +27,7 @@ export class PartySelectScene implements Scene {
   private root: HTMLDivElement;
   private selected = new Set<string>();
   private difficulty: Difficulty = "normal";
+  private slot = 0;
 
   constructor(private ctx: GameContext) {
     this.ctx.renderer.clear();
@@ -49,6 +50,11 @@ export class PartySelectScene implements Scene {
     this.render();
   }
 
+  private setSlot(s: number): void {
+    this.slot = s;
+    this.render();
+  }
+
   private begin(): void {
     if (this.selected.size !== PARTY_SIZE) return;
     const order = ROSTER.filter((h) => this.selected.has(h.id)).map((h) => h.id);
@@ -58,7 +64,8 @@ export class PartySelectScene implements Scene {
     this.ctx.state.difficulty = this.difficulty;
     this.ctx.state.gil = 0;
     this.ctx.state.ownedEquipment = [];
-    clearSave();
+    this.ctx.state.slot = this.slot;
+    clearSave(this.slot);
     this.ctx.nav.toBattle(0);
   }
 
@@ -135,6 +142,21 @@ export class PartySelectScene implements Scene {
     }
     footer.appendChild(diffRow);
     footer.appendChild(el("div", { className: "diff-desc", text: DIFFICULTY_DESCS[this.difficulty] }));
+
+    // Save slot selector
+    footer.appendChild(el("div", { attrs: { style: "font-size:13px;font-weight:700;opacity:0.7;margin-bottom:6px;margin-top:10px" }, text: "Save Slot" }));
+    const slotRow = el("div", { className: "difficulty-row" });
+    for (let s = 0; s < SAVE_SLOTS; s++) {
+      const active = this.slot === s;
+      slotRow.appendChild(
+        el("button", {
+          className: `diff-btn${active ? " active normal" : ""}`,
+          text: `Slot ${s + 1}`,
+          onClick: () => this.setSlot(s),
+        }),
+      );
+    }
+    footer.appendChild(slotRow);
 
     footer.appendChild(
       el("button", {

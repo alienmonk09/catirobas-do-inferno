@@ -164,6 +164,12 @@ const CSS = `
 .phase-row { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
 .phase-row .btn { min-width: 40px; }
 
+/* Save slots list on the title screen */
+.save-slots { margin-top: 16px; padding-top: 14px; border-top: 1px solid rgba(120,140,200,0.25); }
+.save-slots-label { font-size: 12px; opacity: 0.6; margin-bottom: 8px; }
+.save-slot-row { display: flex; justify-content: center; margin-bottom: 6px; }
+.save-slot-empty { font-size: 13px; opacity: 0.4; padding: 6px 0; font-style: italic; }
+
 .hint { position: absolute; left: 50%; transform: translateX(-50%); bottom: 78px;
   font-size: 12px; opacity: 0.65; }
 

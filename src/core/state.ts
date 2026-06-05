@@ -20,6 +20,8 @@ export interface GameState {
   gil: number;
   /** Equipment pieces the party has purchased; only owned gear may be equipped. */
   ownedEquipment: string[];
+  /** Save slot this run persists to (0-based). Slot 0 uses the legacy key. */
+  slot: number;
 }
 
 export function createGameState(): GameState {
@@ -30,8 +32,12 @@ export function createGameState(): GameState {
     difficulty: "normal",
     gil: 0,
     ownedEquipment: [],
+    slot: 0,
   };
 }
+
+/** Total number of save slots. */
+export const SAVE_SLOTS = 3;
 
 /** Flat gil awarded per enemy defeated in battle. */
 export const GIL_PER_KILL = 18;
@@ -141,11 +147,23 @@ export function enemyLevelFor(baseLevel: number, difficulty: Difficulty): number
   return baseLevel;
 }
 
-const SAVE_KEY = "tactics-mvp-save";
+export const SAVE_KEY = "tactics-mvp-save";
+
+/** Summary of a save slot for the title screen slot list. */
+export interface SaveSummary {
+  slot: number;
+  phaseIndex: number;
+  partySize: number;
+}
+
+/** Storage key for a given slot. Slot 0 uses the legacy key for back-compat. */
+function slotKey(slot: number): string {
+  return slot === 0 ? SAVE_KEY : `${SAVE_KEY}-${slot}`;
+}
 
 export function saveGame(state: GameState): void {
   try {
-    localStorage.setItem(SAVE_KEY, JSON.stringify(state));
+    localStorage.setItem(slotKey(state.slot), JSON.stringify(state));
   } catch {
     // ignore (private mode / no storage)
   }
@@ -174,13 +192,13 @@ function isValidSave(data: unknown): data is GameState {
   return true;
 }
 
-export function loadGame(): GameState | null {
+export function loadGame(slot = 0): GameState | null {
   try {
-    const raw = localStorage.getItem(SAVE_KEY);
+    const raw = localStorage.getItem(slotKey(slot));
     if (!raw) return null;
     const parsed: unknown = JSON.parse(raw);
     if (!isValidSave(parsed)) {
-      clearSave();
+      clearSave(slot);
       return null;
     }
     // Back-compat: old saves lack `difficulty`; normalise any missing/invalid value.
@@ -195,6 +213,12 @@ export function loadGame(): GameState | null {
     if (!Array.isArray(parsed.ownedEquipment)) {
       parsed.ownedEquipment = [] as string[];
     }
+    // Back-compat: old saves lack `slot`; normalise to the slot it was loaded from.
+    if (typeof parsed.slot !== "number") {
+      parsed.slot = slot;
+    } else {
+      parsed.slot = slot;
+    }
     // Migration: any gear a unit already has equipped should be in ownedEquipment.
     const owned = parsed.ownedEquipment as string[];
     for (const u of parsed.party as Unit[]) {
@@ -207,12 +231,29 @@ export function loadGame(): GameState | null {
   }
 }
 
-export function clearSave(): void {
+export function clearSave(slot = 0): void {
   try {
-    localStorage.removeItem(SAVE_KEY);
+    localStorage.removeItem(slotKey(slot));
   } catch {
     // ignore
   }
+}
+
+/**
+ * Return a summary of every save slot (length = SAVE_SLOTS).
+ * Null entries indicate an empty or invalid slot.
+ */
+export function listSaves(): (SaveSummary | null)[] {
+  const result: (SaveSummary | null)[] = [];
+  for (let i = 0; i < SAVE_SLOTS; i++) {
+    const save = loadGame(i);
+    if (save === null) {
+      result.push(null);
+    } else {
+      result.push({ slot: i, phaseIndex: save.phaseIndex, partySize: save.party.length });
+    }
+  }
+  return result;
 }
 
 /** Reset a unit's per-battle volatile state (full restore, clear CT/statuses). */

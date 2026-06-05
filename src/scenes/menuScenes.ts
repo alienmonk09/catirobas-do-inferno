@@ -1,6 +1,6 @@
 import { createStartingParty } from "../data/party";
 import { startingInventory } from "../data/items";
-import { clearSave, loadGame, type GameState } from "../core/state";
+import { clearSave, listSaves, loadGame, SAVE_SLOTS, type GameState } from "../core/state";
 import { PHASES } from "../data/maps";
 import { el } from "../ui/dom";
 import type { GameContext, Scene } from "./sceneManager";
@@ -12,6 +12,7 @@ function resetState(state: GameState): void {
   state.difficulty = "normal";
   state.gil = 0;
   state.ownedEquipment = [];
+  state.slot = 0;
 }
 
 function applyLoaded(state: GameState, loaded: GameState): void {
@@ -21,6 +22,7 @@ function applyLoaded(state: GameState, loaded: GameState): void {
   state.difficulty = loaded.difficulty;
   state.gil = loaded.gil;
   state.ownedEquipment = loaded.ownedEquipment;
+  state.slot = loaded.slot;
 }
 
 /** A simple full-screen menu built from a banner card. */
@@ -73,15 +75,34 @@ export class TitleScene extends BannerScene {
     const buttons: Array<{ label: string; onClick: () => void }> = [
       { label: "New Game", onClick: () => this.ctx.nav.toPartySelect() },
     ];
-    const save = loadGame();
-    if (save) {
-      buttons.push({
-        label: `Continue (Phase ${save.phaseIndex + 1})`,
-        onClick: () => {
-          applyLoaded(this.ctx.state, save);
-          this.ctx.nav.toParty();
-        },
-      });
+
+    // Build save-slot rows as an extra element below the buttons.
+    const saves = listSaves();
+    const slotsEl = el("div", { className: "save-slots" });
+    slotsEl.appendChild(el("div", { className: "save-slots-label", text: "Save Slots" }));
+    for (let i = 0; i < SAVE_SLOTS; i++) {
+      const summary = saves[i];
+      const row = el("div", { className: "save-slot-row" });
+      if (summary) {
+        const slotNum = i + 1;
+        const btn = el("button", {
+          className: "btn small",
+          text: `Slot ${slotNum} — Phase ${summary.phaseIndex + 1} (${summary.partySize} heroes)`,
+          onClick: () => {
+            const save = loadGame(i);
+            if (save) {
+              applyLoaded(this.ctx.state, save);
+              this.ctx.nav.toParty();
+            }
+          },
+        });
+        row.appendChild(btn);
+      } else {
+        row.appendChild(
+          el("div", { className: "save-slot-empty", text: `Slot ${i + 1} — empty` }),
+        );
+      }
+      slotsEl.appendChild(row);
     }
 
     // Phase selector (testing): jump to any phase with a fresh level-3 party.
@@ -100,11 +121,15 @@ export class TitleScene extends BannerScene {
     });
     selector.appendChild(row);
 
+    const extras = el("div", {});
+    extras.appendChild(slotsEl);
+    extras.appendChild(selector);
+
     this.showCard(
       "TACTICS",
       "An isometric, turn-based tactics campaign. Choose four heroes from seven — knight, archer, black mage, white mage, monk, thief, and druid, each of a distinct race — and lead them through seven battles of rising peril, gathering reinforcements as you march. Move, strike, cast, and grow.",
       buttons,
-      selector,
+      extras,
     );
   }
 }
@@ -112,7 +137,7 @@ export class TitleScene extends BannerScene {
 export class VictoryScene extends BannerScene {
   constructor(ctx: GameContext) {
     super(ctx);
-    clearSave();
+    clearSave(ctx.state.slot);
     const survivors = ctx.state.party.filter((u) => u.alive).length;
     const maxLevel = Math.max(...ctx.state.party.map((u) => u.level));
     this.showCard(
