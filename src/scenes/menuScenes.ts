@@ -14,6 +14,7 @@ function resetState(state: GameState): void {
   state.difficulty = "normal";
   state.gil = 0;
   state.ownedEquipment = [];
+  state.ownedWeapons = [];
   state.slot = 0;
   state.ngPlus = 0;
 }
@@ -25,6 +26,7 @@ function applyLoaded(state: GameState, loaded: GameState): void {
   state.difficulty = loaded.difficulty;
   state.gil = loaded.gil;
   state.ownedEquipment = loaded.ownedEquipment;
+  state.ownedWeapons = loaded.ownedWeapons;
   state.slot = loaded.slot;
   state.ngPlus = loaded.ngPlus;
 }

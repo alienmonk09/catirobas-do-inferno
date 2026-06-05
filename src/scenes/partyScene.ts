@@ -1,7 +1,7 @@
 import type { ClassId, EquipSlot, Reaction, Unit } from "../core/types";
 import { CLASSES, getClass } from "../data/classes";
 import { getRace } from "../data/races";
-import { getWeapon } from "../data/weapons";
+import { WEAPONS } from "../data/weapons";
 import { equipmentForSlot, EQUIPMENT } from "../data/equipment";
 import { getSkill } from "../data/skills";
 import {
@@ -12,7 +12,7 @@ import {
   learnSkillForClass,
   xpForLevel,
 } from "../core/unit";
-import { saveGame, buyItem, buyEquipment, ownsEquipment, sellItem, sellEquipment } from "../core/state";
+import { saveGame, buyItem, buyEquipment, ownsEquipment, sellItem, sellEquipment, ownsWeapon, buyWeapon, sellWeapon } from "../core/state";
 import { PHASES } from "../data/maps";
 import {
   partyCapForPhase,
@@ -59,8 +59,14 @@ export class PartyScene implements Scene {
     // Recompute stats for the new class at the unit's level (full HP/MP),
     // keeping racial modifiers and equipment bonuses (they persist across class changes).
     unit.stats = statsForUnit(unit);
-    // Re-equip a weapon this class can use.
-    if (!cls.weaponIds.includes(unit.weaponId)) unit.weaponId = cls.weaponIds[0];
+    // Re-equip a weapon this class can use; keep the current one if usable.
+    if (!cls.weaponIds.includes(unit.weaponId)) {
+      unit.weaponId = cls.weaponIds[0];
+      // Ensure the new default weapon is owned so the unit stays armed.
+      if (!this.ctx.state.ownedWeapons.includes(unit.weaponId)) {
+        this.ctx.state.ownedWeapons.push(unit.weaponId);
+      }
+    }
     // Ensure at least the first class skill is known so the class is usable.
     if (!unit.learnedSkillIds.includes(cls.skillIds[0])) unit.learnedSkillIds.push(cls.skillIds[0]);
     // A unit can't sub-job its own primary.
@@ -133,7 +139,12 @@ export class PartyScene implements Scene {
     const cap = partyCapForPhase(this.ctx.state.phaseIndex);
     if (this.ctx.state.party.length >= cap) return;
     if (this.ctx.state.party.some((u) => u.id === hero.id)) return;
-    this.ctx.state.party.push(recruitHero(hero, this.recruitLevel()));
+    const newUnit = recruitHero(hero, this.recruitLevel());
+    this.ctx.state.party.push(newUnit);
+    // Ensure the recruit's starting weapon is owned.
+    if (!this.ctx.state.ownedWeapons.includes(newUnit.weaponId)) {
+      this.ctx.state.ownedWeapons.push(newUnit.weaponId);
+    }
     saveGame(this.ctx.state);
     this.render();
   }
@@ -242,8 +253,12 @@ export class PartyScene implements Scene {
       }),
     );
     const wSel = el("select");
-    for (const wid of cls.weaponIds) {
-      const w = getWeapon(wid);
+    // List owned weapons usable by this class, always including the currently equipped one.
+    const usableWeapons = Object.values(WEAPONS).filter(
+      (w) => w.classes.includes(unit.classId) &&
+        (ownsWeapon(this.ctx.state, w.id) || w.id === unit.weaponId),
+    );
+    for (const w of usableWeapons) {
       const opt = el("option", { text: `${w.name} (pow ${w.power}, rng ${w.range})`, attrs: { value: w.id } });
       if (w.id === unit.weaponId) opt.selected = true;
       wSel.appendChild(opt);
@@ -482,6 +497,72 @@ export class PartyScene implements Scene {
       gearGrid.appendChild(row);
     }
     screen.appendChild(gearGrid);
+
+    // Weapon shop section.
+    screen.appendChild(el("div", { className: "section-title", text: "Weapon Shop" }));
+    screen.appendChild(
+      el("div", { className: "inv-line", attrs: { style: "margin-bottom:10px" }, text: "Buy upgrade weapons — class-locked; a unit can never be left unarmed." }),
+    );
+    const weaponGrid = el("div", { className: "shop-grid" });
+    for (const weapon of Object.values(WEAPONS)) {
+      // Only show weapons with a positive price (starter weapons are free / default-owned).
+      if (weapon.price <= 0) continue;
+      const owned = ownsWeapon(this.ctx.state, weapon.id);
+      const canAfford = this.ctx.state.gil >= weapon.price;
+      const isEquipped = this.ctx.state.party.some((u) => u.weaponId === weapon.id);
+      const classNames = weapon.classes.map((c) => CLASSES[c].name).join(", ");
+      const row = el("div", { className: "shop-row" });
+      row.appendChild(
+        el("div", {
+          className: "shop-item-info",
+          children: [
+            el("span", { className: "shop-item-name", text: weapon.name }),
+            el("span", { className: "shop-item-desc", text: `POW ${weapon.power}, RNG ${weapon.range} — ${classNames}` }),
+          ],
+        }),
+      );
+      const weaponSellValue = Math.floor(weapon.price / 2);
+      row.appendChild(
+        el("div", {
+          className: "shop-item-meta",
+          children: [
+            el("span", { className: "shop-item-price", text: `${weapon.price} gil` }),
+            el("span", {
+              className: "shop-item-owned",
+              text: owned ? "owned" : "",
+              attrs: owned ? { style: "color:#5fbf72;font-size:12px" } : {},
+            }),
+            owned
+              ? el("button", {
+                  className: "btn small",
+                  text: `Sell +${weaponSellValue}`,
+                  attrs: isEquipped ? { disabled: "true" } : {},
+                  onClick: isEquipped
+                    ? undefined
+                    : () => {
+                        sellWeapon(this.ctx.state, weapon.id);
+                        saveGame(this.ctx.state);
+                        this.render();
+                      },
+                })
+              : el("button", {
+                  className: "btn small",
+                  text: "Buy",
+                  attrs: canAfford ? {} : { disabled: "true" },
+                  onClick: canAfford
+                    ? () => {
+                        buyWeapon(this.ctx.state, weapon.id);
+                        saveGame(this.ctx.state);
+                        this.render();
+                      }
+                    : undefined,
+                }),
+          ],
+        }),
+      );
+      weaponGrid.appendChild(row);
+    }
+    screen.appendChild(weaponGrid);
 
     const footer = el("div", { className: "party-footer" });
     footer.appendChild(

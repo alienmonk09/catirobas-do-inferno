@@ -24,8 +24,8 @@ function mkUnit(over: Partial<Unit["stats"]> = {}): Unit {
   } as Unit;
 }
 
-const physWeapon: WeaponDef = { id: "w", name: "W", power: 6, range: 1, kind: "physical", classes: ["knight"] };
-const magWeapon: WeaponDef = { id: "m", name: "M", power: 3, range: 1, kind: "magical", classes: ["blackMage"] };
+const physWeapon: WeaponDef = { id: "w", name: "W", power: 6, range: 1, kind: "physical", classes: ["knight"], price: 0 };
+const magWeapon: WeaponDef = { id: "m", name: "M", power: 3, range: 1, kind: "magical", classes: ["blackMage"], price: 0 };
 
 function skill(over: Partial<SkillDef>): SkillDef {
   return {

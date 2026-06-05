@@ -8,6 +8,7 @@ export const WEAPONS: Record<string, WeaponDef> = {
     range: 1,
     kind: "physical",
     classes: ["knight"],
+    price: 0,
   },
   greatsword: {
     id: "greatsword",
@@ -16,6 +17,7 @@ export const WEAPONS: Record<string, WeaponDef> = {
     range: 1,
     kind: "physical",
     classes: ["knight"],
+    price: 200,
   },
   bow: {
     id: "bow",
@@ -24,6 +26,7 @@ export const WEAPONS: Record<string, WeaponDef> = {
     range: 3,
     kind: "physical",
     classes: ["archer"],
+    price: 0,
   },
   longbow: {
     id: "longbow",
@@ -32,6 +35,7 @@ export const WEAPONS: Record<string, WeaponDef> = {
     range: 4,
     kind: "physical",
     classes: ["archer"],
+    price: 180,
   },
   rod: {
     id: "rod",
@@ -40,6 +44,7 @@ export const WEAPONS: Record<string, WeaponDef> = {
     range: 1,
     kind: "magical",
     classes: ["blackMage", "timeMage"],
+    price: 0,
   },
   staff: {
     id: "staff",
@@ -48,6 +53,7 @@ export const WEAPONS: Record<string, WeaponDef> = {
     range: 1,
     kind: "magical",
     classes: ["whiteMage"],
+    price: 0,
   },
   knuckles: {
     id: "knuckles",
@@ -56,6 +62,7 @@ export const WEAPONS: Record<string, WeaponDef> = {
     range: 1,
     kind: "physical",
     classes: ["monk"],
+    price: 0,
   },
   fellKnuckles: {
     id: "fellKnuckles",
@@ -64,6 +71,7 @@ export const WEAPONS: Record<string, WeaponDef> = {
     range: 1,
     kind: "physical",
     classes: ["monk"],
+    price: 160,
   },
   dagger: {
     id: "dagger",
@@ -72,6 +80,7 @@ export const WEAPONS: Record<string, WeaponDef> = {
     range: 1,
     kind: "physical",
     classes: ["thief"],
+    price: 0,
   },
   rapier: {
     id: "rapier",
@@ -80,6 +89,7 @@ export const WEAPONS: Record<string, WeaponDef> = {
     range: 1,
     kind: "physical",
     classes: ["thief"],
+    price: 150,
   },
   heartwood: {
     id: "heartwood",
@@ -88,6 +98,7 @@ export const WEAPONS: Record<string, WeaponDef> = {
     range: 1,
     kind: "magical",
     classes: ["druid"],
+    price: 0,
   },
   grimoire: {
     id: "grimoire",
@@ -96,6 +107,7 @@ export const WEAPONS: Record<string, WeaponDef> = {
     range: 1,
     kind: "magical",
     classes: ["summoner"],
+    price: 0,
   },
   gaiaStaff: {
     id: "gaiaStaff",
@@ -104,6 +116,7 @@ export const WEAPONS: Record<string, WeaponDef> = {
     range: 1,
     kind: "magical",
     classes: ["geomancer"],
+    price: 0,
   },
   spear: {
     id: "spear",
@@ -112,6 +125,7 @@ export const WEAPONS: Record<string, WeaponDef> = {
     range: 2,
     kind: "physical",
     classes: ["lancer"],
+    price: 0,
   },
 };
 

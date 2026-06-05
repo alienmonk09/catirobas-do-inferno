@@ -64,6 +64,8 @@ export class PartySelectScene implements Scene {
     this.ctx.state.difficulty = this.difficulty;
     this.ctx.state.gil = 0;
     this.ctx.state.ownedEquipment = [];
+    // Seed ownedWeapons from the starting party's equipped weapons.
+    this.ctx.state.ownedWeapons = [...new Set(this.ctx.state.party.map((u) => u.weaponId))];
     this.ctx.state.slot = this.slot;
     this.ctx.state.ngPlus = 0;
     clearSave(this.slot);

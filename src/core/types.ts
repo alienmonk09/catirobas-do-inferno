@@ -147,6 +147,8 @@ export interface WeaponDef {
   range: number;
   kind: WeaponKind;
   classes: ClassId[];
+  /** Gil cost to purchase from the weapon shop. */
+  price: number;
 }
 
 export type ItemEffect = "healHp" | "healMp" | "revive" | "buff";

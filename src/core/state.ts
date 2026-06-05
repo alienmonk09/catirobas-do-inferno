@@ -3,7 +3,7 @@ import { createStartingParty } from "../data/party";
 import { startingInventory, getItem } from "../data/items";
 import { CLASSES } from "../data/classes";
 import { RACES } from "../data/races";
-import { WEAPONS } from "../data/weapons";
+import { WEAPONS, getWeapon } from "../data/weapons";
 import { EQUIPMENT, getEquipment } from "../data/equipment";
 import { equip } from "./unit";
 
@@ -20,6 +20,8 @@ export interface GameState {
   gil: number;
   /** Equipment pieces the party has purchased; only owned gear may be equipped. */
   ownedEquipment: string[];
+  /** Weapons the party has purchased; only owned weapons may be equipped. */
+  ownedWeapons: string[];
   /** Save slot this run persists to (0-based). Slot 0 uses the legacy key. */
   slot: number;
   /** Number of times the campaign has been cleared in New Game+ mode. */
@@ -27,13 +29,16 @@ export interface GameState {
 }
 
 export function createGameState(): GameState {
+  const party = createStartingParty();
   return {
-    party: createStartingParty(),
+    party,
     inventory: startingInventory(),
     phaseIndex: 0,
     difficulty: "normal",
     gil: 0,
     ownedEquipment: [],
+    // Seed with the starting party's equipped weapons so they are always owned.
+    ownedWeapons: [...new Set(party.map((u) => u.weaponId))],
     slot: 0,
     ngPlus: 0,
   };
@@ -135,6 +140,56 @@ export function sellEquipment(state: GameState, id: string): boolean {
   return true;
 }
 
+/**
+ * Check whether the party owns a particular weapon.
+ */
+export function ownsWeapon(state: GameState, id: string): boolean {
+  return state.ownedWeapons.includes(id);
+}
+
+/**
+ * Attempt to purchase a weapon from the weapon shop.
+ * Deducts the weapon's price from `state.gil` and adds its id to `ownedWeapons`.
+ * Returns true on success; false if the weapon is unknown, already owned,
+ * or gil is insufficient (no mutation occurs on false).
+ */
+export function buyWeapon(state: GameState, id: string): boolean {
+  let weapon;
+  try {
+    weapon = getWeapon(id);
+  } catch {
+    return false;
+  }
+  if (ownsWeapon(state, id)) return false;
+  if (state.gil < weapon.price) return false;
+  state.gil -= weapon.price;
+  state.ownedWeapons.push(id);
+  return true;
+}
+
+/**
+ * Attempt to sell an owned weapon back to the weapon shop.
+ * Refuses (returns false) if any party unit currently has this weapon equipped —
+ * a unit can never be left unarmed.
+ * On a valid sell, removes from `ownedWeapons` and adds floor(price/2) gil.
+ * Returns false if the weapon is unknown, not owned, or currently equipped by
+ * any unit.
+ */
+export function sellWeapon(state: GameState, id: string): boolean {
+  let weapon;
+  try {
+    weapon = getWeapon(id);
+  } catch {
+    return false;
+  }
+  if (!ownsWeapon(state, id)) return false;
+  // Refuse to sell a weapon currently equipped by any party unit (no disarming).
+  if (state.party.some((u) => u.weaponId === id)) return false;
+  state.ownedWeapons = state.ownedWeapons.filter((owned) => owned !== id);
+  state.gil += Math.floor(weapon.price / 2);
+  return true;
+}
+
 const VALID_DIFFICULTIES: Difficulty[] = ["easy", "normal", "hard"];
 const VALID_REACTIONS: Reaction[] = ["counter", "autoPotion", "cover"];
 
@@ -230,6 +285,10 @@ export function loadGame(slot = 0): GameState | null {
     if (!Array.isArray(parsed.ownedEquipment)) {
       parsed.ownedEquipment = [] as string[];
     }
+    // Back-compat: old saves lack `ownedWeapons`; normalise to [].
+    if (!Array.isArray(parsed.ownedWeapons)) {
+      parsed.ownedWeapons = [] as string[];
+    }
     // Back-compat: old saves lack `slot`; normalise to the slot it was loaded from.
     if (typeof parsed.slot !== "number") {
       parsed.slot = slot;
@@ -245,6 +304,11 @@ export function loadGame(slot = 0): GameState | null {
     for (const u of parsed.party as Unit[]) {
       if (u.armorId && !owned.includes(u.armorId)) owned.push(u.armorId);
       if (u.accessoryId && !owned.includes(u.accessoryId)) owned.push(u.accessoryId);
+    }
+    // Migration: any weapon a unit currently has equipped should be in ownedWeapons.
+    const ownedWpns = parsed.ownedWeapons as string[];
+    for (const u of parsed.party as Unit[]) {
+      if (u.weaponId && !ownedWpns.includes(u.weaponId)) ownedWpns.push(u.weaponId);
     }
     return parsed;
   } catch {
