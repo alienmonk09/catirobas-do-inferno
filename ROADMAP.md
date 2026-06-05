@@ -68,9 +68,9 @@ The next push: grow the party, make the UI teach itself, and widen the campaign.
 - ✅ **Secondary job / ability pool** — equip a second class's skill set at the camp;
   its learned skills are usable alongside the primary's (FFT-style). Learn across both
   jobs with JP; the first sub-job skill is granted on equip.
-- 🚧 **More classes** — ✅ Time Mage (Comet + haste/slow/stop control) and ✅ Summoner
-  (Ifrit/Shiva/Ramuh/Titan — wide-AoE glass cannon), retrainable at camp; ⏳ Lancer
-  (jump), Geomancer still to come
+- 🚧 **More classes** — ✅ Time Mage (tempo control), ✅ Summoner (wide-AoE glass cannon),
+  and ✅ Geomancer (durable earth control caster), all retrainable at camp; ⏳ Lancer
+  (jump) still to come
 - ✅ **Elemental affinities** — races carry fire/bolt/nature weaknesses & resistances
   that scale spell damage (×1.5 / ×0.5); folded into the shared forecast, which flags
   *weak/resist*, so the AI aims spells at weaknesses too. *(Equipment/terrain affinities later.)*
@@ -84,9 +84,11 @@ The next push: grow the party, make the UI teach itself, and widen the campaign.
 
 Classic mechanics that change how a fight is played, not just its numbers.
 
-- 🚧 **Reaction abilities** — ✅ Counter (Knight/Monk strike back at melee attackers);
-  ⏳ auto-potion, cover an ally, and equippable reactions (FFT-style) still to come
-- ⏳ **Knockback / forced movement** — shoves, pulls, throws; fall damage off ledges
+- 🚧 **Reaction abilities** — ✅ Counter (Knight/Monk strike back) and ✅ Auto-Potion
+  (Thief self-heals from inventory when low); ⏳ cover an ally, and equippable
+  reactions (FFT-style) still to come
+- 🚧 **Knockback / forced movement** — ✅ shoves (single-target skills push the victim N
+  tiles, stopping at walls/edges/units; shove-into-lava synergy); ⏳ pulls, throws, fall damage
 - ⏳ **Zone of control & engagement** — passing an enemy's reach has a cost
 - ⏳ **Spell charge time** — powerful magic resolves a few CT ticks later (FFT casting),
   with a charging indicator and the option to interrupt
