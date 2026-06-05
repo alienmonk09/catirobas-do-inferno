@@ -14,8 +14,8 @@ Living task list for the autonomous build. The roadmap (`ROADMAP.md`) is the
 
 ## Current state (resume point)
 - Branch: **`feat/tactics-depth-and-progression`** (off `main`; not merged, not pushed).
-- Build: clean. Tests: **946 passing across 45 files**. Working tree: clean.
-- Last commit: `bf6bab8 fix: AI leap LoS (review P3)`. Shipped since the sell commit:
+- Build: clean. Tests: **954 passing across 46 files**. Working tree: clean.
+- Last commit: `3841d23 feat(v0.4): skill charge time (FFT casting)`. Shipped since the sell commit:
   battle log, undo move, save slots, settings menu, New Game+.
 - ~24 features this session. Codex reviewer went DOWN mid-session (6+ "failed to output")
   then RECOVERED. Its `review --base main` ran 3 convergent passes: P2s (fall-kill credit,
