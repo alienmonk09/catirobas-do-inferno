@@ -263,7 +263,7 @@ export class Renderer {
         const center = this.project(view, it.x, it.y, z);
         const terrain = grid.terrainAt(it.x, it.y);
         this.drawTileWalls(center, z, terrain);
-        this.drawTileTop(center, z, terrain, it.x, it.y);
+        this.drawTileTop(center, z, terrain, it.x, it.y, this.neighborShade(grid, it.x, it.y, z));
         const cols = overlays.get(`${it.x},${it.y}`);
         if (cols) for (const c of cols) this.paintDiamond(center, c);
       } else {
@@ -305,30 +305,55 @@ export class Renderer {
     const corners = diamondCorners(center);
     const wallH = z * TILE_Z;
     const st = TERRAIN[terrain];
-    // Left face darker, right face a touch lighter — fake a directional light.
-    ctx.fillStyle = `hsl(${st.h}, ${st.s}%, ${clampL(st.l - 20)}%)`;
+    // Two cliff faces, each shaded with a vertical gradient (lit near the top
+    // edge, sinking into shadow at the base) so tall cliffs read as solid mass.
+    // The left face is darker than the right to fake a top-right key light.
+    const face = (a: ScreenPoint, b: ScreenPoint, topL: number, botL: number) => {
+      const g = ctx.createLinearGradient(0, a.sy, 0, a.sy + wallH);
+      g.addColorStop(0, `hsl(${st.h}, ${st.s}%, ${clampL(topL)}%)`);
+      g.addColorStop(1, `hsl(${st.h}, ${st.s}%, ${clampL(botL)}%)`);
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.moveTo(a.sx, a.sy);
+      ctx.lineTo(b.sx, b.sy);
+      ctx.lineTo(b.sx, b.sy + wallH);
+      ctx.lineTo(a.sx, a.sy + wallH);
+      ctx.closePath();
+      ctx.fill();
+    };
+    face(corners[3], corners[2], st.l - 16, st.l - 34); // left (shadow) face
+    face(corners[2], corners[1], st.l - 8, st.l - 24); // right (lit) face
+    // Crisp shadow seam where the two faces meet, and a dark contact line at the
+    // very base — grounds the cliff instead of letting it float.
+    ctx.strokeStyle = `hsla(${st.h}, ${st.s}%, ${clampL(st.l - 40)}%, 0.9)`;
+    ctx.lineWidth = 1;
     ctx.beginPath();
-    ctx.moveTo(corners[3].sx, corners[3].sy);
-    ctx.lineTo(corners[2].sx, corners[2].sy);
+    ctx.moveTo(corners[2].sx, corners[2].sy);
     ctx.lineTo(corners[2].sx, corners[2].sy + wallH);
-    ctx.lineTo(corners[3].sx, corners[3].sy + wallH);
-    ctx.closePath();
-    ctx.fill();
-    ctx.fillStyle = `hsl(${st.h}, ${st.s}%, ${clampL(st.l - 12)}%)`;
-    ctx.beginPath();
-    ctx.moveTo(corners[1].sx, corners[1].sy);
-    ctx.lineTo(corners[2].sx, corners[2].sy);
+    ctx.moveTo(corners[3].sx, corners[3].sy + wallH);
     ctx.lineTo(corners[2].sx, corners[2].sy + wallH);
     ctx.lineTo(corners[1].sx, corners[1].sy + wallH);
-    ctx.closePath();
-    ctx.fill();
+    ctx.stroke();
   }
 
-  private drawTileTop(center: ScreenPoint, z: number, terrain: TerrainType, tx: number, ty: number): void {
+  /** Ambient-occlusion weight: how strongly taller orthogonal neighbors shade
+   *  this tile's top, so tiles nestled below cliffs sink into shadow. */
+  private neighborShade(grid: Grid, x: number, y: number, z: number): number {
+    let s = 0;
+    for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]] as const) {
+      const dh = grid.heightAt(x + dx, y + dy) - z;
+      if (dh > 0) s += Math.min(2, dh);
+    }
+    return s; // 0..8 (typically 0..4)
+  }
+
+  private drawTileTop(center: ScreenPoint, z: number, terrain: TerrainType, tx: number, ty: number, ao: number): void {
     const ctx = this.ctx;
     const corners = diamondCorners(center);
     const st = TERRAIN[terrain];
-    const lit = clampL(st.l + z * 5);
+    // Steeper height ramp so elevation reads at a glance, minus an ambient-
+    // occlusion term so tiles under cliffs darken toward their taller neighbors.
+    const lit = clampL(st.l + z * 6 - ao * 4);
     ctx.fillStyle = `hsl(${st.h}, ${st.s}%, ${lit}%)`;
     ctx.beginPath();
     ctx.moveTo(corners[0].sx, corners[0].sy);
@@ -351,6 +376,17 @@ export class Renderer {
     for (let i = 1; i < corners.length; i++) ctx.lineTo(corners[i].sx, corners[i].sy);
     ctx.closePath();
     ctx.stroke();
+    // Sunlit rim on a raised tile's two upper edges (top→right, top→left) — a
+    // bright lip that makes plateaus and steps pop against the tiles below.
+    if (z > 0) {
+      ctx.strokeStyle = `hsla(${st.h}, ${st.s}%, ${clampL(lit + 22)}%, 0.7)`;
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(corners[3].sx, corners[3].sy);
+      ctx.lineTo(corners[0].sx, corners[0].sy);
+      ctx.lineTo(corners[1].sx, corners[1].sy);
+      ctx.stroke();
+    }
   }
 
   private drawUnit(

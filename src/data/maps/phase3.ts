@@ -30,15 +30,16 @@ export const phase3: MapDef = {
   width: 9,
   height: 9,
   heights: [
-    [1, 1, 2, 1, 1, 1, 2, 1, 1],
-    [1, 1, 1, 1, 2, 1, 1, 1, 1],
-    [1, 1, 1, 1, 1, 1, 1, 1, 1],
-    [1, 1, 1, 1, 1, 1, 1, 1, 1],
-    [0, 0, 0, 0, 1, 0, 0, 0, 0],
-    [1, 1, 1, 1, 1, 1, 1, 1, 1],
-    [1, 1, 1, 1, 1, 1, 1, 1, 1],
-    [1, 1, 1, 1, 2, 1, 1, 1, 1],
-    [1, 1, 2, 1, 1, 1, 2, 1, 1],
+    // North bank: a stepped escarpment crowns the far ridge (enemy high ground)
+    [3, 3, 2, 1, 1, 1, 2, 3, 3],
+    [2, 3, 2, 1, 2, 1, 1, 2, 3],
+    [1, 2, 2, 1, 1, 1, 2, 2, 1],
+    [1, 1, 1, 1, 1, 1, 1, 1, 1], // graded slope down to the river / mire approach
+    [0, 0, 0, 0, 1, 0, 0, 0, 0], // river row (bridge at col 4 stays height 1)
+    [1, 1, 1, 1, 1, 1, 1, 1, 1], // south landing, level with the bridge
+    [1, 1, 0, 1, 1, 1, 0, 1, 1], // sunken hollows cupping the spring seeps
+    [1, 0, 0, 1, 2, 1, 0, 0, 1], // a low rise behind the central spawn (vantage)
+    [2, 1, 1, 1, 2, 1, 1, 1, 2], // raised valley corners frame the south
   ],
   terrain,
   blocked: [
