@@ -211,4 +211,23 @@ export const WEAPON_SPRITES: Record<string, SpriteDef> = {
       ".....AABA.....",
     ],
   },
+  grimoire: {
+    palette: { A: "#1a0a2e", B: "#3d1a6e", C: "#6b2fa0", D: "#c8a0f0", E: "#f0e0ff", F: "#ffd700", G: "#4a1a80", H: "#8b50d0" },
+    rows: [
+      "...AAAAAAA....",
+      "..ABBBBBBBBA..",
+      ".ABBGGGGGBBBA.",
+      ".ABGDDDDDGBBA.",
+      ".ABGDEDEDGBBA.",
+      ".ABGDDDDDGBBA.",
+      ".ABGDFFFEGBBA.",
+      ".ABGDFFFDGBBA.",
+      ".ABGDFFFEGBBA.",
+      ".ABGDDDDDGBBA.",
+      ".ABBGGGGGBBBA.",
+      "..ABBBBBBBBA..",
+      "...AAAAAAA....",
+      "..............",
+    ],
+  },
 };

@@ -83,6 +83,16 @@ export const CLASSES: Record<ClassId, ClassDef> = {
     weaponIds: ["rod"],
     color: "#5fb0d6",
   },
+  summoner: {
+    id: "summoner",
+    name: "Summoner",
+    description: "Calls mighty elemental spirits. Devastating wide-area nukes at the cost of speed and durability.",
+    base: { hp: 76, mp: 66, atk: 5, def: 5, mag: 15, res: 11, spd: 9, move: 3, jump: 2 },
+    growth: { hp: 7, mp: 7, atk: 0.4, def: 0.6, mag: 2.3, res: 1.2, spd: 0.7 },
+    skillIds: ["callIfrit", "callShiva", "callRamuh", "callTitan"],
+    weaponIds: ["grimoire"],
+    color: "#6a3fbf",
+  },
 };
 
 export function getClass(id: ClassId): ClassDef {

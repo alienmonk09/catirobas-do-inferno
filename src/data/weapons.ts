@@ -89,6 +89,14 @@ export const WEAPONS: Record<string, WeaponDef> = {
     kind: "magical",
     classes: ["druid"],
   },
+  grimoire: {
+    id: "grimoire",
+    name: "Summoner's Grimoire",
+    power: 3,
+    range: 1,
+    kind: "magical",
+    classes: ["summoner"],
+  },
 };
 
 export function getWeapon(id: string): WeaponDef {
