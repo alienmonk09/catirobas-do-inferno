@@ -1,12 +1,13 @@
-import type { ClassId, EquipSlot, Reaction, Unit } from "../core/types";
+import type { ClassId, EquipMod, EquipSlot, Reaction, Stats, Unit } from "../core/types";
 import { CLASSES, getClass } from "../data/classes";
 import { getRace } from "../data/races";
-import { WEAPONS } from "../data/weapons";
-import { equipmentForSlot, EQUIPMENT } from "../data/equipment";
+import { WEAPONS, getWeapon } from "../data/weapons";
+import { equipmentForSlot, EQUIPMENT, getEquipment } from "../data/equipment";
 import { getSkill } from "../data/skills";
 import {
   statsForLevel,
   statsForUnit,
+  equipmentMod,
   equip as equipUnit,
   nextLearnableSkillForClass,
   learnSkillForClass,
@@ -33,6 +34,36 @@ import type { GameContext, Scene } from "./sceneManager";
 
 /** Between-phase screen: class change, equipment, and spending SP on skills. */
 type CampTab = "party" | "reinforcements" | "shop";
+
+/** The full stat block, in display order (includes MOVE/JUMP, which the old
+ *  card hid even though they're core to positioning). */
+const STAT_KEYS: (keyof Stats)[] = ["maxHp", "maxMp", "atk", "def", "mag", "res", "spd", "move", "jump"];
+const STAT_LABEL: Record<string, string> = {
+  maxHp: "HP", maxMp: "MP", atk: "ATK", def: "DEF", mag: "MAG", res: "RES", spd: "SPD", move: "MOV", jump: "JMP",
+};
+
+/** "+2 DEF · −1 SPD" from a sparse stat-mod map; "" when there are no deltas.
+ *  Uses a real minus glyph so negatives read clearly. */
+function fmtMod(mod: Partial<Record<string, number>>): string {
+  const order = ["hp", "mp", "atk", "def", "mag", "res", "spd", "move", "jump"];
+  const parts: string[] = [];
+  for (const k of order) {
+    const v = mod[k];
+    if (v) parts.push(`${v > 0 ? "+" : "−"}${Math.abs(v)} ${(STAT_LABEL[k === "hp" ? "maxHp" : k === "mp" ? "maxMp" : k] ?? k.toUpperCase())}`);
+  }
+  return parts.join(" · ");
+}
+
+/** Per-stat delta of swapping a slot from `current` gear to `candidate` gear. */
+function modDelta(candidate: EquipMod, current: EquipMod): EquipMod {
+  const out: EquipMod = {};
+  const keys = new Set<keyof EquipMod>([...Object.keys(candidate), ...Object.keys(current)] as (keyof EquipMod)[]);
+  for (const k of keys) {
+    const d = (candidate[k] ?? 0) - (current[k] ?? 0);
+    if (d) out[k] = d;
+  }
+  return out;
+}
 
 export class PartyScene implements Scene {
   private root: HTMLDivElement;
@@ -107,13 +138,15 @@ export class PartyScene implements Scene {
     if (learnSkillForClass(unit, classId, getSkill(next).spCost)) this.render();
   }
 
-  /** A "SP / Learn next" row for a given class (primary or secondary job). */
+  /** A "SP / Learn next" row for a given class (primary or secondary job). Shows
+   *  how many skills remain and, when SP is short, exactly how much more is needed. */
   private learnRow(unit: Unit, classId: ClassId, labelPrefix: string): HTMLElement {
     const next = nextLearnableSkillForClass(unit, classId);
     const row = el("div", { className: "learn-row" });
     if (next) {
       const skill = getSkill(next);
       const affordable = unit.sp >= skill.spCost;
+      const remaining = getClass(classId).skillIds.filter((id) => !unit.learnedSkillIds.includes(id)).length;
       row.appendChild(
         el("button", {
           className: "btn small",
@@ -122,8 +155,14 @@ export class PartyScene implements Scene {
           onClick: affordable ? () => this.learnFrom(unit, classId) : undefined,
         }),
       );
+      row.appendChild(
+        el("span", {
+          attrs: { style: `font-size:11px;margin-left:6px;opacity:0.8;color:${affordable ? "#9aa3b2" : "#ff9a9a"}` },
+          text: affordable ? `${remaining} left` : `need ${skill.spCost - unit.sp} more SP`,
+        }),
+      );
     } else {
-      row.appendChild(el("span", { text: `${labelPrefix}all learned`, attrs: { style: "font-size:12px;opacity:0.6" } }));
+      row.appendChild(el("span", { text: `${labelPrefix}all learned ✓`, attrs: { style: "font-size:12px;opacity:0.6" } }));
     }
     return row;
   }
@@ -185,12 +224,33 @@ export class PartyScene implements Scene {
     card.appendChild(
       el("div", { className: "role", attrs: { style: "opacity:0.6;margin-bottom:4px" }, text: cls.description }),
     );
-    card.appendChild(
-      el("div", {
-        attrs: { style: "font-size:12px;opacity:0.85" },
-        text: `HP ${unit.stats.maxHp} · MP ${unit.stats.maxMp} · ATK ${unit.stats.atk} · DEF ${unit.stats.def} · MAG ${unit.stats.mag} · RES ${unit.stats.res} · SPD ${unit.stats.spd}`,
-      }),
-    );
+    // Full stat grid (now includes MOVE/JUMP). A stat lifted above its bare
+    // class+level value by gear/mastery is tinted so the player can see what
+    // their loadout is buying at a glance.
+    const bare = statsForLevel(unit.classId, unit.level, unit.raceId);
+    const grid = el("div", {
+      attrs: { style: "display:grid;grid-template-columns:repeat(3,1fr);gap:3px 8px;margin:6px 0 2px;font-size:12px" },
+    });
+    for (const k of STAT_KEYS) {
+      const val = unit.stats[k] as number;
+      const baseVal = bare[k] as number;
+      const color = val > baseVal ? "#7fe39a" : val < baseVal ? "#ff9a9a" : "#e7e9ee";
+      const chip = el("div", { attrs: { style: "display:flex;justify-content:space-between;gap:6px" } });
+      chip.appendChild(el("span", { text: STAT_LABEL[k], attrs: { style: "opacity:0.6" } }));
+      chip.appendChild(el("span", { text: `${val}`, attrs: { style: `font-weight:700;color:${color}` } }));
+      grid.appendChild(chip);
+    }
+    card.appendChild(grid);
+
+    // What the equipped gear contributes on top of the raw class/level/race stats
+    // (the mastery passive is shown separately below with the mastered class names).
+    const gearStr = fmtMod(equipmentMod(unit));
+    if (gearStr) {
+      card.appendChild(
+        el("div", { attrs: { style: "font-size:11px;opacity:0.75;margin-top:5px;color:#9fd0a8" }, text: `Gear ${gearStr}` }),
+      );
+    }
+
     card.appendChild(
       el("div", {
         attrs: { style: "font-size:12px;opacity:0.7;margin-top:4px" },
@@ -212,11 +272,17 @@ export class PartyScene implements Scene {
       );
     }
 
-    // Class change.
+    // Class change. Each option previews that class's stats AT THIS LEVEL so the
+    // player can compare loadouts before committing (the swap is reversible, but
+    // an up-front preview beats trial-and-error).
     card.appendChild(el("label", { text: "Class" }));
     const classSel = el("select");
     for (const c of Object.values(CLASSES)) {
-      const opt = el("option", { text: c.name, attrs: { value: c.id } });
+      const cs = statsForLevel(c.id, unit.level, unit.raceId);
+      const opt = el("option", {
+        text: `${c.name} — HP ${cs.maxHp} ATK ${cs.atk} MAG ${cs.mag} SPD ${cs.spd}`,
+        attrs: { value: c.id },
+      });
       if (c.id === unit.classId) opt.selected = true;
       classSel.appendChild(opt);
     }
@@ -237,6 +303,14 @@ export class PartyScene implements Scene {
     }
     subSel.addEventListener("change", () => this.setSubJob(unit, subSel.value as ClassId | ""));
     card.appendChild(subSel);
+    card.appendChild(
+      el("div", {
+        attrs: { style: "font-size:11px;opacity:0.7;margin:2px 0 2px" },
+        text: unit.subClassId
+          ? `Casts ${getClass(unit.subClassId).name}'s skills alongside ${cls.name}'s — spend SP on both below.`
+          : "Pick a second class to learn and use its skills alongside your own.",
+      }),
+    );
 
     // Equippable reaction — one extra reaction ability on top of class-innate
     // reactions. Reactions are passive triggers that fire automatically (no turn
@@ -293,8 +367,18 @@ export class PartyScene implements Scene {
       (w) => w.classes.includes(unit.classId) &&
         (ownsWeapon(this.ctx.state, w.id) || w.id === unit.weaponId),
     );
+    const curWeapon = getWeapon(unit.weaponId);
     for (const w of usableWeapons) {
-      const opt = el("option", { text: `${w.name} (pow ${w.power}, rng ${w.range})`, attrs: { value: w.id } });
+      const dPow = w.power - curWeapon.power;
+      const dRng = w.range - curWeapon.range;
+      const deltas: string[] = [];
+      if (w.id !== unit.weaponId) {
+        if (dPow) deltas.push(`${dPow > 0 ? "+" : "−"}${Math.abs(dPow)} pow`);
+        if (dRng) deltas.push(`${dRng > 0 ? "+" : "−"}${Math.abs(dRng)} rng`);
+      }
+      const kindTag = w.kind === "magical" ? ", magical" : "";
+      const deltaTag = deltas.length ? `  [${deltas.join(", ")}]` : "";
+      const opt = el("option", { text: `${w.name} (pow ${w.power}, rng ${w.range}${kindTag})${deltaTag}`, attrs: { value: w.id } });
       if (w.id === unit.weaponId) opt.selected = true;
       wSel.appendChild(opt);
     }
@@ -309,14 +393,15 @@ export class PartyScene implements Scene {
       }),
     );
     const armorSel = el("select");
-    armorSel.appendChild(el("option", { text: "— none —", attrs: { value: "" } }));
+    const curArmorMod = unit.armorId ? getEquipment(unit.armorId).mod : {};
+    const noArmorOpt = el("option", { text: `— none —${unit.armorId ? `  [${fmtMod(modDelta({}, curArmorMod))}]` : ""}`, attrs: { value: "" } });
+    if (!unit.armorId) noArmorOpt.selected = true;
+    armorSel.appendChild(noArmorOpt);
     for (const a of equipmentForSlot("armor").filter(
       (e) => ownsEquipment(this.ctx.state, e.id) || e.id === unit.armorId,
     )) {
-      const modHint = Object.entries(a.mod)
-        .map(([k, v]) => `${(v as number) >= 0 ? "+" : ""}${v as number} ${k.toUpperCase()}`)
-        .join(", ");
-      const opt = el("option", { text: `${a.name} (${modHint})`, attrs: { value: a.id } });
+      const delta = a.id === unit.armorId ? "" : fmtMod(modDelta(a.mod, curArmorMod));
+      const opt = el("option", { text: `${a.name} (${fmtMod(a.mod) || "no mods"})${delta ? `  [${delta}]` : ""}`, attrs: { value: a.id } });
       if (a.id === unit.armorId) opt.selected = true;
       armorSel.appendChild(opt);
     }
@@ -331,14 +416,15 @@ export class PartyScene implements Scene {
       }),
     );
     const accSel = el("select");
-    accSel.appendChild(el("option", { text: "— none —", attrs: { value: "" } }));
+    const curAccMod = unit.accessoryId ? getEquipment(unit.accessoryId).mod : {};
+    const noAccOpt = el("option", { text: `— none —${unit.accessoryId ? `  [${fmtMod(modDelta({}, curAccMod))}]` : ""}`, attrs: { value: "" } });
+    if (!unit.accessoryId) noAccOpt.selected = true;
+    accSel.appendChild(noAccOpt);
     for (const acc of equipmentForSlot("accessory").filter(
       (e) => ownsEquipment(this.ctx.state, e.id) || e.id === unit.accessoryId,
     )) {
-      const modHint = Object.entries(acc.mod)
-        .map(([k, v]) => `${(v as number) >= 0 ? "+" : ""}${v as number} ${k.toUpperCase()}`)
-        .join(", ");
-      const opt = el("option", { text: `${acc.name} (${modHint})`, attrs: { value: acc.id } });
+      const delta = acc.id === unit.accessoryId ? "" : fmtMod(modDelta(acc.mod, curAccMod));
+      const opt = el("option", { text: `${acc.name} (${fmtMod(acc.mod) || "no mods"})${delta ? `  [${delta}]` : ""}`, attrs: { value: acc.id } });
       if (acc.id === unit.accessoryId) opt.selected = true;
       accSel.appendChild(opt);
     }
@@ -362,7 +448,12 @@ export class PartyScene implements Scene {
     }
 
     // Spend SP: learn the next skill of the primary class and (if set) the sub-job.
-    card.appendChild(el("div", { text: `Skill Points: ${unit.sp}`, attrs: { style: "font-size:13px;margin-top:6px" } }));
+    card.appendChild(
+      el("div", {
+        attrs: { style: "font-size:13px;margin-top:8px;font-weight:700;color:#ffd98a" },
+        text: `◆ ${unit.sp} Skill Points`,
+      }),
+    );
     card.appendChild(this.learnRow(unit, unit.classId, ""));
     if (unit.subClassId) card.appendChild(this.learnRow(unit, unit.subClassId, `${getClass(unit.subClassId).name}: `));
     return card;
