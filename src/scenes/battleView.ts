@@ -56,6 +56,7 @@ interface ViewScene {
   screenShake: number;
   time: number;
   map: MapDef;
+  chests: { pos: Point; opened: boolean }[];
   ctx: { animator: { animPos: BattleView["animPos"] } };
   inRangeTiles(tile: Point): boolean;
   posCtx(targetPos: Point): AttackContext;
@@ -119,6 +120,7 @@ export function buildView(scene: BattleScene, origin: ScreenPoint): BattleView {
     forecast,
     time: s.time,
     screenShake: computeScreenShake(s),
+    chests: s.chests.filter((c) => !c.opened).map((c) => ({ ...c.pos })),
   };
 }
 

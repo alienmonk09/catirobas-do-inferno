@@ -96,6 +96,8 @@ export interface BattleView {
   time: number;
   /** Whole-scene pixel offset for impact shake (crits, deaths, counters). */
   screenShake?: { dx: number; dy: number };
+  /** Unopened treasure-chest tiles to draw as pickups on the field. */
+  chests?: Point[];
 }
 
 const COLOR = {
@@ -289,6 +291,7 @@ export class Renderer {
 
     type Item =
       | { kind: "tile"; depth: number; x: number; y: number }
+      | { kind: "chest"; depth: number; x: number; y: number }
       | { kind: "unit"; depth: number; unit: Unit; dx: number; dy: number };
     const items: Item[] = [];
 
@@ -296,6 +299,10 @@ export class Renderer {
       for (let x = 0; x < w; x++) {
         items.push({ kind: "tile", depth: depthKey(x, y, grid.heightAt(x, y), rot, w, h), x, y });
       }
+    }
+    // Chests sit just above their tile top but below any unit on that tile.
+    for (const c of view.chests ?? []) {
+      items.push({ kind: "chest", depth: depthKey(c.x, c.y, grid.heightAt(c.x, c.y), rot, w, h) + 0.3, x: c.x, y: c.y });
     }
     for (const unit of view.units) {
       const ap = view.animPos.get(unit.id) ?? unit.pos;
@@ -315,6 +322,9 @@ export class Renderer {
         this.drawTileTop(center, z, terrain, it.x, it.y, this.neighborShade(grid, it.x, it.y, z));
         const cols = overlays.get(`${it.x},${it.y}`);
         if (cols) for (const c of cols) this.paintDiamond(center, c);
+      } else if (it.kind === "chest") {
+        const z = grid.heightAt(it.x, it.y);
+        this.drawChest(this.project(view, it.x, it.y, z), view.time);
       } else {
         const z = this.interpHeight(grid, { x: it.dx, y: it.dy });
         const center = this.project(view, it.dx, it.dy, z);
@@ -346,6 +356,46 @@ export class Renderer {
     for (let i = 1; i < corners.length; i++) ctx.lineTo(corners[i].sx, corners[i].sy);
     ctx.closePath();
     ctx.fill();
+  }
+
+  /** A small treasure chest pickup, drawn as code-art on its tile (no asset). */
+  private drawChest(center: ScreenPoint, time: number): void {
+    const ctx = this.ctx;
+    const cx = center.sx;
+    const baseY = center.sy + 3;
+    const w = TILE_W * 0.42;
+    const h = TILE_H * 0.62;
+    const x = cx - w / 2;
+    const top = baseY - h;
+    const lidH = h * 0.4;
+    // Shadow.
+    ctx.fillStyle = "rgba(0,0,0,0.30)";
+    ctx.beginPath();
+    ctx.ellipse(cx, baseY + 1, w * 0.55, TILE_H * 0.18, 0, 0, Math.PI * 2);
+    ctx.fill();
+    // Wooden body + lid.
+    ctx.fillStyle = "#8a5a2b";
+    ctx.fillRect(x, top + lidH, w, h - lidH);
+    ctx.fillStyle = "#a06a33";
+    ctx.fillRect(x, top, w, lidH);
+    // Gold bands + lock.
+    ctx.fillStyle = "#ffd34d";
+    ctx.fillRect(x, top + lidH - 2, w, 3);
+    ctx.fillRect(cx - 2, top + lidH - 3, 4, 6);
+    ctx.fillRect(x, top, 3, h);
+    ctx.fillRect(x + w - 3, top, 3, h);
+    // Outline.
+    ctx.strokeStyle = "rgba(0,0,0,0.45)";
+    ctx.lineWidth = 1;
+    ctx.strokeRect(x, top, w, h);
+    // Pulsing twinkle.
+    const tw = 0.5 + 0.5 * Math.sin(time * 4);
+    ctx.globalAlpha = 0.4 + 0.6 * tw;
+    ctx.fillStyle = "#fff6d0";
+    ctx.beginPath();
+    ctx.arc(x + w * 0.72, top + lidH * 0.5, 1.6 + tw, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.globalAlpha = 1;
   }
 
   private drawTileWalls(center: ScreenPoint, z: number, terrain: TerrainType): void {

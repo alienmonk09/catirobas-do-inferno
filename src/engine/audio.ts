@@ -234,6 +234,28 @@ function playSelect(): void {
   tone({ freq: noteToFreq("C5"), slideTo: noteToFreq("E5"), dur: 0.045, type: "sine", gain: 0.018 });
 }
 
+function playLevelUp(): void {
+  // A bright ascending arpeggio — the reward payoff for gaining a level.
+  const notes = ["C5", "E5", "G5", "C6"];
+  notes.forEach((n, i) =>
+    tone({ freq: noteToFreq(n), dur: 0.18, type: "triangle", gain: 0.032, delay: i * 0.075 }),
+  );
+}
+
+function playTreasure(): void {
+  // A sparkly two-note shimmer for cracking open a treasure chest.
+  tone({ freq: noteToFreq("G5"), slideTo: noteToFreq("C6"), dur: 0.12, type: "triangle", gain: 0.03 });
+  tone({ freq: noteToFreq("C6"), slideTo: noteToFreq("E6"), dur: 0.16, type: "sine", gain: 0.022, delay: 0.08 });
+}
+
+function playFanfare(): void {
+  // A short triumphant flourish for the end-of-battle spoils screen.
+  tone({ freq: noteToFreq("C5"), dur: 0.16, type: "triangle", gain: 0.034 });
+  tone({ freq: noteToFreq("E5"), dur: 0.16, type: "triangle", gain: 0.032, delay: 0.12 });
+  tone({ freq: noteToFreq("G5"), dur: 0.16, type: "triangle", gain: 0.032, delay: 0.24 });
+  tone({ freq: noteToFreq("C6"), slideTo: noteToFreq("E6"), dur: 0.3, type: "triangle", gain: 0.03, delay: 0.36 });
+}
+
 export const sfx = {
   playHit,
   playCrit,
@@ -243,4 +265,7 @@ export const sfx = {
   playKO,
   playDeath,
   playSelect,
+  playLevelUp,
+  playTreasure,
+  playFanfare,
 };

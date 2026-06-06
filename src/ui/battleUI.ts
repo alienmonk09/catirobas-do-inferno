@@ -1,11 +1,12 @@
-import type { ItemDef, SkillDef, Unit } from "../core/types";
+import type { BattleRewards, ItemDef, LevelUpInfo, SkillDef, Unit } from "../core/types";
 import type { DialogueLine } from "../data/dialogue";
 import { getClass } from "../data/classes";
+import { getItem } from "../data/items";
 import { getWeapon } from "../data/weapons";
 import { getSkill } from "../data/skills";
 import { describeSkill, reactionLine, skillTags, statusChips, turnChipBadge, turnChipTitle } from "./battleUiHelpers";
 import { getCharacterSprite, getItemSprite, getSkillSprite, getWeaponSprite, speakerSprite } from "../data/sprites";
-import { isMuted, toggleMuted } from "../engine/audio";
+import { isMuted, toggleMuted, sfx } from "../engine/audio";
 import { el, clear } from "./dom";
 import { iconImg, portraitImg } from "./icons";
 
@@ -45,6 +46,8 @@ export class BattleUI {
   private rotateCtl: HTMLDivElement;
   private rotLabel: HTMLDivElement;
   private dialogueEl: HTMLDivElement;
+  private levelUpEl: HTMLDivElement;
+  private rewardsEl: HTMLDivElement;
   private battleLogPanel: HTMLDivElement;
   private battleLogLines: HTMLDivElement;
   private toastTimer = 0;
@@ -63,6 +66,8 @@ export class BattleUI {
     this.hintEl = el("div", { className: "hint" });
     this.bannerEl = el("div", { className: "banner" });
     this.dialogueEl = el("div", { className: "dialogue" });
+    this.levelUpEl = el("div", { className: "level-up" });
+    this.rewardsEl = el("div", { className: "rewards" });
     this.rotLabel = el("div", { className: "rlabel", text: "0°" });
     this.rotateCtl = el("div", { className: "panel rotate-ctl" });
     this.battleLogLines = el("div", { className: "battle-log-lines" });
@@ -80,6 +85,8 @@ export class BattleUI {
       this.hintEl,
       this.bannerEl,
       this.dialogueEl,
+      this.levelUpEl,
+      this.rewardsEl,
       this.rotateCtl,
       this.battleLogPanel,
     ]) {
@@ -536,6 +543,162 @@ export class BattleUI {
   hideDialogue(): void {
     this.dialogueEl.style.display = "none";
     clear(this.dialogueEl);
+  }
+
+  /**
+   * Pop a level-up card the moment a unit gains a level mid-battle. Shows each
+   * queued card in turn (Lv↑, stat deltas, a "new skill" hint), advancing on
+   * click; calls `onDone` after the last card (or immediately if none). A bright
+   * chime fires on each reveal.
+   */
+  showLevelUp(cards: LevelUpInfo[], onDone: () => void): void {
+    if (cards.length === 0) {
+      onDone();
+      return;
+    }
+    const STATS: { key: keyof LevelUpInfo["statsAfter"]; label: string }[] = [
+      { key: "maxHp", label: "HP" }, { key: "maxMp", label: "MP" },
+      { key: "atk", label: "ATK" }, { key: "def", label: "DEF" },
+      { key: "mag", label: "MAG" }, { key: "res", label: "RES" },
+      { key: "spd", label: "SPD" },
+    ];
+    let i = 0;
+    const finish = (): void => {
+      this.hideLevelUp();
+      onDone();
+    };
+    const render = (): void => {
+      const c = cards[i];
+      clear(this.levelUpEl);
+      sfx.playLevelUp();
+      const card = el("div", { className: "level-up-card" });
+      card.appendChild(el("div", { className: "lu-flash", text: "LEVEL UP!" }));
+      card.appendChild(el("div", { className: "lu-name", text: c.unitName }));
+      card.appendChild(el("div", {
+        className: "lu-level",
+        children: [
+          el("span", { className: "lu-lv-from", text: `Lv ${c.fromLevel}` }),
+          el("span", { className: "lu-arrow", text: "→" }),
+          el("span", { className: "lu-lv-to", text: `Lv ${c.toLevel}` }),
+        ],
+      }));
+      const grid = el("div", { className: "lu-stats" });
+      for (const s of STATS) {
+        const before = c.statsBefore[s.key];
+        const after = c.statsAfter[s.key];
+        const delta = after - before;
+        const row = el("div", { className: delta > 0 ? "lu-stat up" : "lu-stat" });
+        row.appendChild(el("span", { className: "lu-stat-label", text: s.label }));
+        row.appendChild(el("span", { className: "lu-stat-val", text: `${after}` }));
+        row.appendChild(el("span", { className: "lu-stat-delta", text: delta > 0 ? `+${delta}` : "" }));
+        grid.appendChild(row);
+      }
+      card.appendChild(grid);
+      if (c.newSkillName) {
+        card.appendChild(el("div", { className: "lu-skill", text: `New skill ready: ${c.newSkillName}` }));
+      }
+      const more = cards.length - i - 1;
+      card.appendChild(el("button", {
+        className: "btn",
+        text: more > 0 ? `Next (${more} more) ▸` : "Continue",
+        onClick: () => {
+          i += 1;
+          if (i >= cards.length) finish();
+          else render();
+        },
+      }));
+      this.levelUpEl.appendChild(card);
+      this.levelUpEl.style.display = "flex";
+    };
+    render();
+  }
+
+  hideLevelUp(): void {
+    this.levelUpEl.style.display = "none";
+    clear(this.levelUpEl);
+  }
+
+  /**
+   * The end-of-battle spoils screen: gold earned, items found, and each hero's
+   * XP gain with level-up badges, plus an optional MVP callout. "Continue"
+   * resolves `onDone`.
+   */
+  showRewards(rewards: BattleRewards, onDone: () => void): void {
+    clear(this.rewardsEl);
+    const card = el("div", { className: "rewards-card" });
+    card.appendChild(el("h1", { className: "rewards-title", text: "Spoils of Battle" }));
+
+    // Gold.
+    card.appendChild(el("div", {
+      className: "reward-section reward-gold",
+      children: [
+        el("span", { className: "reward-label", text: "Gold" }),
+        el("span", { className: "reward-gold-amt", text: `+${rewards.gold}` }),
+      ],
+    }));
+
+    // Items (collapse duplicates to "Name ×N").
+    const counts = new Map<string, number>();
+    for (const id of rewards.items) counts.set(id, (counts.get(id) ?? 0) + 1);
+    const itemsSection = el("div", { className: "reward-section reward-items" });
+    itemsSection.appendChild(el("span", { className: "reward-label", text: "Items" }));
+    if (counts.size === 0) {
+      itemsSection.appendChild(el("span", { className: "reward-none", text: "—" }));
+    } else {
+      const list = el("div", { className: "reward-item-list" });
+      for (const [id, n] of counts) {
+        list.appendChild(el("div", {
+          className: "reward-item",
+          children: [
+            iconImg(getItemSprite(id), 22),
+            el("span", { text: n > 1 ? `${getItem(id).name} ×${n}` : getItem(id).name }),
+          ],
+        }));
+      }
+      itemsSection.appendChild(list);
+    }
+    card.appendChild(itemsSection);
+
+    // Per-hero XP.
+    const xpSection = el("div", { className: "reward-section reward-xp" });
+    xpSection.appendChild(el("span", { className: "reward-label", text: "Party XP" }));
+    const heroList = el("div", { className: "reward-hero-list" });
+    for (const h of rewards.heroes) {
+      const leveled = h.toLevel > h.fromLevel;
+      const row = el("div", { className: leveled ? "reward-hero leveled" : "reward-hero" });
+      row.appendChild(el("span", { className: "reward-hero-name", text: h.name }));
+      row.appendChild(el("span", { className: "reward-hero-xp", text: `+${h.xpGained} XP` }));
+      row.appendChild(el("span", {
+        className: leveled ? "reward-hero-lv up" : "reward-hero-lv",
+        text: leveled ? `Lv ${h.fromLevel} → ${h.toLevel}` : `Lv ${h.toLevel}`,
+      }));
+      heroList.appendChild(row);
+    }
+    xpSection.appendChild(heroList);
+    card.appendChild(xpSection);
+
+    if (rewards.mvp) {
+      card.appendChild(el("div", {
+        className: "reward-mvp",
+        text: `MVP: ${rewards.mvp.name} — ${rewards.mvp.reason}`,
+      }));
+    }
+
+    card.appendChild(el("button", {
+      className: "btn",
+      text: "Continue",
+      onClick: () => {
+        this.hideRewards();
+        onDone();
+      },
+    }));
+    this.rewardsEl.appendChild(card);
+    this.rewardsEl.style.display = "flex";
+  }
+
+  hideRewards(): void {
+    this.rewardsEl.style.display = "none";
+    clear(this.rewardsEl);
   }
 
   /** Hide all transient combat UI (used when entering banner/AI states). */

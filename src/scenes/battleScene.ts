@@ -1,6 +1,9 @@
-import type { Direction, MapDef, Point, SkillDef, Unit } from "../core/types";
+import type { BattleRewards, Direction, HeroXpResult, LevelUpInfo, Loot, MapDef, Point, SkillDef, Unit } from "../core/types";
 import { RNG } from "../core/rng";
-import { grantSp, grantXp, createUnit } from "../core/unit";
+import { grantSp, createUnit } from "../core/unit";
+import { ACTION_XP_OFFENSIVE, ACTION_XP_SUPPORT, battleClearXp, grantXpTracked, xpForFinisher, xpForKill } from "../core/progression";
+import { DIALOGUE_ENABLED } from "../core/config";
+import { rollBattleDrops, rollEnemyDrop } from "../data/loot";
 import { enemyLevelFor, partyAverageLevel, enemyTierOffset, refreshForBattle, survivorsAfterBattle, goldForKill } from "../core/state";
 import { Grid, manhattan, moveBlockers, samePoint, zoneOfControl } from "../battle/grid";
 import { pathTo, reachable } from "../battle/pathfinding";
@@ -87,6 +90,24 @@ export class BattleScene implements Scene {
 
   private log: string[] = [];
 
+  // --- Live progression / treasure / rewards (this battle) ---
+  /** enemyId -> player unit ids that damaged or debuffed it (kill participation). */
+  private participants = new Map<string, Set<string>>();
+  /** playerId -> XP earned this battle (kill + action + clear), for the rewards screen. */
+  private xpEarned = new Map<string, number>();
+  /** Level-up events captured mid-battle, drained into the level-up card. */
+  private levelUps: LevelUpInfo[] = [];
+  /** playerId -> level at battle start, so the rewards screen shows net growth. */
+  private startLevels = new Map<string, number>();
+  /** Gold earned this battle (kill bounties + chest gold). */
+  private goldEarned = 0;
+  /** Item ids found this battle (chests + enemy drops + victory spoils). */
+  private itemsFound: string[] = [];
+  /** playerId -> contribution tally driving the MVP callout. */
+  private tally = new Map<string, { damage: number; kills: number; heals: number }>();
+  /** Runtime treasure chests seated from the map, with their opened state. */
+  private chests: { pos: Point; loot: Loot; opened: boolean }[] = [];
+
   constructor(
     private ctx: GameContext,
     private map: MapDef,
@@ -156,6 +177,10 @@ export class BattleScene implements Scene {
     }
     // Point everyone toward the enemy they're about to fight.
     for (const u of this.units) u.facing = this.facingTowardFoes(u);
+    // Snapshot every roster member's starting level (present, fallen, or benched)
+    // so the rewards screen can show net growth, and seat the map's treasure chests.
+    for (const u of party) this.startLevels.set(u.id, u.level);
+    this.chests = (this.map.chests ?? []).map((c) => ({ pos: { ...c.pos }, loot: c.loot, opened: false }));
   }
 
   /** Initial facing: aim at the centroid of the opposing team (south if none). */
@@ -208,7 +233,9 @@ export class BattleScene implements Scene {
     this.ui.hideCombatControls();
     this.ui.hideRotateControl();
     // Play the chapter's story scene first (if any), then the Begin-Battle banner.
-    this.ui.showDialogue(dialogueFor(this.map.id), () => this.showIntroBanner());
+    // Dialogue is currently disabled (DIALOGUE_ENABLED) — go straight to the banner.
+    const intro = DIALOGUE_ENABLED ? dialogueFor(this.map.id) : [];
+    this.ui.showDialogue(intro, () => this.showIntroBanner());
   }
 
   private showIntroBanner(): void {
@@ -337,8 +364,13 @@ export class BattleScene implements Scene {
     this.phase = "resolving";
     this.ui.hideCombatControls();
     this.rangeTiles = [];
-    // Small beat so popups/animation settle before the next actor.
-    void this.ctx.animator.wait(0.15).then(() => this.beginNextTurn());
+    // Small beat so popups/animation settle before the next actor; drain any
+    // level-up cards (e.g. from a counter-kill on the enemy's turn) unless the
+    // battle just ended (the spoils screen will summarize that growth).
+    void this.ctx.animator.wait(0.15).then(() => {
+      if (this.outcome()) return this.beginNextTurn();
+      this.drainLevelUps(() => this.beginNextTurn());
+    });
   }
 
   private endBattle(winner: "player" | "enemy"): void {
@@ -352,9 +384,11 @@ export class BattleScene implements Scene {
     this.ui.setTargetInfo(null);
     stopMusic();
     if (winner === "player") {
-      // Share battle XP evenly across the whole party before recruits join /
-      // the dead are pruned, so every hero that fought gets their cut.
-      this.distributeBattleXp();
+      // Grant the fixed battle-clear XP equally to the whole party (present,
+      // fallen, or benched) and roll the victory item drops, before recruits join
+      // / the dead are pruned, so every hero on the roster gets their cut.
+      this.awardBattleClearXp();
+      this.rollVictoryDrops();
       // Surviving recruited units join the persistent party (up to MAX_PARTY).
       for (const u of this.units) {
         if (!u.recruited || !u.alive) continue;
@@ -379,10 +413,9 @@ export class BattleScene implements Scene {
         body: last
           ? "Maldrath falls. The keep is yours — and with it, peace."
           : `${this.map.name} cleared. Your party regroups and grows stronger.`,
-        buttonLabel: last ? "See Results" : "Continue",
+        buttonLabel: "See Spoils",
         onClick: () => {
           this.ui.hideBanner();
-          const outroLines = outroFor(this.map.id);
           const proceed = () => {
             if (last) this.ctx.nav.toVictory();
             else {
@@ -390,11 +423,14 @@ export class BattleScene implements Scene {
               this.ctx.nav.toParty();
             }
           };
-          if (outroLines.length > 0) {
-            this.ui.showDialogue(outroLines, proceed);
-          } else {
-            proceed();
-          }
+          // Spoils screen (gold + items + per-hero XP), then the chapter outro
+          // (currently disabled), then on to camp / the victory screen.
+          sfx.playFanfare();
+          this.ui.showRewards(this.computeRewards(), () => {
+            const outroLines = DIALOGUE_ENABLED ? outroFor(this.map.id) : [];
+            if (outroLines.length > 0) this.ui.showDialogue(outroLines, proceed);
+            else proceed();
+          });
         },
       });
     } else {
@@ -654,6 +690,8 @@ export class BattleScene implements Scene {
     if (path.length > 1) this.active.facing = directionTo(path[path.length - 2], path[path.length - 1]);
     this.active.pos = { ...tile };
     this.hasMoved = true;
+    // Landing on a treasure chest opens it (gold + items into the spoils).
+    this.tryOpenChest();
     // A move alone can satisfy a position objective (e.g. seize the marked tile),
     // so end the battle at once rather than waiting for a follow-up action.
     const winner = this.outcome();
@@ -675,8 +713,10 @@ export class BattleScene implements Scene {
     const res = resolveWeaponAttack(this.active, actual, weapon, this.rng, this.posCtx(actual.pos));
     this.pushEffect(actual.pos, vfxKeyForWeapon(weapon));
     this.pushPopup(res);
-    // Scale XP by the unit actually struck — Cover may have redirected the hit
-    // onto `actual` rather than the originally-aimed `target`.
+    // Credit kill-participation against the unit actually struck — Cover may have
+    // redirected the hit onto `actual` rather than the originally-aimed `target`.
+    this.registerHit(this.active, actual, res.kind === "damage" ? res.amount : 0);
+    if (res.killed) this.awardKill(actual, this.active.id);
     this.awardForAction(this.active, { offensive: true, killed: res.killed });
     this.awardGold(res.killed ? 1 : 0);
     // A surviving melee-struck defender may strike back.
@@ -714,9 +754,15 @@ export class BattleScene implements Scene {
     this.pushPopup(res);
     // Counter damage can drop a player attacker low enough to auto-potion.
     this.tryAutoPotion(attacker);
+    // Kill-participation for a player defender countering an enemy attacker
+    // (no-ops when the defender is an enemy countering a player).
+    this.registerHit(defender, attacker, res.kind === "damage" ? res.amount : 0);
     // A counter kill still earns the defender its kill rewards (the active actor
     // is the attacker, so the normal award path would miss it).
-    if (res.killed) this.creditKill(defender);
+    if (res.killed) {
+      this.creditKill(defender);
+      this.awardKill(attacker, defender.id);
+    }
   }
 
   private trySkill(tile: Point): void {
@@ -796,6 +842,14 @@ export class BattleScene implements Scene {
         results.push(r);
         if (r.killed) anyKilled = true;
         if (skill.effect !== "damage") support = true;
+        // Live progression: an offensive hit/debuff registers kill-participation
+        // (and credits the kill); a heal on an ally feeds the MVP tally.
+        if (isOffensive) {
+          this.registerHit(caster, actual, r.kind === "damage" ? r.amount : 0);
+          if (r.killed) this.awardKill(actual, caster.id);
+        } else if (r.kind === "heal") {
+          this.bumpTally(caster.id, "heals", r.amount);
+        }
       }
     }
     if (results.length === 0) {
@@ -833,7 +887,10 @@ export class BattleScene implements Scene {
       const damagedTarget = results.find((r) => r.kind === "damage")
         ? this.units.find((u) => u.id === results.find((r) => r.kind === "damage")!.unitId)
         : undefined;
-      if (damagedTarget) fellKill = this.applyKnockback(skill, caster, damagedTarget);
+      if (damagedTarget) {
+        fellKill = this.applyKnockback(skill, caster, damagedTarget);
+        if (fellKill) this.awardKill(damagedTarget, caster.id);
+      }
     }
     if (fellKill) this.awardGold(1);
     this.awardForAction(caster, { offensive: skill.effect === "damage", killed: anyKilled || fellKill, support });
@@ -861,6 +918,7 @@ export class BattleScene implements Scene {
     }
     this.ctx.state.inventory[item.id] = Math.max(0, (this.ctx.state.inventory[item.id] ?? 0) - 1);
     this.pushPopup(res);
+    if (res.kind === "heal") this.bumpTally(this.active.id, "heals", res.amount);
     this.awardForAction(this.active, { support: true });
     this.afterAction();
   }
@@ -927,13 +985,16 @@ export class BattleScene implements Scene {
       this.endBattle(outcome);
       return;
     }
-    // The active unit can be felled by a counterattack — end its turn instead of
-    // re-opening a menu over a corpse.
-    if (!this.active?.alive) {
-      this.endActiveTurn();
-      return;
-    }
-    this.refreshMenu();
+    // Pop any level-up cards earned by this action before continuing the turn.
+    this.drainLevelUps(() => {
+      // The active unit can be felled by a counterattack — end its turn instead
+      // of re-opening a menu over a corpse.
+      if (!this.active?.alive) {
+        this.endActiveTurn();
+        return;
+      }
+      this.refreshMenu();
+    });
   }
 
   private undoMove(): void {
@@ -946,63 +1007,176 @@ export class BattleScene implements Scene {
     this.refreshMenu();
   }
 
-  // --- Progression ---
+  // --- Progression (live XP, kills, treasure, rewards) ---
 
-  /** Add gold to the party treasury for enemies the player just defeated. The
-   *  bounty scales with the current chapter so the treasury keeps pace. */
+  /** Add gold to the treasury (and this battle's tally) for enemies just
+   *  defeated. The bounty scales with the chapter so the treasury keeps pace. */
   private awardGold(kills: number): void {
     if (kills > 0 && this.active?.team === "player") {
-      this.ctx.state.gold += kills * goldForKill(this.ctx.state.phaseIndex);
+      const g = kills * goldForKill(this.ctx.state.phaseIndex);
+      this.ctx.state.gold += g;
+      this.goldEarned += g;
     }
   }
 
   /** Gold + SP for a kill landed outside the actor's own action (e.g. a
-   *  counterattack on the enemy's turn). XP is pooled and shared at battle end,
-   *  so it isn't credited here. No-op for enemies. */
+   *  counterattack on the enemy's turn). Kill XP is credited separately via
+   *  awardKill at the call site. No-op for enemies. */
   private creditKill(killer: Unit): void {
     if (killer.team !== "player") return;
-    this.ctx.state.gold += goldForKill(this.ctx.state.phaseIndex);
+    const g = goldForKill(this.ctx.state.phaseIndex);
+    this.ctx.state.gold += g;
+    this.goldEarned += g;
     grantSp(killer, 20);
   }
 
-  /** Skill points for an action, credited immediately to the acting unit. XP is
-   *  no longer per-action — it's pooled and split evenly at battle end (so the
-   *  whole party climbs together rather than just the unit that lands hits). */
+  /** SP + a little "action XP" credited immediately to the acting unit. The big
+   *  XP reward is the per-kill share (awardKill); this just rewards engaging —
+   *  an offensive hit on a foe, or a buff/heal/revive on an ally. */
   private awardForAction(unit: Unit, opts: { offensive?: boolean; killed?: boolean; support?: boolean }): void {
     if (unit.team !== "player") return;
     let sp = opts.offensive ? 8 : opts.support ? 8 : 6;
     if (opts.killed) sp += 12;
     grantSp(unit, sp);
+    // Action XP only when the action didn't kill (a kill pays the richer kill XP).
+    if (!opts.killed) {
+      if (opts.offensive) this.gainXp(unit, ACTION_XP_OFFENSIVE);
+      else if (opts.support) this.gainXp(unit, ACTION_XP_SUPPORT);
+    }
   }
 
-  /** XP a defeated enemy adds to the shared battle pool. Scales with the enemy's
-   *  level (which tracks the party) so each battle keeps the party climbing. */
-  private enemyXpValue(level: number): number {
-    return 12 + level * 5;
+  /** Grant XP to a player unit: record it in the rewards ledger and, when it
+   *  crosses a level and `queueCard` is set, enqueue an in-battle level-up card.
+   *  No-op for enemies / non-positive amounts. */
+  private gainXp(unit: Unit, amount: number, queueCard = true): void {
+    if (unit.team !== "player" || amount <= 0) return;
+    this.xpEarned.set(unit.id, (this.xpEarned.get(unit.id) ?? 0) + amount);
+    const info = grantXpTracked(unit, amount);
+    if (info && queueCard) this.levelUps.push(info);
   }
 
-  /**
-   * On victory, total the XP from every enemy in the battle and grant it EQUALLY
-   * to every party member — present or fallen, attacker or healer — so the team
-   * levels together and no one is ever left behind the curve. Counts all foes
-   * (not just kills) so objective wins (seize/survive) still pay out fully.
-   */
-  private distributeBattleXp(): void {
-    const pool = this.units
-      .filter((u) => u.team === "enemy")
-      .reduce((sum, e) => sum + this.enemyXpValue(e.level), 0);
-    if (pool <= 0) return;
-    const leveled: string[] = [];
-    for (const member of this.ctx.state.party) {
-      if (grantXp(member, pool) > 0) leveled.push(member.name);
+  /** Record that a player unit interacted offensively with an enemy (kill
+   *  participation) and tally its damage for the MVP callout. */
+  private registerHit(actor: Unit, target: Unit, damage = 0): void {
+    if (actor.team === "player" && target.team === "enemy") {
+      let set = this.participants.get(target.id);
+      if (!set) {
+        set = new Set();
+        this.participants.set(target.id, set);
+      }
+      set.add(actor.id);
+      if (damage > 0) this.bumpTally(actor.id, "damage", damage);
     }
-    this.pushLog(`The party shares the spoils: +${pool} XP each.`);
-    if (leveled.length > 0) {
-      this.pushLog(`Leveled up: ${leveled.join(", ")}.`);
-      this.ui.toast(`+${pool} XP · ${leveled.length} hero${leveled.length > 1 ? "es" : ""} leveled up!`);
-    } else {
-      this.ui.toast(`Party gained +${pool} XP`);
+  }
+
+  private bumpTally(id: string, key: "damage" | "kills" | "heals", n: number): void {
+    const t = this.tally.get(id) ?? { damage: 0, kills: 0, heals: 0 };
+    t[key] += n;
+    this.tally.set(id, t);
+  }
+
+  /** Award kill-participation XP when an enemy falls: every participant gets a
+   *  base share, the finisher the bonus share. Rolls a possible item drop. */
+  private awardKill(enemy: Unit, finisherId: string | null): void {
+    if (enemy.team !== "enemy") return;
+    const set = this.participants.get(enemy.id) ?? new Set<string>();
+    if (finisherId) set.add(finisherId); // a one-shot with no prior hits still counts
+    for (const pid of set) {
+      const u = this.units.find((x) => x.id === pid);
+      if (!u || u.team !== "player") continue;
+      this.gainXp(u, pid === finisherId ? xpForFinisher(enemy.level) : xpForKill(enemy.level));
     }
+    if (finisherId) this.bumpTally(finisherId, "kills", 1);
+    const drop = rollEnemyDrop(enemy.level, this.rng);
+    if (drop) {
+      this.ctx.state.inventory[drop] = (this.ctx.state.inventory[drop] ?? 0) + 1;
+      this.itemsFound.push(drop);
+      this.pushLog(`${enemy.name} dropped ${getItem(drop).name}.`);
+    }
+    this.participants.delete(enemy.id);
+  }
+
+  /** Show any queued level-up cards, then run `then`. Skipped on a battle-ending
+   *  blow (the spoils screen summarizes the growth instead). */
+  private drainLevelUps(then: () => void): void {
+    if (this.levelUps.length === 0) {
+      then();
+      return;
+    }
+    const cards = this.levelUps;
+    this.levelUps = [];
+    this.phase = "resolving";
+    this.ui.hideCombatControls();
+    this.ui.showLevelUp(cards, then);
+  }
+
+  /** Fixed, equal battle-clear XP — the floor that keeps supports and the bench
+   *  on the curve. Folded into the ledger (no mid-battle card; the spoils screen
+   *  shows the result). Granted to the whole roster, present or benched. */
+  private awardBattleClearXp(): void {
+    const bonus = battleClearXp(this.phaseIndex);
+    for (const member of this.ctx.state.party) this.gainXp(member, bonus, false);
+  }
+
+  /** Roll the chapter/difficulty-scaled victory item drops into the inventory. */
+  private rollVictoryDrops(): void {
+    for (const id of rollBattleDrops(this.phaseIndex, this.ctx.state.difficulty, this.rng)) {
+      this.ctx.state.inventory[id] = (this.ctx.state.inventory[id] ?? 0) + 1;
+      this.itemsFound.push(id);
+    }
+  }
+
+  /** Assemble the spoils-screen payload from this battle's ledgers. */
+  private computeRewards(): BattleRewards {
+    const heroes: HeroXpResult[] = this.ctx.state.party.map((u) => ({
+      unitId: u.id,
+      name: u.name,
+      classId: u.classId,
+      xpGained: this.xpEarned.get(u.id) ?? 0,
+      fromLevel: this.startLevels.get(u.id) ?? u.level,
+      toLevel: u.level,
+    }));
+    return { gold: this.goldEarned, items: this.itemsFound, heroes, mvp: this.mvpFrom() };
+  }
+
+  /** The most valuable hero this battle (kills first, then damage, then heals). */
+  private mvpFrom(): BattleRewards["mvp"] {
+    let best: { id: string; score: number; reason: string } | null = null;
+    for (const [id, t] of this.tally) {
+      const score = t.kills * 1000 + t.damage + t.heals;
+      if (score <= 0) continue;
+      const reason =
+        t.kills > 0 ? `${t.kills} kill${t.kills > 1 ? "s" : ""}` : t.heals > t.damage ? `${t.heals} HP healed` : `${t.damage} damage`;
+      if (!best || score > best.score) best = { id, score, reason };
+    }
+    if (!best) return undefined;
+    const u = this.units.find((x) => x.id === best!.id) ?? this.ctx.state.party.find((x) => x.id === best!.id);
+    return u ? { unitId: u.id, name: u.name, reason: best.reason } : undefined;
+  }
+
+  /** Open any unopened chest the active player unit is standing on: bank its
+   *  gold + items, mark it open, and announce it. */
+  private tryOpenChest(): void {
+    if (!this.active || this.active.team !== "player") return;
+    const here = this.active.pos;
+    const chest = this.chests.find((c) => !c.opened && samePoint(c.pos, here));
+    if (!chest) return;
+    chest.opened = true;
+    const parts: string[] = [];
+    if (chest.loot.gold) {
+      this.ctx.state.gold += chest.loot.gold;
+      this.goldEarned += chest.loot.gold;
+      parts.push(`${chest.loot.gold}g`);
+    }
+    for (const id of chest.loot.items ?? []) {
+      this.ctx.state.inventory[id] = (this.ctx.state.inventory[id] ?? 0) + 1;
+      this.itemsFound.push(id);
+      parts.push(getItem(id).name);
+    }
+    sfx.playTreasure();
+    this.pushTextPopup(chest.pos, "Treasure!", POPUP_COLORS.crit);
+    this.pushLog(`${this.active.name} opens a chest: ${parts.join(", ") || "empty"}.`);
+    this.ui.toast(`Treasure: ${parts.join(" · ") || "empty"}`);
   }
 
   // --- Enemy AI ---

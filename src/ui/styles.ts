@@ -284,6 +284,73 @@ const CSS = `
 .title-actions .btn:nth-child(3) { animation-delay: 0.26s; }
 @keyframes fade-up { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
 
+/* In-battle level-up card — pops the moment a hero gains a level. */
+.level-up {
+  position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+  background: radial-gradient(120% 90% at 50% 50%, rgba(232,151,60,0.16), transparent 60%), rgba(6,7,12,0.74);
+}
+.level-up-card {
+  position: relative; min-width: 300px; max-width: 380px; text-align: center;
+  background: linear-gradient(180deg, rgba(40,32,22,0.98), rgba(22,18,26,0.98));
+  border: 1px solid var(--ash-edge-strong); border-radius: 14px; padding: 22px 28px;
+  box-shadow: 0 18px 64px rgba(0,0,0,0.7), 0 0 40px rgba(232,151,60,0.18), inset 0 1px 0 rgba(255,220,180,0.08);
+  animation: card-rise 0.4s cubic-bezier(0.2,0.8,0.2,1) both;
+}
+.lu-flash {
+  font-family: var(--font-display); font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase;
+  font-size: 14px; color: var(--gold); text-shadow: 0 0 14px rgba(255,211,77,0.6);
+  animation: lu-pulse 1.1s ease-in-out infinite;
+}
+@keyframes lu-pulse { 0%,100% { opacity: 0.8; } 50% { opacity: 1; } }
+.lu-name { font-family: var(--font-display); font-size: 22px; color: var(--ink); margin: 4px 0 2px; }
+.lu-level { display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 12px; font-size: 15px; }
+.lu-lv-from { color: var(--ink-faint); }
+.lu-arrow { color: var(--ember); }
+.lu-lv-to { color: var(--gold); font-weight: 700; }
+.lu-stats { display: grid; grid-template-columns: repeat(2, 1fr); gap: 4px 16px; margin-bottom: 12px; }
+.lu-stat { display: flex; align-items: baseline; gap: 6px; font-size: 13px; color: var(--ink-dim); }
+.lu-stat-label { width: 34px; text-align: left; color: var(--ink-faint); }
+.lu-stat-val { color: var(--ink); }
+.lu-stat-delta { margin-left: auto; color: var(--ink-faint); }
+.lu-stat.up .lu-stat-delta { color: #7fe39a; font-weight: 700; }
+.lu-skill { font-size: 13px; color: var(--gold); margin-bottom: 14px; }
+.level-up-card .btn { font-size: 15px; padding: 8px 22px; }
+
+/* End-of-battle spoils screen. */
+.rewards {
+  position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; padding: 16px;
+  background: radial-gradient(120% 80% at 50% 118%, rgba(232,120,40,0.20), transparent 60%), rgba(6,7,12,0.88);
+}
+.rewards-card {
+  position: relative; width: 460px; max-width: calc(100vw - 32px); max-height: calc(100vh - 32px); overflow-y: auto;
+  background: linear-gradient(180deg, rgba(33,29,38,0.98), rgba(20,18,26,0.98));
+  border: 1px solid var(--ash-edge-strong); border-radius: 14px; padding: 26px 30px; text-align: center;
+  box-shadow: 0 18px 64px rgba(0,0,0,0.7), inset 0 1px 0 rgba(255,220,180,0.06);
+  animation: card-rise 0.5s cubic-bezier(0.2,0.8,0.2,1) both;
+}
+.rewards-title {
+  font-family: var(--font-display); font-size: 28px; letter-spacing: 0.05em; margin-bottom: 18px; color: var(--gold);
+  text-shadow: 0 0 16px rgba(255,211,77,0.35);
+}
+.reward-section { text-align: left; border-top: 1px solid var(--ash-edge); padding: 12px 0; }
+.reward-label { display: block; font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--ink-faint); margin-bottom: 6px; }
+.reward-gold { display: flex; align-items: baseline; justify-content: space-between; }
+.reward-gold .reward-label { margin: 0; }
+.reward-gold-amt { font-family: var(--font-display); font-size: 22px; color: var(--gold); font-weight: 700; }
+.reward-item-list { display: flex; flex-wrap: wrap; gap: 8px; }
+.reward-item { display: flex; align-items: center; gap: 5px; font-size: 13px; color: var(--ink); background: rgba(255,255,255,0.04); border: 1px solid var(--ash-edge); border-radius: 8px; padding: 3px 8px; }
+.reward-none { color: var(--ink-faint); }
+.reward-hero-list { display: flex; flex-direction: column; gap: 5px; }
+.reward-hero { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+.reward-hero-name { flex: 1; color: var(--ink); }
+.reward-hero-xp { color: var(--ink-dim); }
+.reward-hero-lv { color: var(--ink-faint); min-width: 96px; text-align: right; }
+.reward-hero.leveled .reward-hero-lv.up { color: var(--gold); font-weight: 700; }
+.reward-mvp { margin-top: 12px; font-size: 13px; color: var(--ember-bright); font-style: italic; }
+.rewards-card .btn { margin-top: 16px; font-size: 16px; padding: 10px 26px; }
+.reduced-motion .level-up-card, .reduced-motion .rewards-card { animation: none; }
+.reduced-motion .lu-flash { animation: none; }
+
 /* Pre-battle story scene — classic JRPG text box docked at the bottom. */
 .dialogue {
   position: absolute; inset: 0; display: flex; align-items: flex-end; justify-content: center;
