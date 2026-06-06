@@ -1,6 +1,6 @@
 import type { BattleRewards, Direction, HeroXpResult, LevelUpInfo, Loot, MapDef, Point, SkillDef, Unit } from "../core/types";
 import { RNG } from "../core/rng";
-import { grantSp, createUnit } from "../core/unit";
+import { grantSp, createUnit, xpForLevel } from "../core/unit";
 import { ACTION_XP_OFFENSIVE, ACTION_XP_SUPPORT, battleClearXp, grantXpTracked, xpForFinisher, xpForKill } from "../core/progression";
 import { DIALOGUE_ENABLED } from "../core/config";
 import { rollBattleDrops, rollEnemyDrop } from "../data/loot";
@@ -1154,13 +1154,31 @@ export class BattleScene implements Scene {
     return u ? { unitId: u.id, name: u.name, reason: best.reason } : undefined;
   }
 
-  /** Open any unopened chest the active player unit is standing on: bank its
-   *  gold + items, mark it open, and announce it. */
+  /** DEV: level the active/first hero THROUGH the live level-up path (queues +
+   *  drains the card), so the in-battle level-up screen can be previewed. */
+  devLevelUpCard(): void {
+    if (this.phase === "over") return;
+    const u =
+      this.active?.team === "player" && this.active.alive
+        ? this.active
+        : this.units.find((x) => x.team === "player" && x.alive);
+    if (!u) return;
+    this.gainXp(u, Math.max(1, xpForLevel(u.level) - u.xp));
+    this.drainLevelUps(() => {
+      if (this.phase === "over") return;
+      if (this.active?.team === "player") this.refreshMenu();
+    });
+  }
+
+  /** Open any unopened chest the active player unit is standing on. */
   private tryOpenChest(): void {
     if (!this.active || this.active.team !== "player") return;
-    const here = this.active.pos;
-    const chest = this.chests.find((c) => !c.opened && samePoint(c.pos, here));
-    if (!chest) return;
+    const chest = this.chests.find((c) => !c.opened && samePoint(c.pos, this.active!.pos));
+    if (chest) this.openChest(chest, this.active.name);
+  }
+
+  /** Bank a chest's gold + items, mark it open, and announce it. */
+  private openChest(chest: { pos: Point; loot: Loot; opened: boolean }, opener: string): void {
     chest.opened = true;
     const parts: string[] = [];
     if (chest.loot.gold) {
@@ -1175,8 +1193,15 @@ export class BattleScene implements Scene {
     }
     sfx.playTreasure();
     this.pushTextPopup(chest.pos, "Treasure!", POPUP_COLORS.crit);
-    this.pushLog(`${this.active.name} opens a chest: ${parts.join(", ") || "empty"}.`);
+    this.pushLog(`${opener} opens a chest: ${parts.join(", ") || "empty"}.`);
     this.ui.toast(`Treasure: ${parts.join(" · ") || "empty"}`);
+  }
+
+  /** DEV: open the nearest unopened chest (preview the treasure flow). */
+  devOpenChest(): void {
+    if (this.phase === "over") return;
+    const chest = this.chests.find((c) => !c.opened);
+    if (chest) this.openChest(chest, this.active?.name ?? "Someone");
   }
 
   // --- Enemy AI ---
