@@ -2,6 +2,8 @@ import type { BattleRewards, ItemDef, LevelUpInfo, SkillDef, Unit } from "../cor
 import type { DialogueLine } from "../data/dialogue";
 import { getClass } from "../data/classes";
 import { getItem } from "../data/items";
+import { xpForLevel, nextLearnableSkill } from "../core/unit";
+import { prefersReducedMotion } from "../engine/accessibility";
 import { getWeapon } from "../data/weapons";
 import { getSkill } from "../data/skills";
 import { describeSkill, reactionLine, skillTags, statusChips, turnChipBadge, turnChipTitle } from "./battleUiHelpers";
@@ -111,6 +113,18 @@ export class BattleUI {
     hpBar.appendChild(el("span", { attrs: { style: `width:${hpFrac}%` } }));
     const mpBar = el("div", { className: "bar mp" });
     mpBar.appendChild(el("span", { attrs: { style: `width:${mpFrac}%` } }));
+    // XP progress (player units only) + a "new skill ready" cue when SP affords it.
+    const xpEls: HTMLElement[] = [];
+    if (unit.team === "player") {
+      const need = xpForLevel(unit.level);
+      const xpBar = el("div", { className: "bar xp" });
+      xpBar.appendChild(el("span", { attrs: { style: `width:${Math.min(100, (unit.xp / need) * 100)}%` } }));
+      xpEls.push(el("div", { text: `XP ${unit.xp}/${need}`, attrs: { style: "font-size:12px" } }), xpBar);
+      const nextId = nextLearnableSkill(unit);
+      if (nextId && unit.sp >= getSkill(nextId).spCost) {
+        xpEls.push(el("div", { className: "new-skill-cue", text: `★ New skill ready: ${getSkill(nextId).name}` }));
+      }
+    }
     return [
       el("h3", { text: `${unit.name}` }),
       el("div", { className: "sub", text: `${cls.name} · Lv ${unit.level} · ${unit.team === "player" ? "Ally" : "Enemy"}` }),
@@ -118,6 +132,7 @@ export class BattleUI {
       hpBar,
       el("div", { text: `MP ${unit.stats.mp}/${unit.stats.maxMp}`, attrs: { style: "font-size:12px" } }),
       mpBar,
+      ...xpEls,
       el("div", {
         className: "stat-row",
         text: `ATK ${unit.stats.atk}  DEF ${unit.stats.def}  MAG ${unit.stats.mag}  RES ${unit.stats.res}  SPD ${unit.stats.spd}  MOV ${unit.stats.move}`,
@@ -571,7 +586,7 @@ export class BattleUI {
       const c = cards[i];
       clear(this.levelUpEl);
       sfx.playLevelUp();
-      const card = el("div", { className: "level-up-card" });
+      const card = el("div", { className: "level-up-card", attrs: { role: "dialog", "aria-label": "Level up" } });
       card.appendChild(el("div", { className: "lu-flash", text: "LEVEL UP!" }));
       card.appendChild(el("div", { className: "lu-name", text: c.unitName }));
       card.appendChild(el("div", {
@@ -625,17 +640,16 @@ export class BattleUI {
    */
   showRewards(rewards: BattleRewards, onDone: () => void): void {
     clear(this.rewardsEl);
-    const card = el("div", { className: "rewards-card" });
+    const card = el("div", { className: "rewards-card", attrs: { role: "dialog", "aria-label": "Battle rewards" } });
     card.appendChild(el("h1", { className: "rewards-title", text: "Spoils of Battle" }));
 
-    // Gold.
+    // Gold — animated count-up for a little payoff.
+    const goldAmt = el("span", { className: "reward-gold-amt", text: "+0" });
     card.appendChild(el("div", {
       className: "reward-section reward-gold",
-      children: [
-        el("span", { className: "reward-label", text: "Gold" }),
-        el("span", { className: "reward-gold-amt", text: `+${rewards.gold}` }),
-      ],
+      children: [el("span", { className: "reward-label", text: "Gold" }), goldAmt],
     }));
+    this.countUp(goldAmt, rewards.gold);
 
     // Items (collapse duplicates to "Name ×N").
     const counts = new Map<string, number>();
@@ -699,6 +713,21 @@ export class BattleUI {
   hideRewards(): void {
     this.rewardsEl.style.display = "none";
     clear(this.rewardsEl);
+  }
+
+  /** Animate a span's text from +0 up to +target (skipped for reduced motion). */
+  private countUp(node: HTMLElement, target: number): void {
+    if (target <= 0 || prefersReducedMotion()) {
+      node.textContent = `+${target}`;
+      return;
+    }
+    const steps = 24;
+    let i = 0;
+    const timer = window.setInterval(() => {
+      i += 1;
+      node.textContent = `+${Math.round((target * i) / steps)}`;
+      if (i >= steps) window.clearInterval(timer);
+    }, 22);
   }
 
   /** Hide all transient combat UI (used when entering banner/AI states). */

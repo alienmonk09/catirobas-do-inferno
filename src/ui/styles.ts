@@ -48,6 +48,8 @@ const CSS = `
 .bar > span { display: block; height: 100%; transition: width 0.2s; }
 .bar.hp > span { background: linear-gradient(90deg,#4caf6a,#7fe39a); }
 .bar.mp > span { background: linear-gradient(90deg,#4a78d6,#7fb0ff); }
+.bar.xp > span { background: linear-gradient(90deg,var(--ember),var(--gold)); }
+.new-skill-cue { font-size: 12px; color: var(--gold); margin-top: 2px; }
 .stat-row { font-size: 11px; opacity: 0.85; display: flex; gap: 10px; flex-wrap: wrap; margin-top: 4px; }
 .statuses { font-size: 11px; color: #ffd34d; margin-top: 4px; min-height: 14px; }
 .skills-line { font-size: 11px; opacity: 0.8; margin-top: 4px; line-height: 1.35; }

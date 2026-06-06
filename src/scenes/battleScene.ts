@@ -1016,6 +1016,7 @@ export class BattleScene implements Scene {
       const g = kills * goldForKill(this.ctx.state.phaseIndex);
       this.ctx.state.gold += g;
       this.goldEarned += g;
+      this.pushTextPopup(this.active.pos, `+${g}g`, POPUP_COLORS.crit);
     }
   }
 
@@ -1027,6 +1028,7 @@ export class BattleScene implements Scene {
     const g = goldForKill(this.ctx.state.phaseIndex);
     this.ctx.state.gold += g;
     this.goldEarned += g;
+    this.pushTextPopup(killer.pos, `+${g}g`, POPUP_COLORS.crit);
     grantSp(killer, 20);
   }
 
@@ -1052,7 +1054,10 @@ export class BattleScene implements Scene {
     if (unit.team !== "player" || amount <= 0) return;
     this.xpEarned.set(unit.id, (this.xpEarned.get(unit.id) ?? 0) + amount);
     const info = grantXpTracked(unit, amount);
-    if (info && queueCard) this.levelUps.push(info);
+    if (info) {
+      this.pushLog(`${unit.name} reaches Lv ${unit.level}!`);
+      if (queueCard) this.levelUps.push(info);
+    }
   }
 
   /** Record that a player unit interacted offensively with an enemy (kill
