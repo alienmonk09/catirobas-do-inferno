@@ -11,6 +11,8 @@ import {
   setTextScale,
   isHighContrast,
   setHighContrast,
+  prefersReducedMotion,
+  setReducedMotion,
   type TextScale,
 } from "../engine/accessibility";
 import {
@@ -102,10 +104,10 @@ function formatKey(key: string): string {
  */
 function buildSettingsPanel(onBack: () => void): HTMLElement {
   const banner = el("div", { className: "banner" });
-  const card = el("div", { className: "banner-card" });
-  card.appendChild(el("h1", { text: "Settings" }));
+  const card = el("div", { className: "banner-card", attrs: { role: "dialog", "aria-label": "Settings" } });
+  card.appendChild(el("h1", { text: "Settings", attrs: { id: "settings-title" } }));
 
-  const settingsBody = el("div", { className: "settings-body" });
+  const settingsBody = el("div", { className: "settings-body", attrs: { role: "group", "aria-labelledby": "settings-title" } });
 
   // --- Sound (master mute) toggle ---
   const soundRow = el("div", { className: "settings-row" });
@@ -113,10 +115,12 @@ function buildSettingsPanel(onBack: () => void): HTMLElement {
   const soundToggle = el("button", {
     className: `btn small settings-toggle${isMuted() ? " settings-toggle-off" : ""}`,
     text: isMuted() ? "Off" : "On",
+    attrs: { role: "switch", "aria-label": "Sound", "aria-checked": isMuted() ? "false" : "true" },
     onClick: () => {
       const nowMuted = !isMuted();
       setMuted(nowMuted);
       soundToggle.textContent = nowMuted ? "Off" : "On";
+      soundToggle.setAttribute("aria-checked", nowMuted ? "false" : "true");
       soundToggle.className = `btn small settings-toggle${nowMuted ? " settings-toggle-off" : ""}`;
     },
   });
@@ -129,10 +133,12 @@ function buildSettingsPanel(onBack: () => void): HTMLElement {
   const musicToggle = el("button", {
     className: `btn small settings-toggle${isMusicMuted() ? " settings-toggle-off" : ""}`,
     text: isMusicMuted() ? "Off" : "On",
+    attrs: { role: "switch", "aria-label": "Music", "aria-checked": isMusicMuted() ? "false" : "true" },
     onClick: () => {
       const nowMuted = !isMusicMuted();
       setMusicMuted(nowMuted);
       musicToggle.textContent = nowMuted ? "Off" : "On";
+      musicToggle.setAttribute("aria-checked", nowMuted ? "false" : "true");
       musicToggle.className = `btn small settings-toggle${nowMuted ? " settings-toggle-off" : ""}`;
     },
   });
@@ -149,9 +155,12 @@ function buildSettingsPanel(onBack: () => void): HTMLElement {
   slider.max = "100";
   slider.value = String(Math.round(getVolume() * 100));
   slider.className = "settings-slider";
+  slider.setAttribute("aria-label", "Volume");
+  slider.setAttribute("aria-valuetext", `${slider.value} percent`);
   slider.addEventListener("input", () => {
     setVolume(Number(slider.value) / 100);
     volLabel.textContent = slider.value;
+    slider.setAttribute("aria-valuetext", `${slider.value} percent`);
   });
   const volLabel = el("span", {
     className: "settings-vol-label",
@@ -170,17 +179,19 @@ function buildSettingsPanel(onBack: () => void): HTMLElement {
     { value: "large", label: "Large" },
     { value: "larger", label: "Larger" },
   ];
-  const scaleGroup = el("div", { className: "settings-scale-group" });
+  const scaleGroup = el("div", { className: "settings-scale-group", attrs: { role: "radiogroup", "aria-label": "Text size" } });
   const scaleButtons: HTMLButtonElement[] = [];
   for (const s of scales) {
     const btn = el("button", {
       className: `btn small${getTextScale() === s.value ? " settings-toggle" : ""}`,
       text: s.label,
+      attrs: { role: "radio", "aria-label": s.label, "aria-checked": getTextScale() === s.value ? "true" : "false" },
       onClick: () => {
         setTextScale(s.value);
         for (const b of scaleButtons) {
           const active = b.textContent === s.label;
           b.className = `btn small${active ? " settings-toggle" : ""}`;
+          b.setAttribute("aria-checked", active ? "true" : "false");
         }
       },
     });
@@ -196,15 +207,35 @@ function buildSettingsPanel(onBack: () => void): HTMLElement {
   const hcToggle = el("button", {
     className: `btn small settings-toggle${isHighContrast() ? "" : " settings-toggle-off"}`,
     text: isHighContrast() ? "On" : "Off",
+    attrs: { role: "switch", "aria-label": "High contrast", "aria-checked": isHighContrast() ? "true" : "false" },
     onClick: () => {
       const nowOn = !isHighContrast();
       setHighContrast(nowOn);
       hcToggle.textContent = nowOn ? "On" : "Off";
+      hcToggle.setAttribute("aria-checked", nowOn ? "true" : "false");
       hcToggle.className = `btn small settings-toggle${nowOn ? "" : " settings-toggle-off"}`;
     },
   });
   hcRow.appendChild(hcToggle);
   settingsBody.appendChild(hcRow);
+
+  // --- Reduced motion toggle ---
+  const rmRow = el("div", { className: "settings-row" });
+  rmRow.appendChild(el("span", { className: "settings-label", text: "Reduced motion" }));
+  const rmToggle = el("button", {
+    className: `btn small settings-toggle${prefersReducedMotion() ? "" : " settings-toggle-off"}`,
+    text: prefersReducedMotion() ? "On" : "Off",
+    attrs: { role: "switch", "aria-label": "Reduced motion", "aria-checked": prefersReducedMotion() ? "true" : "false" },
+    onClick: () => {
+      const nowOn = !prefersReducedMotion();
+      setReducedMotion(nowOn);
+      rmToggle.textContent = nowOn ? "On" : "Off";
+      rmToggle.setAttribute("aria-checked", nowOn ? "true" : "false");
+      rmToggle.className = `btn small settings-toggle${nowOn ? "" : " settings-toggle-off"}`;
+    },
+  });
+  rmRow.appendChild(rmToggle);
+  settingsBody.appendChild(rmRow);
 
   card.appendChild(settingsBody);
 
@@ -238,6 +269,7 @@ function buildSettingsPanel(onBack: () => void): HTMLElement {
       const rebindBtn = el("button", {
         className: "btn small settings-rebind-btn",
         text: formatKey(getBinding(action)),
+        attrs: { "aria-label": `${ACTION_LABELS[action]} key: ${formatKey(getBinding(action))}` },
         onClick: () => {
           if (pendingAction === action) {
             // Second click cancels capture.

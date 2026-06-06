@@ -1,5 +1,6 @@
 import type { Reaction, SkillDef, StatusKind, Unit } from "../core/types";
 import { REACTIONS } from "../data/reactions";
+import { getSkill } from "../data/skills";
 import { el } from "./dom";
 
 /** A one-line summary of a skill's range/shape/effect for inline lists. */
@@ -50,6 +51,36 @@ export function statusChips(unit: Unit): HTMLElement {
     );
   }
   return row;
+}
+
+/**
+ * The one transient worth flagging on a unit's turn-order chip: a pending charge
+ * (highest priority — it dictates the unit's NEXT action), otherwise its most
+ * urgent status by turns-left. Returns null for a clean unit. `cls` is "buff",
+ * "debuff", or "charge" for color-coding.
+ */
+export function turnChipBadge(unit: Unit): { text: string; cls: string } | null {
+  if (unit.charging) return { text: `⏳${unit.charging.turnsLeft}`, cls: "charge" };
+  // Surface a debuff before a buff (the threatening one matters more at a glance).
+  const debuff = unit.statuses.find((s) => STATUS_INFO[s.kind].cls === "st-debuff");
+  const shown = debuff ?? unit.statuses[0];
+  if (!shown) return null;
+  const cls = STATUS_INFO[shown.kind].cls === "st-debuff" ? "debuff" : "buff";
+  return { text: `${STATUS_INFO[shown.kind].label[0]}${shown.turnsLeft}`, cls };
+}
+
+/** Full hover text for a turn-bar chip: name/class plus every status & charge. */
+export function turnChipTitle(unit: Unit, className: string): string {
+  const lines = [`${unit.name} (${className})`];
+  if (unit.charging) {
+    const sk = getSkill(unit.charging.skillId);
+    lines.push(`Charging ${sk.name} — ${unit.charging.turnsLeft} turn(s) left`);
+  }
+  for (const s of unit.statuses) {
+    const info = STATUS_INFO[s.kind];
+    lines.push(`${info.label} ${s.turnsLeft}: ${info.tip}`);
+  }
+  return lines.join("\n");
 }
 
 /** Compact, color-coded tags describing a skill for the cast menu. */

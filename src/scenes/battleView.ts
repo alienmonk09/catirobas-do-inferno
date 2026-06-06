@@ -8,6 +8,7 @@ import type { AttackContext } from "../battle/combat";
 import { getWeapon } from "../data/weapons";
 import { getItem } from "../data/items";
 import { terrainEffect } from "../data/terrain";
+import { prefersReducedMotion } from "../engine/accessibility";
 import type { Rotation, ScreenPoint } from "../engine/iso";
 import type { ActiveEffect, BattleView, FloatingText, ForecastTag, OverlaySet } from "../engine/renderer";
 import type { BattleScene } from "./battleScene";
@@ -123,7 +124,8 @@ export function buildView(scene: BattleScene, origin: ScreenPoint): BattleView {
 
 /** Whole-scene impact shake offset that decays as the timer runs out. */
 function computeScreenShake(s: ViewScene): { dx: number; dy: number } | undefined {
-  if (s.screenShake <= 0) return undefined;
+  // Whole-scene shake is the most disorienting juice — suppress it for reduced motion.
+  if (s.screenShake <= 0 || prefersReducedMotion()) return undefined;
   const amp = (s.screenShake / SCREEN_SHAKE_DUR) * SCREEN_SHAKE_AMP;
   return { dx: Math.sin(s.time * 90) * amp, dy: Math.cos(s.time * 78) * amp * 0.6 };
 }
@@ -131,9 +133,12 @@ function computeScreenShake(s: ViewScene): { dx: number; dy: number } | undefine
 /** Per-unit pixel offsets for hit shake and attack lunge. */
 function computeUnitOffsets(s: ViewScene): Map<string, { dx: number; dy: number }> {
   const offsets = new Map<string, { dx: number; dy: number }>();
-  for (const [id, remaining] of s.hitShake) {
-    const amp = (remaining / SHAKE_DUR) * 3;
-    offsets.set(id, { dx: Math.sin(s.time * 70) * amp, dy: 0 });
+  // Hit shake is rapid jitter (non-essential juice) — skip it for reduced motion.
+  if (!prefersReducedMotion()) {
+    for (const [id, remaining] of s.hitShake) {
+      const amp = (remaining / SHAKE_DUR) * 3;
+      offsets.set(id, { dx: Math.sin(s.time * 70) * amp, dy: 0 });
+    }
   }
   if (s.lunge) {
     const att = s.units.find((u) => u.id === s.lunge!.id);

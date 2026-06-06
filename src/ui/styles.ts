@@ -164,6 +164,44 @@ const CSS = `
 .turn-chip.first { border-color: #ffd34d; box-shadow: 0 0 8px rgba(255,211,77,0.7); }
 .turn-chip.enemy { outline: 2px solid #ff5a5a; outline-offset: -2px; }
 .chip-portrait { width: 100%; height: 100%; object-fit: contain; image-rendering: pixelated; image-rendering: crisp-edges; }
+/* Turn chips carry small corner badges (a side glyph + a status/charge-duration
+   tag); let them escape the chip box (the base rule clips with overflow:hidden)
+   while keeping the portrait visually rounded. */
+.turn-chip { position: relative; overflow: visible; }
+.chip-portrait { border-radius: 5px; }
+/* Non-color side marker (top-left): a glyph badge so ally vs enemy is read by
+   SHAPE, not just the chip color / red outline (colorblind-safe). */
+.chip-side {
+  position: absolute; left: -3px; top: -3px;
+  width: 13px; height: 13px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 9px; line-height: 1; font-weight: 700;
+  border: 1px solid rgba(0,0,0,0.85); text-shadow: 0 1px 1px rgba(0,0,0,0.9);
+}
+.chip-side.chip-ally { background: #1b3a5c; color: #aef0ff; }
+.chip-side.chip-enemy { background: #4a1414; color: #ffb0b0; }
+/* Status / charge-duration badge (bottom-right) — kept clear of the side glyph. */
+.turn-badge {
+  position: absolute; right: -3px; bottom: -4px;
+  font-size: 9px; font-weight: 800; line-height: 1;
+  padding: 1px 3px; border-radius: 5px;
+  font-variant-numeric: tabular-nums;
+  border: 1px solid rgba(0,0,0,0.55);
+  box-shadow: 0 1px 2px rgba(0,0,0,0.6);
+}
+.turn-badge.tb-charge { background: #b98cff; color: #15091f; }
+.turn-badge.tb-debuff { background: #e0905a; color: #1f0f06; }
+.turn-badge.tb-buff { background: #5a96eb; color: #07101f; }
+/* Recruit hint in the target panel, and the MP-shortfall note on skill cards. */
+.recruit-hint {
+  font-size: 11px; font-weight: 700; margin-top: 6px;
+  padding: 4px 7px; border-radius: 5px; line-height: 1.3;
+  color: #ffe9a8; background: rgba(245,200,66,0.14); border: 1px solid rgba(245,200,66,0.5);
+}
+.sk-short-note { font-size: 11px; font-weight: 600; color: #ff7a7a; opacity: 0.9; }
+/* Disabled action buttons also get a non-color cue (dashed edge) so the state
+   isn't conveyed by reduced opacity alone. */
+.btn.btn-disabled { border-style: dashed; }
 
 .objective {
   left: 50%; transform: translateX(-50%); top: 58px;
@@ -491,6 +529,25 @@ const CSS = `
 .high-contrast .settings-toggle-off {
   border-color: #ff6060;
   color: #ffcccc;
+}
+
+/* Reduced-motion: when set (in Settings or via the OS prefers-reduced-motion),
+   strip the decorative DOM animations & transitions. Gameplay-essential canvas
+   motion (unit moves, the attack lunge) stays; the rapid hit-shake/screen-shake
+   juice is gated in battleView. */
+.reduced-motion .banner-card,
+.reduced-motion .title-actions .btn,
+.reduced-motion .banner-card .title-mark h1,
+.reduced-motion .settings-rebind-listening {
+  animation: none !important;
+}
+.reduced-motion .btn,
+.reduced-motion .skill-card,
+.reduced-motion .toast,
+.reduced-motion .camp-tab,
+.reduced-motion .diff-btn,
+.reduced-motion .unit-card.selectable {
+  transition: none !important;
 }
 `;
 

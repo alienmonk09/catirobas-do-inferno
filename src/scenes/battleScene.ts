@@ -8,6 +8,7 @@ import { aoeTiles, knockbackTo, leapLanding, tilesInRange } from "../battle/targ
 import {
   applyTerrainEffect,
   canRecruit,
+  RECRUIT_HP_FRACTION,
   coverFor,
   fallDamage,
   isStopped,
@@ -1171,6 +1172,21 @@ export class BattleScene implements Scene {
     this.pushLog(formatHit(res, (id) => this.units.find((u) => u.id === id)?.name ?? "Someone"));
   }
 
+  /**
+   * A recruit-hint line for the info panel when hovering an enemy on the player's
+   * turn: "recruit now" if the active unit is adjacent to this weakened foe, or a
+   * heads-up that it can be recruited once weakened/adjacent. Null for allies,
+   * healthy enemies, or when no player unit is active.
+   */
+  private recruitHintFor(unit: Unit): string | undefined {
+    if (this.active?.team !== "player" || unit.team === "player" || !unit.alive) return undefined;
+    if (canRecruit(this.active, unit)) return "✦ Recruit ready — use Recruit to turn this foe.";
+    if (unit.stats.hp <= RECRUIT_HP_FRACTION * unit.stats.maxHp) {
+      return "✦ Recruitable — step adjacent, then Recruit.";
+    }
+    return `✦ Can be recruited once worn down to ≤${Math.round(RECRUIT_HP_FRACTION * 100)}% HP & adjacent.`;
+  }
+
   private refreshTurnBar(): void {
     const order = previewOrder(this.units, 8);
     const ordered = order
@@ -1227,7 +1243,8 @@ export class BattleScene implements Scene {
     }
     if (this.hoverTile) {
       const hovered = this.unitAt(this.hoverTile);
-      this.ui.setTargetInfo(hovered && hovered !== this.active ? hovered : null);
+      const shown = hovered && hovered !== this.active ? hovered : null;
+      this.ui.setTargetInfo(shown, shown ? this.recruitHintFor(shown) : undefined);
     } else {
       this.ui.setTargetInfo(null);
     }

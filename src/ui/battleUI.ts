@@ -3,7 +3,7 @@ import type { DialogueLine } from "../data/dialogue";
 import { getClass } from "../data/classes";
 import { getWeapon } from "../data/weapons";
 import { getSkill } from "../data/skills";
-import { describeSkill, reactionLine, skillTags, statusChips } from "./battleUiHelpers";
+import { describeSkill, reactionLine, skillTags, statusChips, turnChipBadge, turnChipTitle } from "./battleUiHelpers";
 import { getCharacterSprite, getItemSprite, getSkillSprite, getWeaponSprite, speakerSprite } from "../data/sprites";
 import { isMuted, toggleMuted } from "../engine/audio";
 import { el, clear } from "./dom";
@@ -95,7 +95,7 @@ export class BattleUI {
 
   // --- Unit / target info ---
 
-  private unitPanelContent(unit: Unit): HTMLElement[] {
+  private unitPanelContent(unit: Unit, recruitHint?: string): HTMLElement[] {
     const cls = getClass(unit.classId);
     const weapon = getWeapon(unit.weaponId);
     const hpFrac = (unit.stats.hp / unit.stats.maxHp) * 100;
@@ -136,6 +136,7 @@ export class BattleUI {
       }),
       reactionLine(unit, cls.reactions),
       statusChips(unit),
+      ...(recruitHint ? [el("div", { className: "recruit-hint", text: recruitHint })] : []),
     ];
   }
 
@@ -149,13 +150,13 @@ export class BattleUI {
     this.unitPanel.style.display = "block";
   }
 
-  setTargetInfo(unit: Unit | null): void {
+  setTargetInfo(unit: Unit | null, recruitHint?: string): void {
     if (!unit) {
       this.targetPanel.style.display = "none";
       return;
     }
     clear(this.targetPanel);
-    for (const n of this.unitPanelContent(unit)) this.targetPanel.appendChild(n);
+    for (const n of this.unitPanelContent(unit, recruitHint)) this.targetPanel.appendChild(n);
     this.targetPanel.style.display = "block";
   }
 
@@ -163,14 +164,37 @@ export class BattleUI {
 
   setTurnOrder(units: Unit[]): void {
     clear(this.turnBar);
-    this.turnBar.appendChild(el("span", { className: "label", text: "Turn order" }));
+    this.turnBar.setAttribute("role", "list");
+    this.turnBar.setAttribute("aria-label", "Turn order");
+    this.turnBar.appendChild(el("span", { className: "label", text: "Turn order", attrs: { "aria-hidden": "true" } }));
     units.forEach((u, i) => {
       const cls = getClass(u.classId);
+      const isEnemy = u.team === "enemy";
+      const side = isEnemy ? "Enemy" : "Ally";
       const chip = el("div", {
-        className: `turn-chip${i === 0 ? " first" : ""}${u.team === "enemy" ? " enemy" : ""}`,
-        attrs: { style: `background:${cls.color}`, title: `${u.name} (${cls.name})` },
+        className: `turn-chip${i === 0 ? " first" : ""}${isEnemy ? " enemy" : ""}`,
+        attrs: {
+          style: `background:${cls.color}`,
+          // Full status/charge list in the tooltip; the badge below shows the headline one.
+          title: turnChipTitle(u, cls.name),
+          role: "listitem",
+          "aria-label": `${u.name}, ${cls.name}, ${side}${i === 0 ? ", next up" : ""}`,
+        },
         children: [portraitImg(getCharacterSprite(u.classId))],
       });
+      // Non-color side marker: a glyph badge so ally vs enemy reads without
+      // relying on the chip's color / red outline (colorblind-safe).
+      chip.appendChild(
+        el("span", {
+          className: `chip-side ${isEnemy ? "chip-enemy" : "chip-ally"}`,
+          text: isEnemy ? "⚔" : "⛨",
+          attrs: { "aria-hidden": "true" },
+        }),
+      );
+      // A status/charge-duration badge so the player can read "poison wears off in 2"
+      // / "caster fires next turn" at a glance.
+      const badge = turnChipBadge(u);
+      if (badge) chip.appendChild(el("span", { className: `turn-badge tb-${badge.cls}`, text: badge.text }));
       this.turnBar.appendChild(chip);
     });
     this.turnBar.style.display = "flex";
@@ -296,8 +320,8 @@ export class BattleUI {
       opts: { accent: string; tip: string; key?: string; extra?: string },
     ) => {
       const b = el("button", {
-        className: `btn act ${opts.accent}${opts.extra ? " " + opts.extra : ""}`,
-        attrs: { title: opts.tip, ...(enabled ? {} : { disabled: "true" }) },
+        className: `btn act ${opts.accent}${opts.extra ? " " + opts.extra : ""}${enabled ? "" : " btn-disabled"}`,
+        attrs: { title: opts.tip, ...(enabled ? {} : { disabled: "true", "aria-disabled": "true" }) },
         onClick: enabled ? fn : undefined,
       });
       b.appendChild(el("span", { className: "act-dot" }));
@@ -330,7 +354,12 @@ export class BattleUI {
 
   showSkillMenu(skills: SkillDef[], unit: Unit, onPick: (s: SkillDef) => void, onBack: () => void): void {
     clear(this.submenu);
-    this.submenu.appendChild(el("div", { className: "submenu-title", text: "Skills" }));
+    this.submenu.appendChild(
+      el("div", {
+        className: "submenu-title",
+        text: `Skills — ${unit.stats.mp}/${unit.stats.maxMp} MP`,
+      }),
+    );
     if (skills.length === 0) {
       this.submenu.appendChild(el("div", { text: "No skills learned. Spend Skill Points at the Party Camp.", attrs: { style: "opacity:0.7;font-size:12px" } }));
     }
@@ -346,6 +375,11 @@ export class BattleUI {
       head.appendChild(el("span", { className: "sk-name", text: s.name }));
       head.appendChild(el("span", { className: `sk-mp${affordable ? "" : " short"}`, text: `${s.mpCost} MP` }));
       card.appendChild(head);
+      if (!affordable) {
+        card.appendChild(
+          el("div", { className: "sk-short-note", text: `Not enough MP — need ${s.mpCost - unit.stats.mp} more` }),
+        );
+      }
       const tags = el("div", { className: "sk-tags" });
       for (const t of skillTags(s)) tags.appendChild(el("span", { className: `tag ${t.cls}`, text: t.text }));
       card.appendChild(tags);
