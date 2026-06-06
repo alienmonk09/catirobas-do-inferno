@@ -296,6 +296,8 @@ export class TitleScene extends BannerScene {
   constructor(ctx: GameContext) {
     super(ctx);
 
+    const isDev = (import.meta as { env?: { DEV?: boolean } }).env?.DEV === true;
+
     /** Fresh party, then jump straight into the chosen phase's battle. */
     const startAtPhase = (index: number) => {
       resetState(this.ctx.state);
@@ -304,69 +306,110 @@ export class TitleScene extends BannerScene {
       this.ctx.nav.toBattle(index);
     };
 
+    /** Load a save slot and continue the campaign from the camp. */
+    const continueSlot = (slot: number) => {
+      const save = loadGame(slot);
+      if (save) {
+        applyLoaded(this.ctx.state, save);
+        this.ctx.nav.toParty();
+      }
+    };
+
     const rebuildTitle = () => {
       this.root.innerHTML = "";
 
-      const buttons: Array<{ label: string; onClick: () => void }> = [
-        { label: "New Game", onClick: () => this.ctx.nav.toPartySelect() },
-        { label: "Settings", onClick: openSettings },
-      ];
+      const banner = el("div", { className: "banner" });
+      const card = el("div", { className: "banner-card" });
 
-      // Build save-slot rows as an extra element below the buttons.
+      // --- Brand mark ---
+      const mark = el("div", { className: "title-mark" });
+      mark.appendChild(el("h1", { text: "Ashen Banner" }));
+      const rule = el("div", { className: "title-rule" });
+      rule.appendChild(el("span", { className: "diamond" }));
+      mark.appendChild(rule);
+      card.appendChild(mark);
+
+      card.appendChild(
+        el("div", {
+          className: "title-tagline",
+          text: "The kingdom burned. A scorched banner, and those who still carry it.",
+        }),
+      );
+      card.appendChild(
+        el("p", {
+          text: "An isometric, turn-based tactics campaign. Muster a company of heroes and lead them through seven battles of rising peril — move, strike, cast, and grow as the realm closes in.",
+        }),
+      );
+
+      // --- Primary actions, with hierarchy ---
       const saves = listSaves();
-      const slotsEl = el("div", { className: "save-slots" });
-      slotsEl.appendChild(el("div", { className: "save-slots-label", text: "Save Slots" }));
-      for (let i = 0; i < SAVE_SLOTS; i++) {
-        const summary = saves[i];
-        const row = el("div", { className: "save-slot-row" });
-        if (summary) {
-          const slotNum = i + 1;
-          const btn = el("button", {
-            className: "btn small",
-            text: `Slot ${slotNum} — Phase ${summary.phaseIndex + 1} (${summary.partySize} heroes)`,
-            onClick: () => {
-              const save = loadGame(i);
-              if (save) {
-                applyLoaded(this.ctx.state, save);
-                this.ctx.nav.toParty();
-              }
-            },
-          });
-          row.appendChild(btn);
-        } else {
-          row.appendChild(
-            el("div", { className: "save-slot-empty", text: `Slot ${i + 1} — empty` }),
-          );
-        }
-        slotsEl.appendChild(row);
-      }
+      const firstSaved = saves.findIndex((s) => !!s);
+      const hasSave = firstSaved >= 0;
 
-      // Phase selector (testing): jump to any phase with a fresh level-3 party.
-      const selector = el("div", { className: "phase-select" });
-      selector.appendChild(el("span", { className: "label", text: "Jump to phase (test):" }));
-      const row = el("div", { className: "phase-row" });
-      PHASES.forEach((p, i) => {
-        row.appendChild(
+      const actions = el("div", { className: "title-actions" });
+      if (hasSave) {
+        actions.appendChild(
           el("button", {
-            className: "btn small",
-            text: `${i + 1}`,
-            attrs: { title: `Phase ${i + 1}: ${p.name}` },
-            onClick: () => startAtPhase(i),
+            className: "btn btn-primary",
+            text: "Continue",
+            onClick: () => continueSlot(firstSaved),
           }),
         );
-      });
-      selector.appendChild(row);
+        actions.appendChild(
+          el("button", { className: "btn btn-ghost", text: "New Game", onClick: () => this.ctx.nav.toPartySelect() }),
+        );
+      } else {
+        actions.appendChild(
+          el("button", { className: "btn btn-primary", text: "New Game", onClick: () => this.ctx.nav.toPartySelect() }),
+        );
+      }
+      actions.appendChild(el("button", { className: "btn btn-ghost", text: "Settings", onClick: openSettings }));
+      card.appendChild(actions);
 
-      const extras = el("div", {});
-      extras.appendChild(slotsEl);
-      extras.appendChild(selector);
+      // --- Save slots (only meaningful when at least one exists) ---
+      if (hasSave) {
+        const slotsEl = el("div", { className: "save-slots" });
+        slotsEl.appendChild(el("div", { className: "save-slots-label", text: "Saved Campaigns" }));
+        for (let i = 0; i < SAVE_SLOTS; i++) {
+          const summary = saves[i];
+          const row = el("div", { className: "save-slot-row" });
+          if (summary) {
+            row.appendChild(
+              el("button", {
+                className: "btn small",
+                text: `Slot ${i + 1} — Phase ${summary.phaseIndex + 1} · ${summary.partySize} heroes`,
+                onClick: () => continueSlot(i),
+              }),
+            );
+          } else {
+            row.appendChild(el("div", { className: "save-slot-empty", text: `Slot ${i + 1} — empty` }));
+          }
+          slotsEl.appendChild(row);
+        }
+        card.appendChild(slotsEl);
+      }
 
-      this.showCard(
-        "TACTICS",
-        "An isometric, turn-based tactics campaign. Choose four heroes from seven — knight, archer, black mage, white mage, monk, thief, and druid, each of a distinct race — and lead them through seven battles of rising peril, gathering reinforcements as you march. Move, strike, cast, and grow.",
-        buttons,
-        extras,
-      );
+      // --- Dev-only: jump straight into any phase with a fresh party. ---
+      if (isDev) {
+        const selector = el("div", { className: "phase-select" });
+        selector.appendChild(el("span", { className: "label", text: "Jump to phase (dev):" }));
+        const row = el("div", { className: "phase-row" });
+        PHASES.forEach((p, i) => {
+          row.appendChild(
+            el("button", {
+              className: "btn small",
+              text: `${i + 1}`,
+              attrs: { title: `Phase ${i + 1}: ${p.name}` },
+              onClick: () => startAtPhase(i),
+            }),
+          );
+        });
+        selector.appendChild(row);
+        card.appendChild(selector);
+      }
+
+      banner.appendChild(card);
+      this.root.appendChild(banner);
     };
 
     const openSettings = () => {
