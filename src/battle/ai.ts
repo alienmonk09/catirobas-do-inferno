@@ -3,7 +3,7 @@ import { Grid, manhattan, moveBlockers, samePoint, zoneOfControl } from "./grid"
 import { pathTo, reachable } from "./pathfinding";
 import { aoeTiles, tilesInRange } from "./targeting";
 import { forecastSkill, forecastWeapon } from "./forecast";
-import { hasStatus, isStopped, type AttackContext } from "./combat";
+import { canCounter, hasStatus, isStopped, type AttackContext } from "./combat";
 import { hasLineOfSight } from "./los";
 import { getWeapon } from "../data/weapons";
 import { getSkill } from "../data/skills";
@@ -84,6 +84,21 @@ function estimateSkillDamage(attacker: Unit, stand: Point, target: Unit, skill: 
   return forecastSkill(attacker, target, skill, ctxFrom(grid, stand, target.pos)).amount;
 }
 
+/**
+ * Expected counterattack damage the `attacker` would eat for striking `target`
+ * in melee from `stand` — 0 if the target can't counter or can't reach back from
+ * that tile. Lets the AI think twice before trading into a Knight's Counter
+ * instead of blindly walking onto the punish. Callers only apply it when the
+ * target would SURVIVE the incoming blow (a corpse never counters).
+ */
+function counterRisk(attacker: Unit, target: Unit, stand: Point, grid: Grid): number {
+  if (!canCounter(target)) return 0;
+  const tw = getWeapon(target.weaponId);
+  const dist = manhattan(stand, target.pos);
+  if (dist === 0 || dist > tw.range) return 0;
+  return forecastWeapon(target, attacker, tw, ctxFrom(grid, target.pos, stand)).amount;
+}
+
 /** Worth of landing a debuff (no effect if the target already carries it). */
 function debuffScore(skill: SkillDef): number {
   switch (skill.statusKind) {
@@ -152,7 +167,16 @@ export function planEnemyTurn(unit: Unit, units: Unit[], grid: Grid): AIPlan {
   const options: Option[] = [];
 
   // --- Healing / support behavior ---
-  const hurtAllies = allies.filter((a) => a.stats.hp < a.stats.maxHp * 0.5);
+  // Personality shifts when a healer commits: aggressive units let allies ride
+  // low before spending a turn on a heal; defensive/support medics top allies up
+  // earlier so the line never crumbles.
+  const healAt =
+    unit.personality === "aggressive"
+      ? 0.4
+      : unit.personality === "defensive" || unit.personality === "support"
+        ? 0.7
+        : 0.55;
+  const hurtAllies = allies.filter((a) => a.stats.hp < a.stats.maxHp * healAt);
   const deadAllies = units.filter((u) => !u.alive && u.team === unit.team);
   for (const skill of healSkills) {
     for (const ally of hurtAllies) {
@@ -194,8 +218,12 @@ export function planEnemyTurn(unit: Unit, units: Unit[], grid: Grid): AIPlan {
       if (d > weapon.range || d === 0) continue;
       if (weapon.range > 1 && !hasLineOfSight(grid, stand, target.pos)) continue;
       const dmg = estimateWeaponDamage(unit, stand, target, grid);
+      let score = scoreTarget(dmg, target);
+      // A target that survives this blow and can reach back will counter — weigh
+      // that punish (0.6×, so a strong trade is still worth taking).
+      if (dmg < target.stats.hp) score -= counterRisk(unit, target, stand, grid) * 0.6;
       options.push({
-        score: scoreTarget(dmg, target),
+        score,
         destination: stand,
         action: { kind: "attack", targetTile: { ...target.pos } },
         kind: "damage",
@@ -211,6 +239,7 @@ export function planEnemyTurn(unit: Unit, units: Unit[], grid: Grid): AIPlan {
         const affected = aoeTiles(grid, center, skill.aoe);
         let total = 0;
         let kills = 0;
+        let numHit = 0;
         let hitAlly = false;
         for (const cell of affected) {
           const occ = enemies.find((e) => samePoint(e.pos, cell));
@@ -219,12 +248,16 @@ export function planEnemyTurn(unit: Unit, units: Unit[], grid: Grid): AIPlan {
           if (!occ) continue;
           const dmg = estimateSkillDamage(unit, stand, occ, skill, grid);
           total += Math.min(dmg, occ.stats.hp);
+          numHit += 1;
           if (dmg >= occ.stats.hp) kills += 1;
         }
         if (total <= 0) continue;
         const penalty = hitAlly ? 40 : 0;
+        // Reward clustering: each kill past the first, and catching 2+ foes, so the
+        // AI saves a big AoE for a knot of enemies instead of nuking a lone target.
+        const clusterBonus = (kills > 1 ? (kills - 1) * 30 : 0) + (numHit >= 3 ? 25 : numHit === 2 ? 10 : 0);
         options.push({
-          score: total + kills * 50 - penalty,
+          score: total + kills * 50 + clusterBonus - penalty,
           destination: stand,
           action: { kind: "skill", skillId: skill.id, targetTile: { ...center } },
           kind: "damage",
