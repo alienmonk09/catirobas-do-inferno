@@ -253,10 +253,24 @@ export class BattleUI {
 
   // --- Camera rotation control ---
 
-  /** Show the always-on view control (rotate buttons + facing label + recenter). */
-  showRotateControl(onLeft: () => void, onRight: () => void, onRecenter: () => void): void {
+  /** Show the always-on view control: zoom ＋／－, rotate ⟲⟳ + facing label,
+   *  recenter ⊙, and the mute toggle. Zoom-in is what unlocks panning (the
+   *  whole-map fit is otherwise pinned), so it's first and prominent. */
+  showRotateControl(
+    onLeft: () => void,
+    onRight: () => void,
+    onRecenter: () => void,
+    onZoomIn: () => void,
+    onZoomOut: () => void,
+  ): void {
     clear(this.rotateCtl);
     const muteBtn = this.audioButton();
+    this.rotateCtl.appendChild(
+      el("button", { className: "btn small rbtn zoom-btn", text: "＋", attrs: { title: "Zoom in (+ / mouse wheel) — zoom in to pan the map", "aria-label": "Zoom in" }, onClick: onZoomIn }),
+    );
+    this.rotateCtl.appendChild(
+      el("button", { className: "btn small rbtn zoom-btn", text: "－", attrs: { title: "Zoom out (- / mouse wheel)", "aria-label": "Zoom out" }, onClick: onZoomOut }),
+    );
     this.rotateCtl.appendChild(
       el("button", { className: "btn small rbtn", text: "⟲", attrs: { title: "Rotate view left (,)" }, onClick: onLeft }),
     );

@@ -355,7 +355,13 @@ export class BattleScene implements Scene {
     this.rangeTiles = [];
     this.refreshTurnBar();
     this.ui.setActiveUnit(this.active);
-    this.ui.showRotateControl(() => this.rotateView(-1), () => this.rotateView(1), () => this.recenter());
+    this.ui.showRotateControl(
+      () => this.rotateView(-1),
+      () => this.rotateView(1),
+      () => this.recenter(),
+      () => this.zoomStep(1),
+      () => this.zoomStep(-1),
+    );
     this.ui.setRotationLabel(this.rot);
     this.pushLog(`— ${this.active.name}'s turn —`);
 
@@ -545,7 +551,7 @@ export class BattleScene implements Scene {
       onUndo: () => this.undoMove(),
       onRecruit: () => this.enterRecruit(),
     });
-    this.ui.setHint(`M Move · A Attack · S Skill · I Item · Enter/${formatKey(getBinding("endTurn"))} end turn · Right-click/${formatKey(getBinding("cancel"))} cancel · ${formatKey(getBinding("rotateLeft"))}/${formatKey(getBinding("rotateRight"))} rotate view`);
+    this.ui.setHint(`M Move · A Attack · S Skill · I Item · Enter/${formatKey(getBinding("endTurn"))} end turn · Right-click/${formatKey(getBinding("cancel"))} cancel · ${formatKey(getBinding("rotateLeft"))}/${formatKey(getBinding("rotateRight"))} rotate · ＋/－/wheel zoom (zoom in to drag-pan) · ${formatKey(getBinding("recenter"))} recenter`);
   }
 
   /**
@@ -590,6 +596,15 @@ export class BattleScene implements Scene {
     this.followSuspended = false;
     if (this.focusUnit) this.cam.snapTo(this.unitCenter(this.focusUnit));
     else this.cam.recenterFit();
+  }
+
+  /** Clickable / keyboard zoom step toward the viewport center (dir +1 in, -1 out).
+   *  The discoverable way to leave the whole-map fit so the map becomes pannable —
+   *  a view op allowed any time; suspends follow like a manual wheel. */
+  private zoomStep(dir: 1 | -1): void {
+    if (this.phase === "intro" || this.phase === "over") return;
+    this.cam.zoomAt(dir > 0 ? 1.3 : 1 / 1.3, this.ctx.renderer.width / 2, this.ctx.renderer.height / 2);
+    this.followSuspended = true;
   }
 
   /** Re-anchor the floating menu to the active unit as the camera pans/zooms/
@@ -771,6 +786,8 @@ export class BattleScene implements Scene {
     if (action === "rotateLeft") return this.rotateView(-1);
     if (action === "rotateRight") return this.rotateView(1);
     if (action === "recenter") return this.recenter();
+    if (key === "+" || key === "=") return this.zoomStep(1);
+    if (key === "-" || key === "_") return this.zoomStep(-1);
     // Enter always works as an end-turn shortcut regardless of bindings so
     // players aren't locked out if they rebind the "e" key to something else.
     if (key === "Enter") {
