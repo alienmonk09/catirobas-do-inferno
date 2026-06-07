@@ -13,9 +13,9 @@ import {
 import { getClass } from "../src/data/classes";
 import type { Unit } from "../src/core/types";
 
-// Knight has 2 skills: "powerStrike", "guard".
+// Knight skills: "powerStrike", "guard", "shieldBash", "rallyingCry".
 // Archer has 2 skills: "aimedShot", "cripple".
-const KNIGHT_SKILLS = getClass("knight").skillIds; // ["powerStrike", "guard"]
+const KNIGHT_SKILLS = getClass("knight").skillIds;
 const ARCHER_SKILLS = getClass("archer").skillIds; // ["aimedShot", "cripple"]
 
 function freshKnight(learnedSkillIds: string[] = []): Unit {

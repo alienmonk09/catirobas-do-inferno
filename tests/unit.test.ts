@@ -488,9 +488,11 @@ describe("learnNextSkill", () => {
     const u = knightWithSp(1000);
     expect(learnNextSkill(u, 100)).toBe("powerStrike");
     expect(learnNextSkill(u, 100)).toBe("guard");
+    expect(learnNextSkill(u, 100)).toBe("shieldBash");
+    expect(learnNextSkill(u, 100)).toBe("rallyingCry");
     expect(learnNextSkill(u, 100)).toBeNull(); // all learned
-    expect(u.learnedSkillIds).toEqual(["powerStrike", "guard"]);
-    expect(u.sp).toBe(800); // only two skills cost 100 each
+    expect(u.learnedSkillIds).toEqual(["powerStrike", "guard", "shieldBash", "rallyingCry"]);
+    expect(u.sp).toBe(600); // four skills cost 100 each
   });
 
   it("checks 'nothing left' before checking SP", () => {

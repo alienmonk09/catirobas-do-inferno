@@ -7,7 +7,7 @@ export const CLASSES: Record<ClassId, ClassDef> = {
     description: "Frontline tank. High HP and defense, strong melee.",
     base: { hp: 72, mp: 20, atk: 14, def: 12, mag: 4, res: 6, spd: 9, move: 4, jump: 2 },
     growth: { hp: 7, mp: 2, atk: 2.2, def: 1.8, mag: 0.4, res: 0.8, spd: 0.6 },
-    skillIds: ["powerStrike", "guard"],
+    skillIds: ["powerStrike", "guard", "shieldBash", "rallyingCry"],
     weaponIds: ["sword", "greatsword", "runeBlade"],
     reactions: ["counter", "cover"],
     color: "#5b8dd6",

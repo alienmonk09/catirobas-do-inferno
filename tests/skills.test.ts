@@ -32,3 +32,43 @@ describe("Time Mage unique skill: hasten", () => {
     expect(getVfx(vfxKeyForSkill(s))).toBeTruthy();
   });
 });
+
+describe("Knight gets reach/AoE skills (R23)", () => {
+  it("Knight has more than 2 skills, including a reach/AoE one", () => {
+    const ids = CLASSES.knight.skillIds;
+    expect(ids).toContain("powerStrike");
+    expect(ids).toContain("guard");
+    expect(ids.length).toBeGreaterThan(2);
+  });
+
+  it("shieldBash is a melee debuff that staggers and slows", () => {
+    const s = SKILLS.shieldBash;
+    expect(s, "missing skill: shieldBash").toBeTruthy();
+    expect(getSkill("shieldBash").id).toBe("shieldBash");
+    expect(s.effect).toBe("debuff");
+    expect(s.scaling).toBe("physical");
+    expect(s.range).toBe(1);
+    expect(s.statusKind).toBe("slow");
+    expect(s.knockback ?? 0).toBeGreaterThanOrEqual(1);
+    expect(CLASSES.knight.skillIds).toContain("shieldBash");
+  });
+
+  it("rallyingCry is a self-centered AoE guard buff", () => {
+    const s = SKILLS.rallyingCry;
+    expect(s, "missing skill: rallyingCry").toBeTruthy();
+    expect(getSkill("rallyingCry").id).toBe("rallyingCry");
+    expect(s.effect).toBe("buff");
+    expect(s.aoe).toBe("square3");
+    expect(s.range).toBe(0);
+    expect(s.statusKind).toBe("guard");
+    expect(CLASSES.knight.skillIds).toContain("rallyingCry");
+  });
+
+  it("both new Knight skills resolve to a sprite and a VFX family (no missing assets)", () => {
+    for (const id of ["shieldBash", "rallyingCry"]) {
+      const s = SKILLS[id];
+      expect(getSkillSprite(id)).toBeTruthy();
+      expect(getVfx(vfxKeyForSkill(s))).toBeTruthy();
+    }
+  });
+});
