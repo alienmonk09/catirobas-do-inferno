@@ -108,6 +108,20 @@ describe("evaluateOutcome — defend", () => {
     const e = makeUnit({ id: "e", team: "enemy", x: 2, y: 3 });
     expect(evaluateOutcome([p, e], obj, 99)).toBe("enemy");
   });
+
+  // Exact-boundary cases at turnsElapsed === obj.turns: lock the priority so the
+  // enemy-on-tile check beats the just-reached survival threshold on the same turn.
+  it("enemy on the tile at exactly the threshold turn loses it (enemy wins)", () => {
+    const p = makeUnit({ id: "p", team: "player" });
+    const e = makeUnit({ id: "e", team: "enemy", x: 2, y: 3 });
+    expect(evaluateOutcome([p, e], obj, obj.turns)).toBe("enemy");
+  });
+
+  it("tile clear at exactly the threshold turn wins (player wins)", () => {
+    const p = makeUnit({ id: "p", team: "player" });
+    const e = makeUnit({ id: "e", team: "enemy", x: 0, y: 0 });
+    expect(evaluateOutcome([p, e], obj, obj.turns)).toBe("player");
+  });
 });
 
 describe("evaluateOutcome — escort", () => {
