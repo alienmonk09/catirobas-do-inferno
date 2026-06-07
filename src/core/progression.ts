@@ -1,5 +1,5 @@
 import type { LevelUpInfo, Stats, Unit } from "./types";
-import { grantXp, nextLearnableSkill } from "./unit";
+import { grantXp, nextLearnableSkill, nextLearnableSkillForClass } from "./unit";
 import { getSkill } from "../data/skills";
 
 /**
@@ -60,6 +60,15 @@ export function grantXpTracked(unit: Unit, amount: number): LevelUpInfo | null {
   if (nextId) {
     const skill = getSkill(nextId);
     if (unit.sp >= skill.spCost) newSkillName = skill.name;
+  }
+  // Primary may be fully learned (or its next skill unaffordable); if a sub-job
+  // is set, surface its next affordable skill too. Keep it to one hint.
+  if (!newSkillName && unit.subClassId) {
+    const subId = nextLearnableSkillForClass(unit, unit.subClassId);
+    if (subId) {
+      const skill = getSkill(subId);
+      if (unit.sp >= skill.spCost) newSkillName = skill.name;
+    }
   }
 
   return {

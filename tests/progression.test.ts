@@ -107,4 +107,14 @@ describe("grantXpTracked", () => {
     const info = grantXpTracked(u, xpForLevel(u.level));
     expect(info!.newSkillName).toBeUndefined();
   });
+
+  it("falls back to the sub-job's next skill when the primary is fully learned", () => {
+    const u = mk();
+    // Primary (knight) fully learned, so its next-learnable is null.
+    u.learnedSkillIds = ["powerStrike", "guard", "shieldBash", "rallyingCry"];
+    u.subClassId = "thief";
+    u.sp = 100000; // affords the first thief skill (backstab)
+    const info = grantXpTracked(u, xpForLevel(u.level));
+    expect(info!.newSkillName).toBeTruthy();
+  });
 });
