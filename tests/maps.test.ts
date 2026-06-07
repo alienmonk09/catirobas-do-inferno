@@ -109,6 +109,17 @@ describe("map data invariants", () => {
         }
       });
 
+      it("keeps seize/defend/escort goal tiles off water and lava", () => {
+        const o = map.objective;
+        if (!o || (o.kind !== "seize" && o.kind !== "defend" && o.kind !== "escort")) return;
+        if (!map.terrain) return;
+        const grid = new Grid(map);
+        // A goal on water/lava would tax whoever must hold it every turn.
+        const t = grid.terrainAt(o.x, o.y);
+        expect(t).not.toBe("water");
+        expect(t).not.toBe("lava");
+      });
+
       it("places decor on valid tiles (solid props on blocked tiles)", () => {
         if (!map.decor) return;
         const grid = new Grid(map);
