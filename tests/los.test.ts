@@ -47,16 +47,24 @@ describe("hasLineOfSight", () => {
     expect(hasLineOfSight(g, { x: 0, y: 0 }, { x: 6, y: 0 })).toBe(false);
   });
 
-  it("treats terrain a full level above the eyeline as cover", () => {
-    // A height-1 ridge tops the ~0.5 eye-level sightline of two ground units.
+  it("sees over terrain one level above the eyeline", () => {
+    // A height-1 ridge is only a single level up — bare terrain gets a full
+    // level of slack, so two ground units still see across it.
     const g = gridFromHeights([[0, 1, 1, 0]]);
+    expect(hasLineOfSight(g, { x: 0, y: 0 }, { x: 3, y: 0 })).toBe(true);
+  });
+
+  it("is blocked by terrain two levels above the eyeline", () => {
+    // A height-2 ridge climbs past the one-level slack and becomes cover.
+    const g = gridFromHeights([[0, 2, 2, 0]]);
     expect(hasLineOfSight(g, { x: 0, y: 0 }, { x: 3, y: 0 })).toBe(false);
   });
 
-  it("blocks a height-3 block sitting between two height-2 standers (throne cover)", () => {
-    // Mirrors the phase4/phase5 dais: the height-3 plateau must block its shoulders.
+  it("does not treat a height-3 dais one level above height-2 standers as cover", () => {
+    // The phase4/phase5 dais is only one level above its standers, so it no
+    // longer blocks — one-level terrain is always shootable over.
     const g = gridFromHeights([[2, 3, 3, 2]]);
-    expect(hasLineOfSight(g, { x: 0, y: 0 }, { x: 3, y: 0 })).toBe(false);
+    expect(hasLineOfSight(g, { x: 0, y: 0 }, { x: 3, y: 0 })).toBe(true);
   });
 
   it("sees across tiles of the same height as the standers", () => {

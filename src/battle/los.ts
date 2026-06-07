@@ -2,13 +2,18 @@ import type { Point } from "../core/types";
 import type { Grid } from "./grid";
 
 /**
- * Height (in tile-z levels) of a unit's "eye" above the top of its tile. Kept
- * below one level on purpose: terrain that rises a full level or more above the
- * eyeline counts as cover, so a height-3 block between two height-2 standers
- * actually blocks (its top, 3, clears the 2.5 sightline). Raising this past 1.0
- * would let units shoot straight through such cover.
+ * Height (in tile-z levels) of a unit's "eye" above the top of its tile.
  */
 const EYE = 0.5;
+
+/**
+ * How far (in tile-z levels) bare terrain must rise above the sightline before
+ * it counts as cover. A full level of ground above the eyeline is shootable
+ * over — you only lose the shot when terrain climbs two or more levels above
+ * the line. Props (trees, walls, boulders) are unaffected: anything they add
+ * still blocks the moment its top tops the line.
+ */
+const TERRAIN_COVER = 1;
 
 /**
  * Line of sight between two tiles for ranged attacks/spells. Walks every cell
@@ -36,7 +41,13 @@ export function hasLineOfSight(grid: Grid, from: Point, to: Point): boolean {
     if (!grid.inBounds(cx, cy)) return false;
     if ((cx === from.x && cy === from.y) || (cx === to.x && cy === to.y)) return false;
     const lineZ = z0 + (z1 - z0) * t;
-    return grid.heightAt(cx, cy) + grid.sightBlockAt(cx, cy) > lineZ + 1e-6;
+    const terrain = grid.heightAt(cx, cy);
+    const prop = grid.sightBlockAt(cx, cy);
+    // A prop blocks as soon as its top clears the line. Bare terrain gets a
+    // full level of slack: one level of ground above the eyeline is shootable
+    // over, only two-plus levels become cover.
+    if (prop > 0) return terrain + prop > lineZ + 1e-6;
+    return terrain > lineZ + TERRAIN_COVER + 1e-6;
   };
 
   const steps = Math.max(2, Math.ceil(Math.hypot(dx, dy) * 4));
