@@ -31,11 +31,18 @@ Living task list for the autonomous build. The roadmap (`ROADMAP.md`) is the
   `docs/superpowers/plans/2026-06-06-sp2a-camera.md` (5 TDD tasks). **To implement:** ultracode
   sequential-workflow run on that branch. SP2b (bigger maps + rebalance) / SP2c (edge-blending)
   are later cycles that build on SP2a.
-- **IN PROGRESS — 50-improvements roadmap** (autonomous overnight run, ultracode) on branch
-  **`feat/improvements-roadmap`** (off `feat/rich-battlefield`): a broad game sweep
-  (combat/AI/UX/a11y/content/juice/progression/code-quality), each small + verifiable,
-  implemented via per-improvement implement→adversarial-verify subagents, build kept green,
-  committed incrementally. Roadmap doc: `docs/superpowers/ROADMAP-improvements.md`.
+- **DONE — 50-improvements roadmap** (autonomous overnight run, ultracode) on branch
+  **`feat/improvements-roadmap`** (off `feat/rich-battlefield`; kept, not merged): a broad game
+  sweep (combat/AI/UX/a11y/content/juice/progression/code-quality). **47 implemented + committed,
+  3 correctly skipped** (R03 conflicted with R07's pinning; R39 + R49 premises already enforced /
+  false — agents declined rather than force phantom changes). Discovery 91→50; 5 sequential batches
+  of ~10, each item implement→adversarial-verify, build kept green throughout. Tests **1362→1524**
+  (+162), tsc strict clean, build clean. Roadmap + per-item commits + skip rationale in
+  `docs/superpowers/ROADMAP-improvements.md`. Highlights: AI now avoids hazards / retreats / holds
+  range / respects counters & friendly-fire; combat fixes (stopped-no-counter, slow⇄haste, weapon
+  elements, honest crit forecast); Knight/Archer/Time-Mage skill depth; Remedy + caster weapons;
+  authored LOS cover on bare maps; save-validation hardening; a real diagonal-corner LOS bug found
+  + fixed (R42); broad test coverage + a11y. **Awaiting user review (visual/feel items eyeball).**
 - Branch: **`feat/progression-rewards`** (off `main`; not merged/pushed) — base of the
   rich-battlefield branch. Build: clean. Tests: **1333 passing**. Audio WIP for
   `feat/audio` is parked in `git stash` (restore: `git checkout feat/audio && git stash pop`).
