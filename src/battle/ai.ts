@@ -7,6 +7,7 @@ import { canCounter, hasStatus, isStopped, type AttackContext } from "./combat";
 import { hasLineOfSight } from "./los";
 import { getWeapon } from "../data/weapons";
 import { getSkill } from "../data/skills";
+import { terrainEffect } from "../data/terrain";
 
 export type AIActionKind = "attack" | "skill" | "wait";
 
@@ -97,6 +98,20 @@ function counterRisk(attacker: Unit, target: Unit, stand: Point, grid: Grid): nu
   const dist = manhattan(stand, target.pos);
   if (dist === 0 || dist > tw.range) return 0;
   return forecastWeapon(target, attacker, tw, ctxFrom(grid, target.pos, stand)).amount;
+}
+
+/**
+ * Score delta for ending the turn on `stand`'s terrain. Mirrors `terrainEffect`:
+ * damage tiles (lava) sting proportional to the unit's maxHp, mire (slow) is a
+ * flat nuisance, and a spring is a small lure. Keeps the AI from parking on — or
+ * even suiciding into — a hazard when an equally good safe tile exists.
+ */
+function terrainPenalty(grid: Grid, stand: Point, unit: Unit): number {
+  const eff = terrainEffect(grid.terrainAt(stand.x, stand.y));
+  if (!eff) return 0;
+  if (eff.kind === "damage") return -unit.stats.maxHp * eff.fracMaxHp;
+  if (eff.kind === "heal") return unit.stats.maxHp * eff.fracMaxHp * 0.5;
+  return -25; // status (mire/slow): flat nuisance
 }
 
 /** Worth of landing a debuff (no effect if the target already carries it). */
@@ -295,6 +310,13 @@ export function planEnemyTurn(unit: Unit, units: Unit[], grid: Grid): AIPlan {
     }
   }
 
+  // Terrain at the stand tile colors every option equally: ending the turn on
+  // lava/mire should make an otherwise-tied action less appealing than the same
+  // action from safe ground.
+  for (const opt of options) {
+    opt.score += terrainPenalty(grid, opt.destination, unit);
+  }
+
   if (options.length > 0) {
     options.sort((a, b) =>
       b.score * personalityWeight(unit.personality, b.kind) -
@@ -313,12 +335,15 @@ export function planEnemyTurn(unit: Unit, units: Unit[], grid: Grid): AIPlan {
   if (!target) {
     return { path: [unit.pos], destination: unit.pos, action: { kind: "wait" } };
   }
+  // Closing distance is the primary driver (each tile of progress is worth 10),
+  // with the terrain penalty folded in so the unit will give up a tile or two of
+  // advance rather than park on — or suicide into — a lava/mire hazard.
   let bestTile = unit.pos;
-  let bestDist = manhattan(unit.pos, target.pos);
+  let bestScore = -manhattan(unit.pos, target.pos) * 10 + terrainPenalty(grid, unit.pos, unit);
   for (const stand of standTiles) {
-    const d = manhattan(stand, target.pos);
-    if (d < bestDist) {
-      bestDist = d;
+    const score = -manhattan(stand, target.pos) * 10 + terrainPenalty(grid, stand, unit);
+    if (score > bestScore) {
+      bestScore = score;
       bestTile = stand;
     }
   }

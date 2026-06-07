@@ -315,6 +315,63 @@ describe("planEnemyTurn: status & line of sight", () => {
   });
 });
 
+/** A grid from an explicit terrain map (flat, fully walkable). */
+function gridFromTerrain(terrain: import("../src/core/types").TerrainType[][]): Grid {
+  const h = terrain.length;
+  const w = terrain[0].length;
+  return new Grid({
+    id: "t",
+    name: "T",
+    intro: "",
+    width: w,
+    height: h,
+    heights: Array.from({ length: h }, () => Array(w).fill(0)),
+    terrain,
+    playerSpawns: [],
+    enemies: [],
+  });
+}
+
+describe("planEnemyTurn: terrain hazard avoidance", () => {
+  it("prefers a safe stand tile over a lava tile when both can strike the same foe", () => {
+    // Foe at (3,0). The knight can attack from (2,0) [lava] or step down to
+    // (3,1) [grass] — both adjacent, equal damage. The lava penalty must steer
+    // it off the hazard tile onto the safe one.
+    const g: ("grass" | "lava")[][] = [
+      ["grass", "grass", "lava", "grass", "grass"],
+      ["grass", "grass", "grass", "grass", "grass"],
+    ];
+    const grid = gridFromTerrain(g as import("../src/core/types").TerrainType[][]);
+    const me = createUnit({ name: "Goblin", team: "enemy", classId: "knight", pos: { x: 1, y: 0 } });
+    const foe = createUnit({ name: "Hero", team: "player", classId: "knight", pos: { x: 3, y: 0 } });
+
+    const plan = planEnemyTurn(me, [me, foe], grid);
+
+    expect(plan.action.kind).toBe("attack");
+    // It still attacks the foe, but never ends its turn on the lava tile.
+    expect(grid.terrainAt(plan.destination.x, plan.destination.y)).not.toBe("lava");
+  });
+
+  it("gives up the closest tile to dodge lava when advancing to a far foe", () => {
+    // 1-row map. Knight (move 4) at x=0; far foe at x=9. The tile that closes the
+    // most distance (x=4) is lava — eating ~15% maxHp next turn. The advance
+    // tie-break must trade one tile of progress for the safe x=3 grass tile.
+    const g: ("grass" | "lava")[][] = [
+      ["grass", "grass", "grass", "grass", "lava", "grass", "grass", "grass", "grass", "grass"],
+    ];
+    const grid = gridFromTerrain(g as import("../src/core/types").TerrainType[][]);
+    const me = createUnit({ name: "Goblin", team: "enemy", classId: "knight", pos: { x: 0, y: 0 } });
+    const foe = createUnit({ name: "Hero", team: "player", classId: "knight", pos: { x: 9, y: 0 } });
+
+    const plan = planEnemyTurn(me, [me, foe], grid);
+
+    expect(plan.action.kind).toBe("wait");
+    // Without the terrain term it would stop on x=4 (lava); now it backs off one.
+    expect(grid.terrainAt(plan.destination.x, plan.destination.y)).not.toBe("lava");
+    expect(plan.destination.x).toBe(3);
+  });
+});
+
 describe("planEnemyTurn: healer behavior", () => {
   it("a White Mage knowing Cure heals a hurt ally instead of attacking", () => {
     const grid = flatGrid();
