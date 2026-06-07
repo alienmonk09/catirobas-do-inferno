@@ -72,7 +72,7 @@ function objectiveTiles(s: ViewScene): Point[] {
 }
 
 /** Assemble the full render snapshot for the current frame. */
-export function buildView(scene: BattleScene, origin: ScreenPoint): BattleView {
+export function buildView(scene: BattleScene, origin: ScreenPoint, scale: number): BattleView {
   const s = scene as unknown as ViewScene;
   const overlays: OverlaySet = { move: [], attack: [], aoe: [], path: [], objective: objectiveTiles(s) };
   if (s.phase === "move") {
@@ -108,6 +108,7 @@ export function buildView(scene: BattleScene, origin: ScreenPoint): BattleView {
     grid: s.grid,
     units: s.units,
     origin,
+    scale,
     rot: s.rot,
     activeUnitId: s.active?.id ?? null,
     hoverTile: s.hoverTile,

@@ -114,6 +114,22 @@ describe("screenToTile round-trips through rotation", () => {
     }
   });
 
+  it("round-trips when the scene is drawn at a fit scale < 1", () => {
+    const grid = flatGrid(4, 3);
+    const origin = { sx: 137, sy: 91 };
+    const scale = 0.5;
+    for (const rot of ROTS) {
+      for (let y = 0; y < grid.height; y++) {
+        for (let x = 0; x < grid.width; x++) {
+          const v = rotateTile(x, y, rot, grid.width, grid.height);
+          const c = worldToScreen(v.x, v.y, 0, origin); // unscaled tile-space center
+          const picked = screenToTile(c.sx * scale, c.sy * scale, grid, origin, rot, scale);
+          expect(picked).toEqual({ x, y });
+        }
+      }
+    }
+  });
+
   it("maps a fixed screen point to different logical tiles under different rotations", () => {
     const grid = flatGrid(5, 5);
     const origin = { sx: 200, sy: 120 };

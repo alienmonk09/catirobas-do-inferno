@@ -337,6 +337,26 @@ describe("occupancy", () => {
   });
 });
 
+// --- Grid.maxHeight ------------------------------------------------------
+
+function gridOf(heights: number[][]): Grid {
+  const map: MapDef = {
+    id: "h", name: "h", intro: "",
+    width: heights[0].length, height: heights.length,
+    heights, playerSpawns: [], enemies: [],
+  };
+  return new Grid(map);
+}
+
+describe("Grid.maxHeight", () => {
+  it("returns the tallest tile height", () => {
+    expect(gridOf([[0, 1, 2], [3, 0, 1]]).maxHeight()).toBe(3);
+  });
+  it("is 0 for an all-flat grid", () => {
+    expect(gridOf([[0, 0], [0, 0]]).maxHeight()).toBe(0);
+  });
+});
+
 // --- moveBlockers --------------------------------------------------------
 
 /** Unit stub with a team — moveBlockers reads id, pos, alive, and team. */

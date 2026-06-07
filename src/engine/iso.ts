@@ -2,9 +2,9 @@ import type { Point } from "../core/types";
 import type { Grid } from "../battle/grid";
 
 // Isometric tile dimensions (2:1 diamond) and per-level height in pixels.
-export const TILE_W = 64;
-export const TILE_H = 32;
-export const TILE_Z = 16;
+export const TILE_W = 96;
+export const TILE_H = 48;
+export const TILE_Z = 24;
 
 export interface ScreenPoint {
   sx: number;
@@ -76,7 +76,12 @@ export function screenToTile(
   grid: Grid,
   origin: ScreenPoint,
   rot: Rotation = 0,
+  scale = 1,
 ): Point | null {
+  // Pointer arrives in CSS px; the scene draws under ctx.scale(scale), so invert
+  // it back into the unscaled tile space the diamond test operates in.
+  px /= scale;
+  py /= scale;
   let best: Point | null = null;
   let bestRank = -Infinity;
   for (let y = 0; y < grid.height; y++) {

@@ -8,6 +8,7 @@ export class Grid {
   private readonly heights: number[][];
   private readonly blocked: boolean[][];
   private readonly terrain: TerrainType[][];
+  private readonly _maxHeight: number;
 
   constructor(map: MapDef) {
     this.width = map.width;
@@ -21,6 +22,9 @@ export class Grid {
         map.terrain?.[y]?.[x] ?? defaultTerrain(this.blocked[y]?.[x] ?? false, this.heights[y]?.[x] ?? 0),
       ),
     );
+    let mx = 0;
+    for (const row of this.heights) for (const z of row) if (z > mx) mx = z;
+    this._maxHeight = mx;
   }
 
   inBounds(x: number, y: number): boolean {
@@ -29,6 +33,11 @@ export class Grid {
 
   heightAt(x: number, y: number): number {
     return this.inBounds(x, y) ? this.heights[y][x] : 0;
+  }
+
+  /** Tallest tile height on the map (for camera fit). Computed once. */
+  maxHeight(): number {
+    return this._maxHeight;
   }
 
   terrainAt(x: number, y: number): TerrainType {

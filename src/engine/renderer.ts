@@ -19,7 +19,7 @@ import {
 
 /** Target on-screen sprite height (px) — bake scale is derived per sprite so
  *  16x20 class art and 24x30 hero art render to the same footprint. */
-const CHAR_PX_H = 60;
+const CHAR_PX_H = 90;
 const VFX_SCALE = 3;
 /** Bake scale for a sprite so it lands near CHAR_PX_H tall. */
 function charScale(def: SpriteDef): number {
@@ -98,6 +98,8 @@ export interface BattleView {
   screenShake?: { dx: number; dy: number };
   /** Unopened treasure-chest tiles to draw as pickups on the field. */
   chests?: Point[];
+  /** Uniform fit-to-viewport scale applied to the whole scene (1 = no scaling). */
+  scale?: number;
 }
 
 const COLOR = {
@@ -161,15 +163,23 @@ export class Renderer {
     this.ctx.clearRect(0, 0, this.width, this.height);
   }
 
-  /** Center the camera so the map's middle sits at the screen middle. The map's
-   *  logical center maps to the center of the (possibly swapped) rotated grid,
-   *  so rotation keeps the map centered. */
-  computeOrigin(grid: Grid, rot: Rotation = 0): ScreenPoint {
+  /** Center the camera and pick a uniform scale so the whole (rotated) map fits
+   *  the viewport. Scale never exceeds 1 (tiles render at most at their native
+   *  +50% size); it shrinks only enough to fit. Origin is in unscaled tile space;
+   *  render() applies the scale. SP2 replaces this with pan/zoom/follow. */
+  computeCamera(grid: Grid, rot: Rotation = 0): { origin: ScreenPoint; scale: number } {
     const dims = rotatedDims(rot, grid.width, grid.height);
+    const pxW = (dims.w + dims.h) * (TILE_W / 2);
+    const pxH = (dims.w + dims.h) * (TILE_H / 2) + grid.maxHeight() * TILE_Z;
+    const scale = Math.min(1, (this.width * 0.98) / pxW, (this.height * 0.94) / pxH);
     const midX = (dims.w - 1) / 2;
     const midY = (dims.h - 1) / 2;
-    const center = worldToScreen(midX, midY, 0, { sx: 0, sy: 0 });
-    return { sx: this.width / 2 - center.sx, sy: this.height / 2 - center.sy - 40 };
+    const mid = worldToScreen(midX, midY, 0, { sx: 0, sy: 0 });
+    const origin: ScreenPoint = {
+      sx: this.width / 2 / scale - mid.sx,
+      sy: this.height / 2 / scale - mid.sy - 40,
+    };
+    return { origin, scale };
   }
 
   /** Project a logical tile (x, y, z) to its screen center, honoring rotation. */
@@ -204,18 +214,19 @@ export class Renderer {
 
   render(view: BattleView): void {
     this.clear();
-    // Impact shake: nudge the whole scene a few pixels. Save/restore so the DPR
-    // transform set in resize() is preserved across frames.
     const shake = view.screenShake;
-    if (shake) {
+    const scale = view.scale ?? 1;
+    const transformed = !!shake || scale !== 1;
+    if (transformed) {
       this.ctx.save();
-      this.ctx.translate(shake.dx, shake.dy);
+      if (shake) this.ctx.translate(shake.dx, shake.dy);
+      if (scale !== 1) this.ctx.scale(scale, scale);
     }
     this.drawScene(view);
     this.drawEffects(view);
     this.drawPopups(view);
     this.drawForecast(view);
-    if (shake) this.ctx.restore();
+    if (transformed) this.ctx.restore();
   }
 
   private drawForecast(view: BattleView): void {
@@ -225,7 +236,7 @@ export class Renderer {
     const z = view.grid.heightAt(f.tile.x, f.tile.y);
     const center = this.project(view, f.tile.x, f.tile.y, z);
     const x = center.sx;
-    const y = center.sy - 64;
+    const y = center.sy - 96;
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
     ctx.font = f.strong ? "bold 18px system-ui" : "bold 15px system-ui";
@@ -248,7 +259,7 @@ export class Renderer {
       ctx.drawImage(
         canvas,
         Math.round(center.sx - canvas.width / 2),
-        Math.round(center.sy - 26 - canvas.height / 2),
+        Math.round(center.sy - 39 - canvas.height / 2),
       );
     }
   }
@@ -503,13 +514,13 @@ export class Renderer {
     const h = canvas.height;
     const bob = active ? Math.sin(time * 6) * 2 : 0;
     const drawX = Math.round(center.sx - w / 2);
-    const feetY = center.sy + 4; // a touch below the tile-top center
+    const feetY = center.sy + 6; // a touch below the tile-top center
     const drawY = Math.round(feetY - h + bob);
 
     // Shadow.
     ctx.fillStyle = "rgba(0,0,0,0.30)";
     ctx.beginPath();
-    ctx.ellipse(center.sx, center.sy + 2, TILE_W * 0.26, TILE_H * 0.26, 0, 0, Math.PI * 2);
+    ctx.ellipse(center.sx, center.sy + 3, TILE_W * 0.26, TILE_H * 0.26, 0, 0, Math.PI * 2);
     ctx.fill();
 
     if (!unit.alive) {
@@ -524,12 +535,12 @@ export class Renderer {
     ctx.strokeStyle = unit.team === "player" ? "#5fe3ff" : "#ff5a5a";
     ctx.lineWidth = 2;
     ctx.beginPath();
-    ctx.ellipse(center.sx, center.sy + 2, TILE_W * 0.28, TILE_H * 0.28, 0, 0, Math.PI * 2);
+    ctx.ellipse(center.sx, center.sy + 3, TILE_W * 0.28, TILE_H * 0.28, 0, 0, Math.PI * 2);
     ctx.stroke();
 
     // Facing arrowhead on the ring — shows which way the unit looks (for flanks).
     const tipX = center.sx + facingDir.x * TILE_W * 0.32;
-    const tipY = center.sy + 2 + facingDir.y * TILE_H * 0.32;
+    const tipY = center.sy + 3 + facingDir.y * TILE_H * 0.32;
     const perpX = -facingDir.y;
     const perpY = facingDir.x;
     ctx.fillStyle = unit.team === "player" ? "#aef0ff" : "#ffb0b0";
@@ -544,9 +555,9 @@ export class Renderer {
 
     const topY = drawY;
     // HP bar.
-    const barW = 28;
+    const barW = 42;
     const barX = center.sx - barW / 2;
-    const barY = topY - 8;
+    const barY = topY - 10;
     ctx.fillStyle = "rgba(0,0,0,0.6)";
     ctx.fillRect(barX - 1, barY - 1, barW + 2, 5);
     const hpFrac = unit.stats.hp / unit.stats.maxHp;
@@ -555,12 +566,12 @@ export class Renderer {
 
     // Status pips: one colored badge per active status.
     if (unit.statuses.length > 0) {
-      const pipW = 9;
+      const pipW = 13;
       const gap = 1;
       const total = unit.statuses.length * pipW + (unit.statuses.length - 1) * gap;
       let px = center.sx - total / 2;
-      const py = barY - 11;
-      ctx.font = "bold 8px system-ui";
+      const py = barY - 15;
+      ctx.font = "bold 11px system-ui";
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       for (const s of unit.statuses) {
@@ -580,9 +591,9 @@ export class Renderer {
       const ab = Math.sin(time * 6) * 3;
       ctx.fillStyle = "#ffd34d";
       ctx.beginPath();
-      ctx.moveTo(center.sx, topY - 10 + ab);
-      ctx.lineTo(center.sx - 6, topY - 18 + ab);
-      ctx.lineTo(center.sx + 6, topY - 18 + ab);
+      ctx.moveTo(center.sx, topY - 14 + ab);
+      ctx.lineTo(center.sx - 9, topY - 26 + ab);
+      ctx.lineTo(center.sx + 9, topY - 26 + ab);
       ctx.closePath();
       ctx.fill();
     }
@@ -596,7 +607,7 @@ export class Renderer {
       const z = view.grid.heightAt(p.tile.x, p.tile.y);
       const center = this.project(view, p.tile.x, p.tile.y, z);
       const t = p.age / p.ttl;
-      const yOff = -40 - t * 24;
+      const yOff = -60 - t * 36;
       ctx.globalAlpha = Math.max(0, 1 - t);
       if (p.crit) {
         // Crit popups read bigger and "pop": a brief overshoot scale at spawn that

@@ -200,14 +200,17 @@ export class BattleScene implements Scene {
     };
   }
 
-  private get origin(): ScreenPoint {
-    return this.ctx.renderer.computeOrigin(this.grid, this.rot);
+  private get camera(): { origin: ScreenPoint; scale: number } {
+    return this.ctx.renderer.computeCamera(this.grid, this.rot);
   }
 
-  /** Project a logical tile to its on-screen center under the current rotation. */
+  /** Project a logical tile to its on-screen (CSS px) center under the current
+   *  rotation + fit scale. */
   private projectTile(x: number, y: number, z: number): ScreenPoint {
+    const { origin, scale } = this.camera;
     const v = rotateTile(x, y, this.rot, this.grid.width, this.grid.height);
-    return worldToScreen(v.x, v.y, z, this.origin);
+    const p = worldToScreen(v.x, v.y, z, origin);
+    return { sx: p.sx * scale, sy: p.sy * scale };
   }
 
   /** Rotate the camera by one quarter-turn (dir +1 = clockwise / right). The
@@ -634,7 +637,8 @@ export class BattleScene implements Scene {
 
   private handleClick(px: number, py: number): void {
     if (this.ctx.animator.busy) return;
-    const tile = screenToTile(px, py, this.grid, this.origin, this.rot);
+    const cam = this.camera;
+    const tile = screenToTile(px, py, this.grid, cam.origin, this.rot, cam.scale);
     if (!tile) return;
     switch (this.phase) {
       case "move":
@@ -1482,9 +1486,9 @@ export class BattleScene implements Scene {
     if (this.screenShake > 0) this.screenShake = Math.max(0, this.screenShake - dt);
 
     // Hover + target info.
-    const origin = this.origin;
+    const cam = this.camera;
     if (this.ctx.input.pointer && this.phase !== "over" && this.phase !== "intro") {
-      this.hoverTile = screenToTile(this.ctx.input.pointer.x, this.ctx.input.pointer.y, this.grid, origin, this.rot);
+      this.hoverTile = screenToTile(this.ctx.input.pointer.x, this.ctx.input.pointer.y, this.grid, cam.origin, this.rot, cam.scale);
     } else {
       this.hoverTile = null;
     }
@@ -1496,7 +1500,7 @@ export class BattleScene implements Scene {
       this.ui.setTargetInfo(null);
     }
 
-    this.ctx.renderer.render(buildView(this, origin));
+    this.ctx.renderer.render(buildView(this, cam.origin, cam.scale));
   }
 
   dispose(): void {
