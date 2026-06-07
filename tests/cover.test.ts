@@ -166,6 +166,23 @@ describe("coverFor", () => {
     expect(result).toBe(guardB); // higher HP wins
   });
 
+  it("breaks ties stably — returns the first qualifying guard when two share the highest HP", () => {
+    const target = monk({ x: 2, y: 2 });
+    target.stats.hp = 15;
+
+    // Two equally-healthy guards, both adjacent and qualifying.
+    const guardA = knight({ x: 1, y: 2 });
+    guardA.stats.hp = 70;
+    guardA.id = "guardA";
+
+    const guardB = knight({ x: 2, y: 1 });
+    guardB.stats.hp = 70; // equal highest HP
+    guardB.id = "guardB";
+
+    // guardA comes first in array order → stays the winner on a tie.
+    expect(coverFor(target, [guardA, guardB, target])).toBe(guardA);
+  });
+
   it("returns null when the target is itself the only unit (no allies)", () => {
     const target = monk({ x: 2, y: 2 });
     target.stats.hp = 10;
