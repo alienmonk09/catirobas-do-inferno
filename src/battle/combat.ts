@@ -310,7 +310,16 @@ export function resolveAutoPotion(
   return res;
 }
 
+// Statuses that cancel each other out: applying one strips its opposite so a
+// unit can never carry both (which would muddle effectiveSpd into a x0.75 mess).
+const OPPOSITE_STATUS: Partial<Record<StatusKind, StatusKind>> = {
+  slow: "haste",
+  haste: "slow",
+};
+
 export function addStatus(unit: Unit, status: ActiveStatus): void {
+  const opposite = OPPOSITE_STATUS[status.kind];
+  if (opposite) unit.statuses = unit.statuses.filter((s) => s.kind !== opposite);
   const existing = unit.statuses.find((s) => s.kind === status.kind);
   if (existing) existing.turnsLeft = Math.max(existing.turnsLeft, status.turnsLeft);
   else unit.statuses.push({ ...status });

@@ -127,13 +127,22 @@ describe("effectiveSpd", () => {
     expect(effectiveSpd(u)).toBe(1);
   });
 
-  it("applies both slow and haste sequentially when both present", () => {
+  it("haste replaces slow (mutually exclusive) — full speed boost, no x0.75 muddle", () => {
     const u = knight();
     u.stats.spd = 10;
-    u.statuses.push({ kind: "slow", turnsLeft: 2 });
-    u.statuses.push({ kind: "haste", turnsLeft: 2 });
-    // slow first: round(10*0.5)=5, then haste: round(5*1.5)=8
-    expect(effectiveSpd(u)).toBe(8);
+    addStatus(u, { kind: "slow", turnsLeft: 2 });
+    addStatus(u, { kind: "haste", turnsLeft: 2 });
+    expect(u.statuses.some((s) => s.kind === "slow")).toBe(false);
+    expect(effectiveSpd(u)).toBe(15); // round(10 * 1.5), not round(10*0.5*1.5)=8
+  });
+
+  it("slow replaces haste (mutually exclusive)", () => {
+    const u = knight();
+    u.stats.spd = 10;
+    addStatus(u, { kind: "haste", turnsLeft: 2 });
+    addStatus(u, { kind: "slow", turnsLeft: 2 });
+    expect(u.statuses.some((s) => s.kind === "haste")).toBe(false);
+    expect(effectiveSpd(u)).toBe(5); // round(10 * 0.5)
   });
 });
 
