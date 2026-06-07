@@ -330,7 +330,7 @@ export class Renderer {
         const center = this.project(view, it.x, it.y, z);
         const terrain = grid.terrainAt(it.x, it.y);
         this.drawTileWalls(center, z, terrain);
-        this.drawTileTop(center, z, terrain, it.x, it.y, this.neighborShade(grid, it.x, it.y, z));
+        this.drawTileTop(center, z, terrain, it.x, it.y, this.neighborShade(grid, it.x, it.y, z), view.time);
         const cols = overlays.get(`${it.x},${it.y}`);
         if (cols) for (const c of cols) this.paintDiamond(center, c);
       } else if (it.kind === "chest") {
@@ -457,7 +457,7 @@ export class Renderer {
     return s; // 0..8 (typically 0..4)
   }
 
-  private drawTileTop(center: ScreenPoint, z: number, terrain: TerrainType, tx: number, ty: number, ao: number): void {
+  private drawTileTop(center: ScreenPoint, z: number, terrain: TerrainType, tx: number, ty: number, ao: number, time: number): void {
     const ctx = this.ctx;
     const corners = diamondCorners(center);
     const st = TERRAIN[terrain];
@@ -470,15 +470,7 @@ export class Renderer {
     for (let i = 1; i < corners.length; i++) ctx.lineTo(corners[i].sx, corners[i].sy);
     ctx.closePath();
     ctx.fill();
-    // Cheap deterministic speckle so flat ground isn't a single dead color.
-    const seed = ((tx * 73856093) ^ (ty * 19349663)) >>> 0;
-    for (let i = 0; i < 3; i++) {
-      const r = (seed >> (i * 5)) & 31;
-      const dx = ((r & 3) - 1.5) * (TILE_W * 0.16);
-      const dy = (((r >> 2) & 3) - 1.5) * (TILE_H * 0.16);
-      ctx.fillStyle = `hsl(${st.h}, ${st.s}%, ${clampL(lit + (r & 1 ? 7 : -7))}%)`;
-      ctx.fillRect(Math.round(center.sx + dx), Math.round(center.sy + dy), 2, 2);
-    }
+    this.terrainMotif(center, terrain, tx, ty, lit, time);
     ctx.strokeStyle = COLOR.gridLine;
     ctx.lineWidth = 1;
     ctx.beginPath();
@@ -496,6 +488,100 @@ export class Renderer {
       ctx.lineTo(corners[0].sx, corners[0].sy);
       ctx.lineTo(corners[1].sx, corners[1].sy);
       ctx.stroke();
+    }
+  }
+
+  /** Deterministic 0..1 hash for tile (tx,ty) at channel `i`. */
+  private tileHash(tx: number, ty: number, i: number): number {
+    let h = (((tx * 73856093) ^ (ty * 19349663) ^ (i * 83492791)) >>> 0);
+    h = (h ^ (h >>> 13)) >>> 0;
+    return (h % 1000) / 1000;
+  }
+
+  private dot(cx: number, cy: number, st: { h: number; s: number }, l: number, sz = 2): void {
+    this.ctx.fillStyle = `hsl(${st.h}, ${st.s}%, ${clampL(l)}%)`;
+    this.ctx.fillRect(Math.round(cx), Math.round(cy), sz, sz);
+  }
+
+  /** Per-terrain texture drawn within the tile diamond (replaces the speckle). */
+  private terrainMotif(center: ScreenPoint, terrain: TerrainType, tx: number, ty: number, lit: number, time: number): void {
+    const st = TERRAIN[terrain];
+    const cx = center.sx;
+    const cy = center.sy;
+    // Random points stay inside the diamond: |dx|/HW + |dy|/HH <= ~0.7.
+    const HW = TILE_W * 0.32;
+    const HH = TILE_H * 0.32;
+    const p = (i: number) => {
+      const a = this.tileHash(tx, ty, i) * 2 - 1;
+      const b = this.tileHash(tx, ty, i + 50) * 2 - 1;
+      // contract toward center so points land on the tile, not the edge
+      return { x: cx + a * HW * (1 - Math.abs(b) * 0.5), y: cy + b * HH * (1 - Math.abs(a) * 0.5) };
+    };
+    switch (terrain) {
+      case "grass": {
+        for (let i = 0; i < 5; i++) {
+          const q = p(i);
+          this.ctx.fillStyle = `hsl(${st.h}, ${st.s + 8}%, ${clampL(lit + (i % 2 ? 10 : -8))}%)`;
+          this.ctx.fillRect(Math.round(q.x), Math.round(q.y), 1, 2 + (i % 2)); // blade tick
+        }
+        if (this.tileHash(tx, ty, 7) > 0.82) { const q = p(9); this.dot(q.x, q.y, { h: 48, s: 70 }, 70); } // flower
+        break;
+      }
+      case "dirt": {
+        for (let i = 0; i < 4; i++) { const q = p(i); this.dot(q.x, q.y, st, lit + (i % 2 ? 8 : -10)); }
+        const c = p(6); this.ctx.strokeStyle = `hsl(${st.h}, ${st.s}%, ${clampL(lit - 12)}%)`;
+        this.ctx.lineWidth = 1; this.ctx.beginPath(); this.ctx.moveTo(c.x, c.y); this.ctx.lineTo(c.x + 4, c.y + 2); this.ctx.stroke();
+        break;
+      }
+      case "rock": {
+        for (let i = 0; i < 3; i++) {
+          const a = p(i), b = p(i + 20);
+          this.ctx.strokeStyle = `hsl(${st.h}, ${st.s}%, ${clampL(lit + (i % 2 ? 12 : -16))}%)`;
+          this.ctx.lineWidth = 1; this.ctx.beginPath(); this.ctx.moveTo(a.x, a.y); this.ctx.lineTo(b.x, b.y); this.ctx.stroke();
+        }
+        break;
+      }
+      case "sand": {
+        for (let i = 0; i < 3; i++) {
+          const q = p(i); this.ctx.strokeStyle = `hsl(${st.h}, ${st.s}%, ${clampL(lit - 8)}%)`;
+          this.ctx.lineWidth = 1; this.ctx.beginPath(); this.ctx.moveTo(q.x - 4, q.y); this.ctx.lineTo(q.x + 4, q.y + 1); this.ctx.stroke();
+        }
+        break;
+      }
+      case "wood": {
+        for (let i = -1; i <= 1; i++) {
+          this.ctx.strokeStyle = `hsl(${st.h}, ${st.s}%, ${clampL(lit - 12)}%)`;
+          this.ctx.lineWidth = 1; this.ctx.beginPath();
+          this.ctx.moveTo(cx - HW, cy + i * HH * 0.5); this.ctx.lineTo(cx + HW, cy + i * HH * 0.5); this.ctx.stroke();
+        }
+        break;
+      }
+      case "water":
+      case "spring": {
+        const drift = Math.sin(time * 1.6 + (tx + ty)) * 3;
+        for (let i = -1; i <= 1; i++) {
+          this.ctx.strokeStyle = `hsla(${st.h}, ${st.s}%, ${clampL(lit + 18)}%, 0.5)`;
+          this.ctx.lineWidth = 1; this.ctx.beginPath();
+          this.ctx.moveTo(cx - HW * 0.7 + drift, cy + i * HH * 0.45);
+          this.ctx.lineTo(cx + HW * 0.7 + drift, cy + i * HH * 0.45); this.ctx.stroke();
+        }
+        if (this.tileHash(tx, ty, 3) > 0.6) { const q = p(4); this.dot(q.x, q.y, st, lit + 28, 1); }
+        break;
+      }
+      case "lava": {
+        const pulse = 0.5 + 0.5 * Math.sin(time * 3 + (tx * 2 + ty));
+        for (let i = 0; i < 2; i++) {
+          const a = p(i), b = p(i + 30);
+          this.ctx.strokeStyle = `hsla(40, 100%, ${clampL(60 + pulse * 20)}%, ${0.6 + pulse * 0.3})`;
+          this.ctx.lineWidth = 1.5; this.ctx.beginPath(); this.ctx.moveTo(a.x, a.y); this.ctx.lineTo(b.x, b.y); this.ctx.stroke();
+        }
+        break;
+      }
+      case "mire": {
+        for (let i = 0; i < 4; i++) { const q = p(i); this.dot(q.x, q.y, st, lit + (i % 2 ? 6 : -10)); }
+        if (this.tileHash(tx, ty, 5) > 0.7) { const q = p(8); this.dot(q.x, q.y, st, lit + 16, 1); }
+        break;
+      }
     }
   }
 
