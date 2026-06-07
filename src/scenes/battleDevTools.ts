@@ -1,5 +1,5 @@
 import type { ClassId, Point, SkillDef, Unit } from "../core/types";
-import { recomputeStats } from "../core/unit";
+import { grantSp, recomputeStats } from "../core/unit";
 import { CLASSES, getClass } from "../data/classes";
 import { el } from "../ui/dom";
 import type { BattleScene } from "./battleScene";
@@ -57,6 +57,13 @@ function devLevelUp(s: DevScene): void {
   // Route through the live level-up path so the in-battle level-up card shows
   // (lets us preview the card without grinding a real kill).
   s.devLevelUpCard();
+}
+
+function devGrantSp(s: DevScene): void {
+  const u = devTargetUnit(s);
+  if (!u) return;
+  grantSp(u, 100);
+  s.ui.toast(`${u.name}: ${u.sp} SP`);
 }
 
 function devCycleClass(s: DevScene): void {
@@ -146,6 +153,7 @@ export function setupDevBar(scene: BattleScene): void {
     { label: "Loot", title: "Open the nearest treasure chest", onClick: () => { if (s.phase !== "over") s.devOpenChest(); } },
     { label: "Class▸", title: "Cycle the active/first hero's class", onClick: () => devCycleClass(s) },
     { label: "+500g", title: "Add 500 gold", onClick: () => { s.ctx.state.gold += 500; s.ui.toast(`Gold: ${s.ctx.state.gold}`); } },
+    { label: "+SP", title: "Grant 100 skill points to the active/first hero", onClick: () => devGrantSp(s) },
     { label: "Heal", title: "Fully restore the party", onClick: () => devHealParty(s) },
   ];
   const bar = el("div", { className: "panel dev-bar" });
