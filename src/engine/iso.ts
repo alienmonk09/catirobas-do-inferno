@@ -46,6 +46,12 @@ export function worldToScreen(x: number, y: number, z: number, origin: ScreenPoi
   };
 }
 
+/** Origin-less projection: a logical (already-rotated) tile at height z to its
+ *  tile-screen-space point (pre-origin, pre-zoom). Shared by camera + scene + tests. */
+export function tileScreen(x: number, y: number, z: number): ScreenPoint {
+  return worldToScreen(x, y, z, { sx: 0, sy: 0 });
+}
+
 /** Four corner points of a tile's top-face diamond, given its screen center. */
 export function diamondCorners(center: ScreenPoint): ScreenPoint[] {
   const hw = TILE_W / 2;

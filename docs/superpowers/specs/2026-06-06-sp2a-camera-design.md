@@ -113,8 +113,16 @@ read them so they clamp/fit **without taking those as args**.
     the bbox is **taller** than the viewport, `center.sy` is bounded so **bbox top ≥ −CLAMP_MARGIN
     AND bottom ≤ vh + CLAMP_MARGIN** (you can't pan the map off-screen); when it **fits** vertically,
     `center.sy = fitCenter.sy` (boot framing) — this intentionally leaves extra headroom above the
-    map, so the top edge can sit *higher* than `−CLAMP_MARGIN` (nothing is clipped, the whole map is
-    visible). The margin bound is an anti-pan-off-screen rule, not a symmetric-centering rule.
+    map, so the top edge can sit *higher* than `−CLAMP_MARGIN`. The margin bound is an
+    anti-pan-off-screen rule, not a symmetric-centering rule.
+    > **Impl-verification note (SP2a):** the original prose here ("nothing is clipped, the whole map
+    > is visible") was an overstatement and is corrected. Because `fitCenter.sy` is biased
+    > `FRAME_NUDGE + mh·Z/2` *below* the geometric bbox-Y center, on an **elevated** map (`mh>0`) the
+    > map's *top* renders **above** the viewport top at boot (measured: 14 of the 17 real maps clip
+    > the top by ~30–56 px; tall test maps far more). This is **by design and pixel-identical to SP1's
+    > `computeCamera`** (Goal 4 mandates boot parity) — the downward bias buys the bottom HUD/menu
+    > headroom. It is not a clamp defect. SP2b (which re-authors maps + framing) should treat
+    > whole-map visibility on tall maps as an open framing question, not a settled guarantee.
 - Getters: **`origin`**, **`scale`** (= `zoom`).
 
 **Map bounding box (tile-screen space) — used by both `clamp` and `fitScale`, full-diamond extents
