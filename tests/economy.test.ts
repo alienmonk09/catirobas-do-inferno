@@ -1,6 +1,8 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { createGameState, saveGame, loadGame, buyItem, GOLD_PER_KILL, GOLD_PER_PHASE, goldForKill } from "../src/core/state";
 import { ITEMS } from "../src/data/items";
+import { WEAPONS } from "../src/data/weapons";
+import type { ClassId } from "../src/core/types";
 
 const SAVE_KEY = "tactics-mvp-save";
 
@@ -190,4 +192,22 @@ describe("ITEMS price field", () => {
       expect(item.price, `${item.id}.price must be positive`).toBeGreaterThan(0);
     }
   });
+});
+
+// ---------------------------------------------------------------------------
+// Caster classes have a purchasable weapon upgrade (gold sink)
+// ---------------------------------------------------------------------------
+
+describe("caster weapon upgrade path", () => {
+  const CASTERS: ClassId[] = ["blackMage", "timeMage", "whiteMage", "druid", "summoner", "geomancer"];
+
+  for (const cls of CASTERS) {
+    it(`${cls} has >=2 usable weapons including at least one purchasable upgrade`, () => {
+      const usable = Object.values(WEAPONS).filter((w) => w.classes.includes(cls));
+      // Mirror the shop filter: purchasable means price > 0.
+      const purchasable = usable.filter((w) => w.price > 0);
+      expect(usable.length, `${cls} should have at least 2 usable weapons`).toBeGreaterThanOrEqual(2);
+      expect(purchasable.length, `${cls} should have at least one purchasable upgrade`).toBeGreaterThanOrEqual(1);
+    });
+  }
 });
