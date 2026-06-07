@@ -65,6 +65,14 @@ describe("map data invariants", () => {
         }
       });
 
+      it("has exactly one enemy matching a defeat objective's target name", () => {
+        const obj = map.objective;
+        if (obj?.kind !== "defeat") return;
+        const matches = map.enemies.filter((e) => e.name === obj.targetName);
+        // evaluateOutcome matches the boss by name; duplicates would misfire.
+        expect(matches.length).toBe(1);
+      });
+
       it("places treasure chests on valid, walkable, unoccupied tiles", () => {
         if (!map.chests) return;
         const grid = new Grid(map);
