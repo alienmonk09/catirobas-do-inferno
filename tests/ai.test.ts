@@ -569,6 +569,33 @@ describe("planEnemyTurn: counter risk on range-1 damage skills", () => {
   });
 });
 
+describe("planEnemyTurn: high-ground positional tiebreak", () => {
+  it("prefers the higher stand when a magic skill deals equal damage from two tiles", () => {
+    // Foe at (1,1) on height 0. A Black Mage casting Fire (magical, so elevation
+    // never changes the damage number) can strike from two tiles equidistant to
+    // the foe: the low (1,2) at height 0 and the high (2,1) at height 2. Both
+    // yield the identical rounded forecast — the only differentiator is the
+    // sub-point high-ground tiebreak, which must steer the cast onto the height-2
+    // tile. Heights are climbable in one step apart so reachability isn't a factor.
+    const heights = [
+      [0, 0, 2],
+      [0, 0, 2],
+      [0, 0, 0],
+    ];
+    const grid = gridFrom(heights);
+    const me = createUnit({ name: "Pyro", team: "enemy", classId: "blackMage", learnedSkillIds: ["fire"], pos: { x: 1, y: 2 } });
+    const foe = createUnit({ name: "Hero", team: "player", classId: "knight", pos: { x: 1, y: 1 } });
+
+    const plan = planEnemyTurn(me, [me, foe], grid);
+
+    expect(plan.action.kind).toBe("skill");
+    expect(plan.action.skillId).toBe("fire");
+    expect(samePt(plan.action.targetTile!, foe.pos)).toBe(true);
+    // The high-ground tiebreak picks the elevated stand over the equal-damage flat one.
+    expect(grid.heightAt(plan.destination.x, plan.destination.y)).toBeGreaterThan(0);
+  });
+});
+
 describe("planEnemyTurn: AoE friendly-fire penalty scales with ally harm", () => {
   it("won't drop a Fireball that catches and kills an ally, even when it nets an extra foe", () => {
     // The blast at (3,3) catches two foes (3,2)+(4,3) — tempting — but its 3x3

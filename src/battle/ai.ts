@@ -76,6 +76,15 @@ function ctxFrom(grid: Grid, stand: Point, target: Point): AttackContext {
   return { fromPos: stand, heightDelta: grid.heightAt(stand.x, stand.y) - grid.heightAt(target.x, target.y) };
 }
 
+/**
+ * Sub-point nudge toward attacking from the high ground. When two stands yield
+ * the same rounded forecast (notably for magic, which ignores elevation), this
+ * tiebreak — up to +1 for a 2-level edge — steers the AI onto the higher tile.
+ */
+function highGroundBonus(grid: Grid, stand: Point, target: Point): number {
+  return Math.min(2, Math.max(0, grid.heightAt(stand.x, stand.y) - grid.heightAt(target.x, target.y))) * 0.5;
+}
+
 /** Deterministic estimate of a basic weapon attack from a candidate stand tile. */
 function estimateWeaponDamage(attacker: Unit, stand: Point, target: Unit, grid: Grid): number {
   return forecastWeapon(attacker, target, getWeapon(attacker.weaponId), ctxFrom(grid, stand, target.pos)).amount;
@@ -262,7 +271,7 @@ export function planEnemyTurn(unit: Unit, units: Unit[], grid: Grid): AIPlan {
       if (d > weapon.range || d === 0) continue;
       if (weapon.range > 1 && !hasLineOfSight(grid, stand, target.pos)) continue;
       const dmg = estimateWeaponDamage(unit, stand, target, grid);
-      let score = scoreTarget(dmg, target);
+      let score = scoreTarget(dmg, target) + highGroundBonus(grid, stand, target.pos);
       // A target that survives this blow and can reach back will counter — weigh
       // that punish (0.6×, so a strong trade is still worth taking).
       if (dmg < target.stats.hp) score -= counterRisk(unit, target, stand, grid) * 0.6;
@@ -319,7 +328,7 @@ export function planEnemyTurn(unit: Unit, units: Unit[], grid: Grid): AIPlan {
           counterPenalty = counterRisk(unit, loneSurvivor, stand, grid) * 0.6;
         }
         options.push({
-          score: total + kills * 50 + clusterBonus - penalty - counterPenalty,
+          score: total + kills * 50 + clusterBonus - penalty - counterPenalty + highGroundBonus(grid, stand, center),
           destination: stand,
           action: { kind: "skill", skillId: skill.id, targetTile: { ...center } },
           kind: "damage",
