@@ -243,11 +243,19 @@ export class BattleScene implements Scene {
     return { sx: p.sx * scale, sy: p.sy * scale };
   }
 
-  /** Rotate the camera by one quarter-turn (dir +1 = clockwise / right). The
-   *  active unit's on-screen position shifts, so re-anchor the floating menu. */
+  /** Rotate the camera by one quarter-turn (dir +1 = clockwise / right), keeping
+   *  the focused tile centered. The camera caches its own rotation for its fit/
+   *  clamp/centering math, so it MUST be reframed when this.rot changes. */
   private rotateView(dir: 1 | -1): void {
+    // Capture the tile to keep centered BEFORE rotating: the focus unit, else the
+    // tile currently under the viewport center (read with the pre-rotation camera).
+    const focusTile: Point | null =
+      this.focusUnit?.pos ??
+      screenToTile(this.ctx.renderer.width / 2, this.ctx.renderer.height / 2,
+        this.grid, this.cam.origin, this.rot, this.cam.scale);
     this.rot = (((this.rot + dir) % 4) + 4) % 4 as Rotation;
     this.ui.setRotationLabel(this.rot);
+    this.cam.reframeForRotation(this.grid, this.rot, focusTile);
     this.anchorMenuToActive();
     this.ui.reflowFloating();
   }
