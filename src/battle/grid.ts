@@ -52,6 +52,22 @@ export class Grid {
     return this._maxHeight;
   }
 
+  /** Bilinearly interpolated height at fractional (px,py) — for smooth elevation
+   *  during move animations and camera-follow. Integer coords return the exact
+   *  tile height; samples are clamped to bounds. Shared by the renderer (unit
+   *  draw-z) and the camera (follow target), so both track the same surface. */
+  interpHeightAt(px: number, py: number): number {
+    const x0 = Math.floor(px), y0 = Math.floor(py);
+    const fx = px - x0, fy = py - y0;
+    const h = (x: number, y: number) => this.heightAt(
+      Math.max(0, Math.min(this.width - 1, x)),
+      Math.max(0, Math.min(this.height - 1, y)),
+    );
+    const top = h(x0, y0) * (1 - fx) + h(x0 + 1, y0) * fx;
+    const bot = h(x0, y0 + 1) * (1 - fx) + h(x0 + 1, y0 + 1) * fx;
+    return top * (1 - fy) + bot * fy;
+  }
+
   terrainAt(x: number, y: number): TerrainType {
     return this.inBounds(x, y) ? this.terrain[y][x] : "grass";
   }

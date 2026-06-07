@@ -13,7 +13,6 @@ import {
   diamondCorners,
   depthKey,
   rotateTile,
-  rotatedDims,
   type Rotation,
   type ScreenPoint,
 } from "./iso";
@@ -179,53 +178,10 @@ export class Renderer {
     this.ctx.clearRect(0, 0, this.width, this.height);
   }
 
-  /** Center the camera and pick a uniform scale so the whole (rotated) map fits
-   *  the viewport. Scale never exceeds 1 (tiles render at most at their native
-   *  +50% size); it shrinks only enough to fit. Origin is in unscaled tile space;
-   *  render() applies the scale. SP2 replaces this with pan/zoom/follow. */
-  computeCamera(grid: Grid, rot: Rotation = 0): { origin: ScreenPoint; scale: number } {
-    const dims = rotatedDims(rot, grid.width, grid.height);
-    const pxW = (dims.w + dims.h) * (TILE_W / 2);
-    const pxH = (dims.w + dims.h) * (TILE_H / 2) + grid.maxHeight() * TILE_Z;
-    const scale = Math.min(1, (this.width * 0.98) / pxW, (this.height * 0.94) / pxH);
-    const midX = (dims.w - 1) / 2;
-    const midY = (dims.h - 1) / 2;
-    const mid = worldToScreen(midX, midY, 0, { sx: 0, sy: 0 });
-    const origin: ScreenPoint = {
-      sx: this.width / 2 / scale - mid.sx,
-      sy: this.height / 2 / scale - mid.sy - 40,
-    };
-    return { origin, scale };
-  }
-
   /** Project a logical tile (x, y, z) to its screen center, honoring rotation. */
   private project(view: BattleView, x: number, y: number, z: number): ScreenPoint {
     const v = rotateTile(x, y, view.rot, view.grid.width, view.grid.height);
     return worldToScreen(v.x, v.y, z, view.origin);
-  }
-
-  /**
-   * Interpolated tile height for a unit at a possibly-fractional position, so a
-   * unit visually climbs/descends as it steps across tiles of differing height
-   * instead of popping to the next tile's z. Bilinear over the four surrounding
-   * integer tiles — for the axis-aligned, one-tile-at-a-time movement the animator
-   * produces, the off-axis weights fall to zero, giving a clean per-step ramp.
-   */
-  private interpHeight(grid: Grid, ap: Point): number {
-    const x0 = Math.floor(ap.x);
-    const y0 = Math.floor(ap.y);
-    const fx = ap.x - x0;
-    const fy = ap.y - y0;
-    const h00 = grid.heightAt(x0, y0);
-    const h10 = grid.heightAt(x0 + 1, y0);
-    const h01 = grid.heightAt(x0, y0 + 1);
-    const h11 = grid.heightAt(x0 + 1, y0 + 1);
-    return (
-      h00 * (1 - fx) * (1 - fy) +
-      h10 * fx * (1 - fy) +
-      h01 * (1 - fx) * fy +
-      h11 * fx * fy
-    );
   }
 
   render(view: BattleView): void {
@@ -338,7 +294,7 @@ export class Renderer {
       const ap = view.animPos.get(unit.id) ?? unit.pos;
       // Interpolated height so a mid-step unit climbs/descends smoothly (and sorts
       // at its true in-between elevation rather than snapping to a tile's z).
-      const z = this.interpHeight(grid, ap);
+      const z = grid.interpHeightAt(ap.x, ap.y);
       items.push({ kind: "unit", depth: depthKey(ap.x, ap.y, z, rot, w, h) + 0.5, unit, dx: ap.x, dy: ap.y });
     }
     items.sort((a, b) => a.depth - b.depth);
@@ -364,7 +320,7 @@ export class Renderer {
         const z = grid.heightAt(it.x, it.y);
         this.drawChest(this.project(view, it.x, it.y, z), view.time);
       } else {
-        const z = this.interpHeight(grid, { x: it.dx, y: it.dy });
+        const z = grid.interpHeightAt(it.dx, it.dy);
         const center = this.project(view, it.dx, it.dy, z);
         // Screen-space facing vector: project one tile ahead and normalize, so the
         // marker rotates correctly with the camera.

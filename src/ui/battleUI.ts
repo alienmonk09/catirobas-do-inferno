@@ -55,6 +55,9 @@ export class BattleUI {
   private toastTimer = 0;
   /** Screen point (CSS px) the action menu/submenu anchor to; null = docked. */
   private menuAnchor: { x: number; y: number } | null = null;
+  /** Last-measured panel size, so the per-frame camera re-anchor can clamp without
+   *  a getBoundingClientRect reflow. Refreshed by placeFloating on open/content change. */
+  private lastSize = new WeakMap<HTMLDivElement, { w: number; h: number }>();
 
   constructor(parent: HTMLElement) {
     this.layer = el("div", { className: "ui-layer" });
@@ -296,11 +299,50 @@ export class BattleUI {
     this.menuAnchor = p;
   }
 
+  /** Whether a floating menu panel is currently shown (gates the per-frame re-anchor). */
+  get menuOpen(): boolean {
+    return this.actionMenu.style.display !== "none" || this.submenu.style.display !== "none";
+  }
+
   /** Re-apply floating placement to whichever menu panel is currently visible.
    *  Called after a viewport resize so the menu re-anchors and re-clamps. */
   reflowFloating(): void {
     if (this.actionMenu.style.display !== "none") this.placeFloating(this.actionMenu);
     if (this.submenu.style.display !== "none") this.placeFloating(this.submenu);
+  }
+
+  /** Cheap per-frame re-anchor used while the camera pans/zooms/follows: re-applies
+   *  the current anchor and clamps with the panel's last-measured size — no
+   *  getBoundingClientRect reflow. Falls back to a full placeFloating if the panel
+   *  hasn't been measured yet (a fresh open / content change refreshes the cache). */
+  placeFloatingFast(): void {
+    if (this.actionMenu.style.display !== "none") this.fastPlace(this.actionMenu);
+    if (this.submenu.style.display !== "none") this.fastPlace(this.submenu);
+  }
+
+  private fastPlace(panel: HTMLDivElement): void {
+    if (!this.menuAnchor) {
+      panel.style.left = "";
+      panel.style.top = "";
+      panel.style.right = "";
+      panel.style.bottom = "";
+      panel.style.transform = "";
+      return;
+    }
+    const sz = this.lastSize.get(panel);
+    if (!sz) { this.placeFloating(panel); return; }
+    const margin = 10;
+    let x = this.menuAnchor.x + 28;
+    let y = this.menuAnchor.y - 16;
+    if (x + sz.w > window.innerWidth - margin) x = window.innerWidth - margin - sz.w;
+    if (y + sz.h > window.innerHeight - margin) y = window.innerHeight - margin - sz.h;
+    if (x < margin) x = margin;
+    if (y < margin) y = margin;
+    panel.style.right = "auto";
+    panel.style.bottom = "auto";
+    panel.style.transform = "none";
+    panel.style.left = `${Math.round(x)}px`;
+    panel.style.top = `${Math.round(y)}px`;
   }
 
   /** Position a floating panel near the anchor (clamped to the viewport), or
@@ -324,6 +366,7 @@ export class BattleUI {
     panel.style.top = `${y}px`;
     // Clamp into the viewport now that the panel has a measurable size.
     const r = panel.getBoundingClientRect();
+    this.lastSize.set(panel, { w: r.width, h: r.height }); // cache for the fast re-anchor path
     if (r.right > window.innerWidth - margin) x -= r.right - (window.innerWidth - margin);
     if (r.bottom > window.innerHeight - margin) y -= r.bottom - (window.innerHeight - margin);
     if (x < margin) x = margin;

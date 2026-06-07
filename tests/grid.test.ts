@@ -432,3 +432,18 @@ describe("moveBlockers", () => {
     expect(solid.has("0,1")).toBe(true);
   });
 });
+
+describe("Grid.interpHeightAt", () => {
+  it("returns the exact height at integer coords", () => {
+    const g = new Grid({ id: "i", name: "i", intro: "", width: 2, height: 2,
+      heights: [[0, 2], [4, 6]], playerSpawns: [], enemies: [] });
+    expect(g.interpHeightAt(0, 0)).toBe(0);
+    expect(g.interpHeightAt(1, 1)).toBe(6);
+  });
+  it("bilinearly interpolates fractional coords", () => {
+    const g = new Grid({ id: "i", name: "i", intro: "", width: 2, height: 2,
+      heights: [[0, 2], [4, 6]], playerSpawns: [], enemies: [] });
+    expect(g.interpHeightAt(0.5, 0)).toBeCloseTo(1, 6);   // between 0 and 2
+    expect(g.interpHeightAt(0.5, 0.5)).toBeCloseTo(3, 6); // mean of 0,2,4,6
+  });
+});

@@ -28,6 +28,7 @@ import { directionTo } from "../battle/facing";
 import { advanceToNextActor, endTurn, evaluateOutcome, previewOrder } from "../battle/turnManager";
 import { planEnemyTurn } from "../battle/ai";
 import { screenToTile, worldToScreen, rotateTile, type Rotation, type ScreenPoint } from "../engine/iso";
+import { Camera } from "../engine/camera";
 import { sfx } from "../engine/audio";
 import { startMusic, stopMusic, battleThemeForPhase } from "../engine/music";
 import { actionForKey, getBinding, formatKey } from "../engine/keybindings";
@@ -47,6 +48,11 @@ import { formatHit } from "../battle/log";
 import type { GameContext, Scene } from "./sceneManager";
 import { POPUP_COLORS, SHAKE_DUR, LUNGE_DUR, SCREEN_SHAKE_DUR, buildView } from "./battleView";
 
+/** Held-key camera pan speed (CSS px/s). */
+const PAN_SPEED = 600;
+/** Wheel-zoom sensitivity: a normalized 100-px notch ⇒ exp(-100·ZOOM_SENS) ≈ 1/1.1. */
+const ZOOM_SENS = 0.00095;
+
 type Phase =
   | "intro"
   | "starting"
@@ -62,6 +68,10 @@ type Phase =
 
 export class BattleScene implements Scene {
   private grid: Grid;
+  /** Navigable camera (pan/zoom/follow); replaces SP1's per-frame auto-fit. */
+  private cam: Camera;
+  /** Last camera origin/scale, to skip the menu re-anchor when nothing moved. */
+  private camPrev = { sx: NaN, sy: NaN, z: NaN };
   private units: Unit[] = [];
   private ui: BattleUI;
   private rng = new RNG(0x1234 + 17);
@@ -119,6 +129,8 @@ export class BattleScene implements Scene {
   ) {
     this.grid = new Grid(map);
     this.ctx.renderer.resetTileCache();
+    this.cam = new Camera({ w: this.ctx.renderer.width, h: this.ctx.renderer.height });
+    this.cam.reset(this.grid, this.rot);
     this.props = [
       ...scatterProps(this.map, this.grid),
       ...(this.map.decor ?? []).map((d) => ({ pos: { ...d.pos }, propId: d.propId as PropSpriteId })),
@@ -210,7 +222,7 @@ export class BattleScene implements Scene {
   }
 
   private get camera(): { origin: ScreenPoint; scale: number } {
-    return this.ctx.renderer.computeCamera(this.grid, this.rot);
+    return { origin: this.cam.origin, scale: this.cam.scale };
   }
 
   /** Project a logical tile to its on-screen (CSS px) center under the current
@@ -236,6 +248,16 @@ export class BattleScene implements Scene {
     this.ctx.input.onLeftClick = (px, py) => this.handleClick(px, py);
     this.ctx.input.onRightClick = () => this.cancelToMenu();
     this.ctx.input.onKey = (key) => this.handleKey(key);
+    // Drag-pan + wheel-zoom only while the player holds control (not on the AI's
+    // turn or mid-animation). Task 4 adds follow + suspends it on manual input here.
+    this.ctx.input.onDrag = (dx, dy) => {
+      if (!this.playerInControl) return;
+      this.cam.panBy(dx, dy);
+    };
+    this.ctx.input.onWheel = (nd, x, y) => {
+      if (!this.playerInControl) return;
+      this.cam.zoomAt(Math.exp(-nd * ZOOM_SENS), x, y);
+    };
   }
 
   // --- Banners / flow ---
@@ -511,6 +533,18 @@ export class BattleScene implements Scene {
     const z = this.grid.heightAt(this.active.pos.x, this.active.pos.y);
     const p = this.projectTile(this.active.pos.x, this.active.pos.y, z);
     this.ui.setMenuAnchor({ x: p.sx, y: p.sy });
+  }
+
+  /** Re-anchor the floating menu to the active unit as the camera pans/zooms/
+   *  follows — but only when origin/scale actually changed since last frame (a
+   *  static camera does no work), via the cheap cached-size path (no reflow). */
+  private trackMenuToCamera(): void {
+    const o = this.cam.origin, z = this.cam.scale;
+    if (o.sx === this.camPrev.sx && o.sy === this.camPrev.sy && z === this.camPrev.z) return;
+    this.camPrev = { sx: o.sx, sy: o.sy, z };
+    if (!this.ui.menuOpen) return;
+    this.anchorMenuToActive();
+    this.ui.placeFloatingFast();
   }
 
   /** True only when the human player may issue input right now. */
@@ -1473,6 +1507,7 @@ export class BattleScene implements Scene {
   /** Re-anchor the floating menu to the active unit and re-clamp after a resize
    *  (the camera re-centers, so the unit's on-screen position moves). */
   onResize(): void {
+    this.cam.setViewport(this.ctx.renderer.width, this.ctx.renderer.height);
     this.anchorMenuToActive();
     this.ui.reflowFloating();
   }
@@ -1482,6 +1517,23 @@ export class BattleScene implements Scene {
   update(dt: number): void {
     this.time += dt;
     this.ctx.animator.update(dt);
+
+    // --- Camera advance (runs first so origin/scale are fresh for the hover-pick
+    // and render reads later this frame). Held-key pan, then follow (see Task 4),
+    // then ease + clamp; finally keep the floating menu glued to the camera. ---
+    if (this.playerInControl) {
+      const k = this.ctx.input.keysDown;
+      let kx = 0, ky = 0;
+      if (k.has("ArrowLeft") || k.has("a")) kx -= 1;
+      if (k.has("ArrowRight") || k.has("d")) kx += 1;
+      if (k.has("ArrowUp") || k.has("w")) ky -= 1;
+      if (k.has("ArrowDown") || k.has("s")) ky += 1;
+      // Camera-move convention (right pans the camera right ⇒ center.sx up), so
+      // negate the grab-the-map drag delta.
+      if (kx || ky) this.cam.panBy(-kx * PAN_SPEED * dt, -ky * PAN_SPEED * dt);
+    }
+    this.cam.update(dt);
+    this.trackMenuToCamera();
 
     // Age popups.
     for (let i = this.popups.length - 1; i >= 0; i--) {
