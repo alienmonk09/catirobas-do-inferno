@@ -193,6 +193,37 @@ describe("planEnemyTurn: waiting / advancing when no target is reachable", () =>
     expect(manhattan(me.pos, plan.destination)).toBeLessThanOrEqual(me.stats.move);
   });
 
+  it("a ranged unit holds at firing range instead of charging to melee when it can't shoot this turn", () => {
+    // Foe penned behind a tall vertical screen (height-9 wall at x=3, rows y=1..3)
+    // so NO reachable tile has line of sight — every shot is blocked, forcing the
+    // no-action advance fallback. The archer (move 5, bow range 3) could close to
+    // dist 2 toward the screen, but a range-aware advance must instead stop at its
+    // weapon's firing range (dist 3) rather than over-committing toward melee.
+    const heights = [
+      [0, 0, 0, 0, 0],
+      [0, 0, 0, 9, 0],
+      [0, 0, 0, 9, 0],
+      [0, 0, 0, 9, 0],
+      [0, 0, 0, 0, 0],
+    ];
+    const blocked = [
+      [false, false, false, false, false],
+      [false, false, false, true, false],
+      [false, false, false, true, false],
+      [false, false, false, true, false],
+      [false, false, false, false, false],
+    ];
+    const grid = gridFrom(heights, blocked);
+    const me = createUnit({ name: "Sniper", team: "enemy", classId: "archer", pos: { x: 0, y: 2 } });
+    const foe = createUnit({ name: "Hero", team: "player", classId: "knight", pos: { x: 4, y: 2 } });
+
+    const plan = planEnemyTurn(me, [me, foe], grid);
+
+    // No shot is possible, so it advances (waits) — but stops exactly at bow range.
+    expect(plan.action.kind).toBe("wait");
+    expect(manhattan(plan.destination, foe.pos)).toBe(3);
+  });
+
   it("waits in place with no movement when there are no enemies at all", () => {
     const grid = flatGrid();
     const me = createUnit({ name: "Goblin", team: "enemy", classId: "knight", pos: { x: 3, y: 3 } });

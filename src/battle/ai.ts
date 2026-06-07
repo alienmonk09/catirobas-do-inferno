@@ -418,13 +418,23 @@ export function planEnemyTurn(unit: Unit, units: Unit[], grid: Grid): AIPlan {
   if (!target) {
     return { path: [unit.pos], destination: unit.pos, action: { kind: "wait" } };
   }
-  // Closing distance is the primary driver (each tile of progress is worth 10),
-  // with the terrain penalty folded in so the unit will give up a tile or two of
-  // advance rather than park on — or suicide into — a lava/mire hazard.
+  // Threat reach: the farthest this unit can hit from — its weapon range or any
+  // affordable damage skill's range, whichever is greater. A ranged unit aims to
+  // park at this distance (firing range) rather than charge into melee; a melee
+  // unit's reach of 1 collapses this to "get as close as possible" (since for
+  // dist >= 1, |dist - 1| is monotonic in dist), preserving prior behavior.
+  let reachDist = weapon.range;
+  for (const skill of damageSkills) reachDist = Math.max(reachDist, skill.range);
+  // Closing the gap to firing range is the primary driver (each tile worth 10);
+  // overshooting past it is penalized equally, so the unit holds at standoff. The
+  // terrain penalty is folded in so it will give up a tile rather than park on —
+  // or suicide into — a lava/mire hazard.
+  const advanceScore = (stand: Point): number =>
+    -Math.abs(manhattan(stand, target.pos) - reachDist) * 10 + terrainPenalty(grid, stand, unit);
   let bestTile = unit.pos;
-  let bestScore = -manhattan(unit.pos, target.pos) * 10 + terrainPenalty(grid, unit.pos, unit);
+  let bestScore = advanceScore(unit.pos);
   for (const stand of standTiles) {
-    const score = -manhattan(stand, target.pos) * 10 + terrainPenalty(grid, stand, unit);
+    const score = advanceScore(stand);
     if (score > bestScore) {
       bestScore = score;
       bestTile = stand;
