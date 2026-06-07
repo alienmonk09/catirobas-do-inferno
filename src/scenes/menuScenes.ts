@@ -285,6 +285,11 @@ function buildSettingsPanel(onBack: () => void): HTMLElement {
           keydownHandler = (e: KeyboardEvent): void => {
             e.preventDefault();
             e.stopPropagation();
+            // Escape is the universal abort: cancel the rebind without binding it.
+            if (e.key === "Escape") {
+              cancelCapture();
+              return;
+            }
             window.removeEventListener("keydown", keydownHandler!, true);
             keydownHandler = null;
             const captured = e.key;
