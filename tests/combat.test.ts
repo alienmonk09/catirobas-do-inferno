@@ -587,6 +587,35 @@ describe("resolveItem", () => {
     expect(target.alive).toBe(true);
     expect(target.stats.hp).toBe(40);
   });
+
+  it("cureStatus strips negative statuses and returns a status result", () => {
+    const target = knight();
+    addStatus(target, { kind: "poison", turnsLeft: 3 });
+    addStatus(target, { kind: "slow", turnsLeft: 2 });
+    addStatus(target, { kind: "regen", turnsLeft: 2 }); // positive — must survive
+    const res = resolveItem(target, "cureStatus", 0);
+    expect(res).not.toBeNull();
+    expect(res!.kind).toBe("status");
+    expect(target.statuses.some((s) => s.kind === "poison")).toBe(false);
+    expect(target.statuses.some((s) => s.kind === "slow")).toBe(false);
+    expect(target.statuses.some((s) => s.kind === "regen")).toBe(true); // kept
+  });
+
+  it("cureStatus returns null when there is nothing negative to cure", () => {
+    const target = knight();
+    addStatus(target, { kind: "haste", turnsLeft: 2 }); // positive only
+    const res = resolveItem(target, "cureStatus", 0);
+    expect(res).toBeNull();
+    expect(target.statuses.some((s) => s.kind === "haste")).toBe(true);
+  });
+
+  it("cureStatus returns null on a dead target", () => {
+    const target = knight();
+    target.alive = false;
+    target.stats.hp = 0;
+    const res = resolveItem(target, "cureStatus", 0);
+    expect(res).toBeNull();
+  });
 });
 
 describe("addStatus", () => {

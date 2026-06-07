@@ -1420,7 +1420,8 @@ export class BattleScene implements Scene {
         color = POPUP_COLORS.revive;
         break;
       case "status":
-        text = res.status ?? "status";
+        // A status result with no `status` field is a cure (Remedy strips debuffs).
+        text = res.status ?? "Cure";
         color = POPUP_COLORS.status;
         break;
     }

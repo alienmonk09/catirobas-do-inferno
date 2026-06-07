@@ -33,9 +33,10 @@ export function formatHit(result: HitResult, nameOf: (id: string) => string): st
       return `${name} is revived`;
     case "status": {
       const sk = result.status as StatusKind | undefined;
-      const wording = sk ? (STATUS_WORDING[sk] ?? "affected by") : "affected by";
-      const statusName = sk ?? "unknown";
-      return `${name} is ${wording} ${statusName}`;
+      // No `status` field means a cure (Remedy strips debuffs), not a new status.
+      if (!sk) return `${name} is cured of debuffs`;
+      const wording = STATUS_WORDING[sk] ?? "affected by";
+      return `${name} is ${wording} ${sk}`;
     }
   }
 }

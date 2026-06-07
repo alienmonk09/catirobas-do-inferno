@@ -68,6 +68,11 @@ describe("formatHit", () => {
     expect(formatHit(r, nameOf)).toBe("Aldric is blessed with regen");
   });
 
+  it("formats a Remedy cure (status result with no status field)", () => {
+    const r: HitResult = { unitId: "u1", kind: "status", amount: 0, crit: false, killed: false, revived: false };
+    expect(formatHit(r, nameOf)).toBe("Aldric is cured of debuffs");
+  });
+
   it("falls back to Someone for an unknown unit id", () => {
     const r: HitResult = { unitId: "unknown-id", kind: "damage", amount: 10, crit: false, killed: false, revived: false };
     expect(formatHit(r, nameOf)).toBe("Someone takes 10 damage");

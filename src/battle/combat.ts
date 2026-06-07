@@ -321,6 +321,10 @@ const OPPOSITE_STATUS: Partial<Record<StatusKind, StatusKind>> = {
   haste: "slow",
 };
 
+// Debuffs a cure-status consumable (Remedy) lifts. Beneficial statuses
+// (guard/haste/regen/protect/shell) are left untouched.
+const NEGATIVE_STATUSES: readonly StatusKind[] = ["poison", "slow", "stop"];
+
 export function addStatus(unit: Unit, status: ActiveStatus): void {
   const opposite = OPPOSITE_STATUS[status.kind];
   if (opposite) unit.statuses = unit.statuses.filter((s) => s.kind !== opposite);
@@ -509,6 +513,12 @@ export function resolveItem(
       if (!target.alive || !statusKind) return null;
       addStatus(target, { kind: statusKind, turnsLeft: statusDuration ?? 3 });
       return { unitId: target.id, kind: "status", amount: 0, crit: false, killed: false, revived: false, status: statusKind };
+    }
+    case "cureStatus": {
+      // No effect (and so: don't consume) on a corpse or a target carrying no debuffs.
+      if (!target.alive || !target.statuses.some((s) => NEGATIVE_STATUSES.includes(s.kind))) return null;
+      target.statuses = target.statuses.filter((s) => !NEGATIVE_STATUSES.includes(s.kind));
+      return { unitId: target.id, kind: "status", amount: 0, crit: false, killed: false, revived: false };
     }
   }
 }

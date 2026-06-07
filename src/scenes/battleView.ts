@@ -270,6 +270,10 @@ function computeForecast(s: ViewScene, tile: Point): ForecastTag | null {
       if (!ally || !item.statusKind) return null;
       return { tile, text: item.statusKind, color: POPUP_COLORS.status, strong: false };
     }
+    if (item.effect === "cureStatus") {
+      if (!ally) return null;
+      return { tile, text: "Cure", color: POPUP_COLORS.status, strong: false };
+    }
   }
   return null;
 }

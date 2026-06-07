@@ -48,6 +48,15 @@ export const ITEMS: Record<string, ItemDef> = {
     statusKind: "haste",
     statusDuration: 3,
   },
+  remedy: {
+    id: "remedy",
+    name: "Remedy",
+    description: "Cure an ally's poison, slow, and stop.",
+    effect: "cureStatus",
+    amount: 0,
+    range: 1,
+    price: 45,
+  },
   xPotion: {
     id: "xPotion",
     name: "X-Potion",

@@ -159,7 +159,7 @@ export interface WeaponDef {
   element?: Element;
 }
 
-export type ItemEffect = "healHp" | "healMp" | "revive" | "buff";
+export type ItemEffect = "healHp" | "healMp" | "revive" | "buff" | "cureStatus";
 
 export interface ItemDef {
   id: string;
