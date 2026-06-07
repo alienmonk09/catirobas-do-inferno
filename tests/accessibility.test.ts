@@ -4,8 +4,11 @@ import {
   setTextScale,
   isHighContrast,
   setHighContrast,
+  prefersReducedMotion,
+  setReducedMotion,
   applyTextScale,
   applyHighContrast,
+  applyReducedMotion,
   applyAccessibility,
   type TextScale,
 } from "../src/engine/accessibility";
@@ -94,6 +97,37 @@ describe("accessibility — high contrast", () => {
 
   it("applyHighContrast is a safe no-op without a document", () => {
     expect(() => applyHighContrast()).not.toThrow();
+  });
+});
+
+describe("accessibility — reduced motion", () => {
+  beforeEach(() => {
+    setReducedMotion(false);
+  });
+
+  it("prefersReducedMotion default is false in node (no matchMedia)", () => {
+    setReducedMotion(false);
+    expect(prefersReducedMotion()).toBe(false);
+  });
+
+  it("setReducedMotion round-trips: false → true → false", () => {
+    setReducedMotion(false);
+    expect(prefersReducedMotion()).toBe(false);
+
+    setReducedMotion(true);
+    expect(prefersReducedMotion()).toBe(true);
+
+    setReducedMotion(false);
+    expect(prefersReducedMotion()).toBe(false);
+  });
+
+  it("setReducedMotion does not throw in node env (no document)", () => {
+    expect(() => setReducedMotion(true)).not.toThrow();
+    expect(() => setReducedMotion(false)).not.toThrow();
+  });
+
+  it("applyReducedMotion is a safe no-op without a document", () => {
+    expect(() => applyReducedMotion()).not.toThrow();
   });
 });
 
