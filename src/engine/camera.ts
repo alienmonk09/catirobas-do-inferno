@@ -9,6 +9,11 @@ const FRAME_NUDGE = 40;
 const TAU = 0.12;
 const EASE_EPSILON = 0.5;
 const CLAMP_MARGIN = 48;
+/** Max zoom-in (multiple of native tile size). Boot still fits the whole map at
+ *  ≤1 (see fitScale's min(1,…)); only manual zoom-in goes past native, up to here.
+ *  Needs real headroom so big maps that already nearly fit at native are actually
+ *  zoomable + pannable — [fitScale..1] was too tight to feel like a camera. */
+export const MAX_ZOOM = 2.5;
 
 type TileScreenPoint = ScreenPoint;
 
@@ -79,12 +84,12 @@ export class Camera {
   }
   setViewport(w: number, h: number): void {
     this.vw = w; this.vh = h;
-    this.zoom = clampNum(this.zoom, this.fitScale(), 1);
+    this.zoom = clampNum(this.zoom, this.fitScale(), MAX_ZOOM);
     this.clamp();
   }
   reframeForRotation(map: Grid, toRot: Rotation, focusTile: Point | null): void {
     this.map = map; this.rot = toRot;
-    this.zoom = clampNum(this.zoom, this.fitScale(), 1);
+    this.zoom = clampNum(this.zoom, this.fitScale(), MAX_ZOOM);
     if (focusTile) {
       const v = rotateTile(focusTile.x, focusTile.y, toRot, map.width, map.height);
       this.center = tileScreen(v.x, v.y, map.heightAt(focusTile.x, focusTile.y));
@@ -104,7 +109,7 @@ export class Camera {
   zoomAt(factor: number, cursorX: number, cursorY: number): void {
     if (!(factor > 0)) throw new Error("zoomAt factor must be > 0");
     const z0 = this.zoom;
-    const z1 = clampNum(z0 * factor, this.fitScale(), 1);
+    const z1 = clampNum(z0 * factor, this.fitScale(), MAX_ZOOM);
     const k = 1 / z0 - 1 / z1;
     this.center = {
       sx: this.center.sx + (cursorX - this.vw / 2) * k,
@@ -138,6 +143,6 @@ export class Camera {
   }
   get scale(): number { return this.zoom; }
 
-  // test-only convenience: jump zoom to a value within [fitScale..1]
-  zoomTo(z: number): void { this.zoom = clampNum(z, this.fitScale(), 1); this.clamp(); }
+  // test-only convenience: jump zoom to a value within [fitScale..MAX_ZOOM]
+  zoomTo(z: number): void { this.zoom = clampNum(z, this.fitScale(), MAX_ZOOM); this.clamp(); }
 }

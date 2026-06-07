@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { Camera } from "../src/engine/camera";
+import { Camera, MAX_ZOOM } from "../src/engine/camera";
 import { tileScreen, rotateTile, TILE_W, TILE_H, TILE_Z, type Rotation } from "../src/engine/iso";
 import { Grid } from "../src/battle/grid";
 import type { MapDef } from "../src/core/types";
@@ -109,13 +109,15 @@ describe("Camera zoomAt", () => {
       expect((u.sy + o1.sy) * z1).toBeCloseTo(cursor.y, 3);
     }
   });
-  it("clamps zoom to [fitScale..1] and asserts factor>0", () => {
+  it("clamps zoom to [fitScale..MAX_ZOOM] and asserts factor>0", () => {
     const cam = new Camera(VP);
     cam.reset(gridOf(24, 24, 0), 0);
-    cam.zoomAt(100, 640, 360); // way in → clamps at 1
-    expect(cam.scale).toBeLessThanOrEqual(1);
+    const fit = cam.scale; // boot zoom == fitScale (< 1 on this big map)
+    cam.zoomAt(100, 640, 360); // way in → clamps at MAX_ZOOM
+    expect(cam.scale).toBeCloseTo(MAX_ZOOM, 9);
+    expect(cam.scale).toBeGreaterThan(1); // zoom-in can exceed native (the whole point)
     cam.zoomAt(0.0001, 640, 360); // way out → clamps at fitScale
-    expect(cam.scale).toBeGreaterThan(0);
+    expect(cam.scale).toBeCloseTo(fit, 9);
     expect(() => cam.zoomAt(0, 640, 360)).toThrow();
   });
 });
