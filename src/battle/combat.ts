@@ -405,6 +405,12 @@ export function resolveSkillOnTarget(
       addStatus(target, { kind: skill.statusKind, turnsLeft: skill.statusDuration ?? 3 });
       return { unitId: target.id, kind: "status", amount: 0, crit: false, killed: false, revived: false, status: skill.statusKind };
     }
+    default: {
+      // Exhaustiveness guard: a new SkillEffect makes TS fail here instead of
+      // silently returning undefined.
+      const _exhaustive: never = skill.effect;
+      return _exhaustive;
+    }
   }
 }
 
