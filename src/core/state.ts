@@ -49,12 +49,13 @@ export function createGameState(): GameState {
 
 /**
  * Classic mode survivor filter, applied after a victory. When permadeath is on,
- * fallen heroes (alive === false at battle end) are dropped from the party for
- * good; otherwise the party is returned unchanged. Pure — does not mutate input.
+ * only heroes still explicitly alive (alive === true) are kept; fallen heroes
+ * and any unit with a missing/legacy alive flag are dropped from the party for
+ * good. Otherwise the party is returned unchanged. Pure — does not mutate input.
  */
 export function survivorsAfterBattle(party: Unit[], permadeath: boolean): Unit[] {
   if (!permadeath) return party;
-  return party.filter((u) => u.alive !== false);
+  return party.filter((u) => u.alive === true);
 }
 
 /** Total number of save slots. */

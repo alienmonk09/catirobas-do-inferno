@@ -32,7 +32,18 @@ describe("permadeath - survivorsAfterBattle", () => {
     const result = survivorsAfterBattle(party, true);
     expect(result).not.toContain(party[0]);
     expect(result).toContain(party[1]);
-    expect(result.every((u) => u.alive !== false)).toBe(true);
+    expect(result.every((u) => u.alive === true)).toBe(true);
+  });
+
+  it("with permadeath true, drops a legacy unit whose alive is undefined", () => {
+    const party = createStartingParty();
+    expect(party.length).toBeGreaterThanOrEqual(2);
+    // Migrated/legacy save: alive may be missing (undefined) rather than a boolean.
+    (party[0] as { alive?: boolean }).alive = undefined;
+    party[1].alive = true;
+    const result = survivorsAfterBattle(party, true);
+    expect(result).not.toContain(party[0]);
+    expect(result).toContain(party[1]);
   });
 
   it("with permadeath false, returns the party unchanged (including the dead)", () => {
