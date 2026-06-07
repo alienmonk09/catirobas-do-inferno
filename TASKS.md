@@ -23,9 +23,19 @@ Living task list for the autonomous build. The roadmap (`ROADMAP.md`) is the
     + LOS-blocking props (verdantRuins seeded w/ trees+boulders). Build clean; **1362
     tests passing** (1333 baseline + 29). Browser-verified phase1 + verdantRuins +
     emberfall (motifs, animation, props, trees/boulders all render; rotation centers).
-  - **NEXT UP — SP2** (separate spec→plan→branch): bigger map dimensions (re-author all
-    17 maps), real pan/zoom/follow camera (replaces SP1 auto-fit), enemy rebalancing,
-    terrain edge/transition blending. Builds on SP1 visuals.
+- **SP2 decomposed into SP2a/SP2b/SP2c.** **SP2a — real camera (pan/zoom/follow)**:
+  **spec + plan DONE, NOT implemented** (feel feature — parked for user's live eyeball).
+  Branch `feat/rich-battlefield-camera` (off `feat/rich-battlefield`); spec
+  `docs/superpowers/specs/2026-06-06-sp2a-camera-design.md` (hardened through 5 adversarial
+  review rounds — transform math numerically verified, boot pixel-identical to SP1), plan
+  `docs/superpowers/plans/2026-06-06-sp2a-camera.md` (5 TDD tasks). **To implement:** ultracode
+  sequential-workflow run on that branch. SP2b (bigger maps + rebalance) / SP2c (edge-blending)
+  are later cycles that build on SP2a.
+- **IN PROGRESS — 50-improvements roadmap** (autonomous overnight run, ultracode) on branch
+  **`feat/improvements-roadmap`** (off `feat/rich-battlefield`): a broad game sweep
+  (combat/AI/UX/a11y/content/juice/progression/code-quality), each small + verifiable,
+  implemented via per-improvement implement→adversarial-verify subagents, build kept green,
+  committed incrementally. Roadmap doc: `docs/superpowers/ROADMAP-improvements.md`.
 - Branch: **`feat/progression-rewards`** (off `main`; not merged/pushed) — base of the
   rich-battlefield branch. Build: clean. Tests: **1333 passing**. Audio WIP for
   `feat/audio` is parked in `git stash` (restore: `git checkout feat/audio && git stash pop`).
