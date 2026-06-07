@@ -35,16 +35,16 @@ green (`tsc` + `npm test` + `npm run build`), committed incrementally.
 | R18 | AI seeks rear/flank on equal damage | ai | M/L | unit | ✅ `7f1ef63` |
 | R19 | Ranged enemies stop at firing range | ai | H/M | unit | ✅ `9de5b30` |
 | R20 | Low-HP AI units retreat | ai | H/M | unit | ✅ `5793e4d` |
-| R21 | Make holy element mechanically active | data | M/L | unit | ⬜ |
-| R22 | Time Mage gets a unique skill | data | H/L | unit | ⬜ |
-| R23 | Knight gets reach/AoE skill(s) | data | H/L | unit | ⬜ |
-| R24 | Archer gets a 3rd/4th skill | data | H/L | unit | ⬜ |
-| R25 | Caster weapon upgrade path / gold sink | data | M/M | screenshot | ⬜ |
-| R26 | Add Remedy status-cure consumable | data | H/M | unit | ⬜ |
-| R27 | Pin consumable economics in tests | data | M/L | unit | ⬜ |
-| R28 | Author SP1 props as cover on bare maps | data | H/L | screenshot | ⬜ |
-| R29 | Convert frostspirePass rout→seize | data | M/L | unit | ⬜ |
-| R30 | Stretch partyCapForPhase to 17 phases | data | M/M | unit | ⬜ |
+| R21 | Make holy element mechanically active | data | M/L | unit | ✅ `ce3fd41` |
+| R22 | Time Mage gets a unique skill | data | H/L | unit | ✅ `a5b9dce` |
+| R23 | Knight gets reach/AoE skill(s) | data | H/L | unit | ✅ `6ed0c40` |
+| R24 | Archer gets a 3rd/4th skill | data | H/L | unit | ✅ `371a9f9` |
+| R25 | Caster weapon upgrade path / gold sink | data | M/M | unit | ✅ `1026ea3` |
+| R26 | Add Remedy status-cure consumable | data | H/M | unit | ✅ `178a2cd` |
+| R27 | Pin consumable economics in tests | data | M/L | unit | ✅ `f02f0ee` |
+| R28 | Author SP1 props as cover on bare maps | data | H/L | screenshot | ✅ `7406544` (3 maps, browser-verified) |
+| R29 | Convert frostspirePass rout→seize | data | M/L | unit | ✅ `4a12fc0` |
+| R30 | Stretch partyCapForPhase to 17 phases | data | M/M | unit | ✅ `eda9a57` |
 | R31 | Reject non-finite level/xp in save validation | progression | H/L | unit | ⬜ |
 | R32 | survivorsAfterBattle: alive===true | progression | L/L | unit | ⬜ |
 | R33 | newSkillName hint checks sub-job | progression | L/L | unit | ⬜ |
