@@ -26,16 +26,19 @@ describe("hero roster", () => {
     expect(ROSTER.length).toBeGreaterThanOrEqual(PARTY_SIZE);
   });
 
-  it("grows the party cap across the campaign without exceeding the roster", () => {
+  it("grows the party cap across the 17-phase campaign without exceeding the roster", () => {
     expect(partyCapForPhase(0)).toBe(PARTY_SIZE); // start: three-strong
     expect(partyCapForPhase(1)).toBe(PARTY_SIZE);
     expect(partyCapForPhase(2)).toBe(4); // fourth slot opens
-    expect(partyCapForPhase(4)).toBe(5); // fifth slot opens
-    expect(partyCapForPhase(6)).toBe(6); // sixth slot for the finale
-    expect(partyCapForPhase(9)).toBeLessThanOrEqual(MAX_PARTY);
-    expect(partyCapForPhase(6)).toBeGreaterThan(partyCapForPhase(0));
-    // Monotonic, non-decreasing growth across the campaign.
-    for (let p = 1; p <= 6; p++) {
+    expect(partyCapForPhase(5)).toBe(4); // still four through the early march
+    expect(partyCapForPhase(6)).toBe(5); // fifth slot opens mid-campaign
+    expect(partyCapForPhase(10)).toBe(5);
+    expect(partyCapForPhase(11)).toBe(6); // sixth slot for the long final stretch
+    expect(partyCapForPhase(16)).toBe(6); // finale (last phase) at full company
+    expect(partyCapForPhase(16)).toBeLessThanOrEqual(MAX_PARTY);
+    expect(partyCapForPhase(16)).toBeGreaterThan(partyCapForPhase(0));
+    // Monotonic, non-decreasing growth across the whole campaign.
+    for (let p = 1; p <= 16; p++) {
       expect(partyCapForPhase(p)).toBeGreaterThanOrEqual(partyCapForPhase(p - 1));
     }
   });

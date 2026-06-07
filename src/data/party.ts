@@ -33,15 +33,17 @@ export const MAX_PARTY = ROSTER.length;
 
 /**
  * Deployment / recruit cap for a chapter (0-based phase index). The party starts
- * at four and earns a slot mid-campaign and another for the finale, so reinforce-
- * ments arrive at a readable pace. Maps must offer at least this many spawns.
+ * at three and earns a slot a few times across the campaign, reaching a six-strong
+ * company for the long final stretch, so reinforcements arrive at a readable pace.
+ * Maps must offer at least this many spawns.
  */
 export function partyCapForPhase(phaseIndex: number): number {
-  // 7-phase campaign (indices 0–6): the army grows one slot every couple of
-  // chapters — start with three, reach a six-strong company at the finale — so
-  // reinforcements arrive at a steady, readable pace.
-  if (phaseIndex >= 6) return Math.min(6, MAX_PARTY);
-  if (phaseIndex >= 4) return 5;
+  // 17-phase campaign (indices 0–16): the army grows one slot a few times over the
+  // long march — three at the start, four through the early chapters, five mid-
+  // campaign, and a six-strong company for the final stretch — so reinforcements
+  // arrive at a steady, readable pace instead of maxing out a third of the way in.
+  if (phaseIndex >= 11) return Math.min(6, MAX_PARTY);
+  if (phaseIndex >= 6) return 5;
   if (phaseIndex >= 2) return 4;
   return PARTY_SIZE;
 }
