@@ -10,16 +10,21 @@ green (`tsc` + `npm test` + `npm run build`), committed incrementally.
 
 | ID | Title | Area | V/R | Verify | Status |
 |----|-------|------|-----|--------|--------|
-| R01 | Stopped units should not counterattack | combat | H/L | unit | ⬜ |
-| R02 | Slow & haste mutually exclusive | combat | M/L | unit | ⬜ |
-| R03 | Net Poison+Regen into one HP delta/tick | combat | M/M | unit | ⬜ |
-| R04 | Auto-Potion falls back to X-Potion | combat | M/L | unit | ⬜ |
-| R05 | Exhaustiveness guard on resolveSkillOnTarget | combat | M/L | logic | ⬜ |
-| R06 | Pin facing×defense×element×crit composition | combat | L/L | unit | ⬜ |
-| R07 | Pin Poison+Regen interaction in tests | combat | M/L | unit | ⬜ |
-| R08 | coverFor stable tie test | combat | L/L | unit | ⬜ |
-| R09 | Fold expected crit into forecast | combat | M/L | unit | ⬜ |
-| R10 | Weapon attacks honor elemental affinity | combat | M/L | unit | ⬜ |
+| R01 | Stopped units should not counterattack | combat | H/L | unit | ✅ `e83984e` |
+| R02 | Slow & haste mutually exclusive | combat | M/L | unit | ✅ `6ed5a42` |
+| R03 | Net Poison+Regen into one HP delta/tick | combat | M/M | unit | ⏭️ skipped — conflicts with R07 (see note) |
+| R04 | Auto-Potion falls back to X-Potion | combat | M/L | unit | 🔄 retry (529) in batch 2 |
+| R05 | Exhaustiveness guard on resolveSkillOnTarget | combat | M/L | logic | ✅ `dccb079` |
+| R06 | Pin facing×defense×element×crit composition | combat | L/L | unit | ✅ `c894f5d` |
+| R07 | Pin Poison+Regen interaction in tests | combat | M/L | unit | ✅ `d826060` |
+| R08 | coverFor stable tie test | combat | L/L | unit | ✅ `a59cfd3` |
+| R09 | Fold expected crit into forecast | combat | M/L | unit | ✅ `a0b2c50` |
+| R10 | Weapon attacks honor elemental affinity | combat | M/L | unit | ✅ `eababd6` |
+
+> **R03 skipped:** R07 (committed) pinned the current poison+regen behavior (two HitResults,
+> net-zero HP, lethal-poison-blocks-regen) with good tests. R03's netting-into-one-delta would
+> contradict + undo R07 for a debatable cosmetic gain (the per-effect popups are informative; the
+> "poison kills before regen" worry is already the tested behavior). Not worth undoing tested code.
 | R11 | AI penalizes ending turn on lava/mire | ai | H/L | unit | ⬜ |
 | R12 | counterRisk for range-1 damage skills | ai | H/L | unit | ⬜ |
 | R13 | AoE friendly-fire penalty scales w/ dmg | ai | H/L | unit | ⬜ |
