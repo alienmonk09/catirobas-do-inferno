@@ -1,4 +1,4 @@
-import type { SkillDef, Unit, WeaponDef } from "../core/types";
+import type { SkillDef, Unit, WeaponDef, WeaponKind } from "../core/types";
 import {
   effectiveDef,
   effectiveRes,
@@ -6,9 +6,29 @@ import {
   elementAffinity,
   elementDamageMult,
   positionalDamageMult,
+  positionalCritBonus,
+  CRIT_CHANCE,
+  CRIT_MULT,
   type AttackContext,
   type Affinity,
 } from "./combat";
+
+/**
+ * Expected crit multiplier folded into a no-variance forecast: a physical hit
+ * lands a CRIT_MULT crit with probability (CRIT_CHANCE + positional bonus), so
+ * its mean damage is base × (1 + chance·(CRIT_MULT-1)). Magic never crits, so
+ * this returns 1 for it — matching applyVarianceAndCrit's `allowCrit` gate.
+ */
+function expectedCritMult(
+  attacker: Unit,
+  target: Unit,
+  kind: WeaponKind,
+  ctx?: AttackContext,
+): number {
+  if (kind !== "physical") return 1;
+  const chance = CRIT_CHANCE + positionalCritBonus(attacker, target, kind, ctx);
+  return 1 + chance * (CRIT_MULT - 1);
+}
 
 export interface Forecast {
   kind: "damage" | "heal" | "revive" | "status";
@@ -31,6 +51,7 @@ export function forecastWeapon(attacker: Unit, target: Unit, weapon: WeaponDef, 
   let amount = Math.max(1, stat + weapon.power - effectiveDef(target));
   amount *= positionalDamageMult(attacker, target, weapon.kind, ctx);
   amount *= defenseDamageMult(target, weapon.kind);
+  amount *= expectedCritMult(attacker, target, weapon.kind, ctx);
   amount = Math.max(1, Math.round(amount));
   return { kind: "damage", amount, lethal: amount >= target.stats.hp };
 }
@@ -45,6 +66,7 @@ export function forecastSkill(caster: Unit, target: Unit, skill: SkillDef, ctx?:
       base *= positionalDamageMult(caster, target, skill.scaling, ctx);
       base *= defenseDamageMult(target, skill.scaling);
       base *= elementDamageMult(target, skill.element);
+      base *= expectedCritMult(caster, target, skill.scaling, ctx);
       const amount = Math.max(1, Math.round(base));
       return { kind: "damage", amount, lethal: amount >= target.stats.hp, affinity: elementAffinity(target, skill.element) };
     }

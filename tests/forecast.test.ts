@@ -35,9 +35,9 @@ function skill(over: Partial<SkillDef>): SkillDef {
 }
 
 describe("forecast", () => {
-  it("physical weapon = atk + power - def", () => {
+  it("physical weapon = (atk + power - def) crit-weighted", () => {
     const f = forecastWeapon(mkUnit({ atk: 20 }), mkUnit({ def: 5 }), physWeapon);
-    expect(f.amount).toBe(21); // 20 + 6 - 5
+    expect(f.amount).toBe(22); // (20 + 6 - 5) * 1.04 = 21.84 -> 22
     expect(f.kind).toBe("damage");
   });
 
@@ -50,7 +50,7 @@ describe("forecast", () => {
     const target = mkUnit({ def: 5 });
     addStatus(target, { kind: "guard", turnsLeft: 2 });
     const f = forecastWeapon(mkUnit({ atk: 20 }), target, physWeapon);
-    expect(f.amount).toBe(18); // 20 + 6 - round(5*1.5=7.5 -> 8)
+    expect(f.amount).toBe(19); // (20 + 6 - round(5*1.5=7.5 -> 8)) * 1.04 = 18.72 -> 19
   });
 
   it("flags a lethal hit", () => {
@@ -63,9 +63,39 @@ describe("forecast", () => {
     expect(f.amount).toBe(16); // round(16*16/10 - 10) = round(15.6)
   });
 
-  it("physical damage skill subtracts def", () => {
+  it("physical damage skill subtracts def (crit-weighted)", () => {
     const f = forecastSkill(mkUnit({ atk: 20 }), mkUnit({ def: 5 }), skill({ power: 18, effect: "damage", scaling: "physical" }));
-    expect(f.amount).toBe(31); // round(20*18/10 - 5) = round(36-5)
+    expect(f.amount).toBe(32); // (20*18/10 - 5) * 1.04 = 32.24 -> 32
+  });
+
+  it("folds expected crit into physical weapon damage (×1.04 at base 8% crit)", () => {
+    // base 20 + 6 - 5 = 21; expected crit factor 1 + 0.08*(1.5-1) = 1.04 -> 21.84 -> 22
+    const f = forecastWeapon(mkUnit({ atk: 20 }), mkUnit({ def: 5 }), physWeapon);
+    expect(f.amount).toBe(22);
+  });
+
+  it("rear positional crit bonus raises expected physical damage further", () => {
+    // Target faces south; attacking from the north hits its rear (+25% dmg, +0.2 crit).
+    // base 21 * 1.25 = 26.25; crit factor 1 + 0.28*0.5 = 1.14 -> 29.925 -> 30
+    const attacker = mkUnit({ atk: 20 });
+    attacker.pos = { x: 0, y: -1 };
+    const target = mkUnit({ def: 5 });
+    target.pos = { x: 0, y: 0 };
+    target.facing = "s";
+    const f = forecastWeapon(attacker, target, physWeapon, { fromPos: { x: 0, y: -1 } });
+    expect(f.amount).toBe(30);
+  });
+
+  it("does NOT fold crit into magical weapon damage", () => {
+    // 16 + 3 - 5 = 14, no crit weighting for magical
+    const f = forecastWeapon(mkUnit({ mag: 16 }), mkUnit({ def: 5 }), magWeapon);
+    expect(f.amount).toBe(14);
+  });
+
+  it("folds expected crit into physical damage skill", () => {
+    // base 20*18/10 - 5 = 31; ×1.04 = 32.24 -> 32
+    const f = forecastSkill(mkUnit({ atk: 20 }), mkUnit({ def: 5 }), skill({ power: 18, effect: "damage", scaling: "physical" }));
+    expect(f.amount).toBe(32);
   });
 
   it("heal = stat*power/10, never lethal", () => {

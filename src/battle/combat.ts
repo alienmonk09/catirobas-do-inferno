@@ -33,8 +33,8 @@ export interface AttackContext {
 }
 
 const VARIANCE = 0.15;
-const CRIT_CHANCE = 0.08;
-const CRIT_MULT = 1.5;
+export const CRIT_CHANCE = 0.08;
+export const CRIT_MULT = 1.5;
 const GUARD_DEF_BONUS = 0.5; // +50% def while guarding
 
 // Flank/rear damage and crit bonuses (physical only).

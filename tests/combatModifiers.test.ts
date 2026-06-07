@@ -106,7 +106,9 @@ describe("forecastWeapon honors position and protection", () => {
     const front = forecastWeapon(a, t, sword, { fromPos: { x: 5, y: 7 } });
     const rear = forecastWeapon(a, t, sword, { fromPos: { x: 5, y: 3 } });
     expect(rear.amount).toBeGreaterThan(front.amount);
-    expect(rear.amount / front.amount).toBeCloseTo(1.25, 1);
+    // Ratio now folds in expected crit: rear gets +1.25 dmg AND +0.2 crit chance.
+    // (1.25 * (1 + 0.28*0.5)) / (1.0 * (1 + 0.08*0.5)) = 1.425 / 1.04 ≈ 1.37.
+    expect(rear.amount / front.amount).toBeCloseTo(1.37, 1);
   });
 
   it("Protect lowers the physical forecast by ~25%", () => {
