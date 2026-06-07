@@ -8,6 +8,14 @@ green (`tsc` + `npm test` + `npm run build`), committed incrementally.
 
 **Status legend:** ⬜ pending · 🔄 in progress · ✅ done · ⚠️ flagged (needs user taste) · ⏭️ skipped
 
+> **RESULT: 47 implemented + committed, 3 skipped (R03/R39/R49 — see notes; each a phantom or
+> conflicting premise the implement agents correctly declined rather than force a bad change).**
+> Test suite **1362 → 1524 passing** (+162), `tsc` strict clean, `npm run build` clean throughout —
+> the branch was kept green-and-committed after every single item. Run in 5 sequential batches of
+> ~10, each item implement→adversarial-verify (verify caught/fixed issues inline; R42 even surfaced
+> a real diagonal-corner LOS bug beyond the test it was asked to add). 2 API-529 transients (R03/R04
+> first attempt) were retried. Branch `feat/improvements-roadmap` kept as-is for review — not merged.
+
 | ID | Title | Area | V/R | Verify | Status |
 |----|-------|------|-----|--------|--------|
 | R01 | Stopped units should not counterattack | combat | H/L | unit | ✅ `e83984e` |
@@ -55,16 +63,16 @@ green (`tsc` + `npm test` + `npm run build`), committed incrementally.
 | R38 | Objective goal tiles not on lava/water | standalone | M/L | unit | ✅ `dcd266f` |
 | R39 | Solid prop not on objective goal tile | standalone | M/L | unit | ⏭️ skipped — already enforced (no-op test) |
 | R40 | Spawn-fairness min separation | standalone | M/L | unit | ✅ `5069a75` |
-| R41 | Diagonal knockback direction test | standalone | M/L | unit | ⬜ |
-| R42 | LOS sight-block at short range test | standalone | M/M | unit | ⬜ |
-| R43 | previewOrder vs advanceToNextActor tie test | standalone | M/L | unit | ⬜ |
-| R44 | Reduced-motion settings test | standalone | M/L | unit | ⬜ |
-| R45 | Fix page title + canvas aria-label | standalone | M/L | logic | ⬜ |
-| R46 | Escape cancels a key-rebind | ui | M/L | logic | ⬜ |
-| R47 | Keyboard parity + key hints for action menu | battleScene | H/L | logic | ⬜ |
-| R48 | Auto-Potion fires from poison/terrain dmg | battleScene | M/L | unit | ⬜ |
-| R49 | Counterattacks honor attacker facing | battleScene | M/L | logic | ⬜ |
-| R50 | Camp shop shows item names not ids | partyScene | M/L | screenshot | ⬜ |
+| R41 | Diagonal knockback direction test | standalone | M/L | unit | ✅ `ef7a417` |
+| R42 | LOS sight-block at short range test | standalone | M/M | unit | ✅ `112624b` (found+fixed a real diagonal-corner LOS bug) |
+| R43 | previewOrder vs advanceToNextActor tie test | standalone | M/L | unit | ✅ `25e7097` (extracted shared comparator) |
+| R44 | Reduced-motion settings test | standalone | M/L | unit | ✅ `04a6daf` |
+| R45 | Fix page title + canvas aria-label | standalone | M/L | logic | ✅ `956676c` |
+| R46 | Escape cancels a key-rebind | ui | M/L | logic | ✅ `81e497b` |
+| R47 | Keyboard parity + key hints for action menu | battleScene | H/L | logic | ✅ `a54c85c` |
+| R48 | Auto-Potion fires from poison/terrain dmg | battleScene | M/L | unit | ✅ `8975a6d` |
+| R49 | Counterattacks honor attacker facing | battleScene | M/L | logic | ⏭️ skipped — premise wrong (already honors facing) |
+| R50 | Camp shop shows item names not ids | partyScene | M/L | screenshot | ✅ `43fe365` |
 
 ---
 
