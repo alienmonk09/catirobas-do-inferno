@@ -494,3 +494,40 @@ describe("planEnemyTurn: counter risk on range-1 damage skills", () => {
     expect(samePt(plan.action.targetTile!, safeFoe.pos)).toBe(true);
   });
 });
+
+describe("planEnemyTurn: AoE friendly-fire penalty scales with ally harm", () => {
+  it("won't drop a Fireball that catches and kills an ally, even when it nets an extra foe", () => {
+    // The blast at (3,3) catches two foes (3,2)+(4,3) — tempting — but its 3x3
+    // footprint also engulfs a fragile ally at (2,3) and kills it. A second center
+    // at (5,2) hits one foe (4,3) cleanly. Under the OLD flat -40 friendly-fire
+    // penalty the two-foe blast wins (extra kill outweighs 40); under the new
+    // allyDamage + allyKills*120 penalty, frying a teammate is far too costly,
+    // so the AI must NOT pick a center whose footprint covers the ally.
+    const grid = flatGrid();
+    const me = createUnit({
+      name: "Pyromancer",
+      team: "enemy",
+      classId: "blackMage",
+      learnedSkillIds: ["fireball"],
+      pos: { x: 3, y: 7 },
+    });
+    me.stats.move = 0; // pin the caster so only the AoE center varies
+    me.stats.mp = 99;
+
+    const allyVictim = createUnit({ name: "Tinder", team: "enemy", classId: "blackMage", pos: { x: 2, y: 3 } });
+    allyVictim.stats.hp = 1; // any graze kills it -> allyKills surcharge bites
+
+    const foeA = createUnit({ name: "Wretch", team: "player", classId: "blackMage", pos: { x: 3, y: 2 } });
+    foeA.stats.hp = 1; // dies to the blast -> the extra-kill lure the old penalty caved to
+    const foeB = createUnit({ name: "Brute", team: "player", classId: "knight", pos: { x: 4, y: 3 } });
+
+    const plan = planEnemyTurn(me, [me, allyVictim, foeA, foeB], grid);
+
+    expect(plan.action.kind).toBe("skill");
+    expect(plan.action.skillId).toBe("fireball");
+    // Whatever center it lands on, the 3x3 footprint must not cover the ally.
+    const center = plan.action.targetTile!;
+    const hitsAlly = Math.abs(center.x - allyVictim.pos.x) <= 1 && Math.abs(center.y - allyVictim.pos.y) <= 1;
+    expect(hitsAlly).toBe(false);
+  });
+});

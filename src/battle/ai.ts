@@ -255,12 +255,19 @@ export function planEnemyTurn(unit: Unit, units: Unit[], grid: Grid): AIPlan {
         let total = 0;
         let kills = 0;
         let numHit = 0;
-        let hitAlly = false;
+        let allyDamage = 0;
+        let allyKills = 0;
         let loneSurvivor: Unit | null = null;
         for (const cell of affected) {
           const occ = enemies.find((e) => samePoint(e.pos, cell));
           const ally = allies.find((a) => samePoint(a.pos, cell));
-          if (ally && ally.id !== unit.id) hitAlly = true;
+          if (ally && ally.id !== unit.id) {
+            // Friendly fire: tally the actual hurt this blast inflicts on allies,
+            // so a near-miss graze and a teammate-killing nuke aren't punished alike.
+            const dmg = estimateSkillDamage(unit, stand, ally, skill, grid);
+            allyDamage += Math.min(dmg, ally.stats.hp);
+            if (dmg >= ally.stats.hp) allyKills += 1;
+          }
           if (!occ) continue;
           const dmg = estimateSkillDamage(unit, stand, occ, skill, grid);
           total += Math.min(dmg, occ.stats.hp);
@@ -269,7 +276,9 @@ export function planEnemyTurn(unit: Unit, units: Unit[], grid: Grid): AIPlan {
           else loneSurvivor = occ;
         }
         if (total <= 0) continue;
-        const penalty = hitAlly ? 40 : 0;
+        // Friendly-fire cost scales with the harm done: every HP shaved off an ally
+        // plus a steep surcharge per ally the blast would outright kill.
+        const penalty = allyDamage + allyKills * 120;
         // Reward clustering: each kill past the first, and catching 2+ foes, so the
         // AI saves a big AoE for a knot of enemies instead of nuking a lone target.
         const clusterBonus = (kills > 1 ? (kills - 1) * 30 : 0) + (numHit >= 3 ? 25 : numHit === 2 ? 10 : 0);
