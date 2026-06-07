@@ -260,6 +260,48 @@ describe("map objective sanity — seize (outerRamparts)", () => {
   });
 });
 
+describe("map objective sanity — seize (frostspirePass)", () => {
+  const map = PHASES.find((m) => m.id === "frostspirePass");
+
+  it("frostspirePass exists and has a seize objective", () => {
+    expect(map).toBeDefined();
+    expect(map!.objective).toBeDefined();
+    expect(map!.objective!.kind).toBe("seize");
+  });
+
+  it("seize tile is in-bounds", () => {
+    const obj = map!.objective as { kind: "seize"; x: number; y: number };
+    expect(obj.x).toBeGreaterThanOrEqual(0);
+    expect(obj.x).toBeLessThan(map!.width);
+    expect(obj.y).toBeGreaterThanOrEqual(0);
+    expect(obj.y).toBeLessThan(map!.height);
+  });
+
+  it("seize tile is not blocked and not water/lava", () => {
+    const obj = map!.objective as { kind: "seize"; x: number; y: number };
+    expect(map!.blocked?.[obj.y][obj.x] ?? false).toBe(false);
+    const t = map!.terrain?.[obj.y][obj.x];
+    expect(t).not.toBe("water");
+    expect(t).not.toBe("lava");
+  });
+
+  it("seize tile is not on a player or enemy spawn", () => {
+    const obj = map!.objective as { kind: "seize"; x: number; y: number };
+    const onSpawn = map!.playerSpawns.some((s) => s.x === obj.x && s.y === obj.y);
+    const onEnemy = map!.enemies.some((e) => e.pos.x === obj.x && e.pos.y === obj.y);
+    expect(onSpawn).toBe(false);
+    expect(onEnemy).toBe(false);
+  });
+
+  it("seize tile is adjacent to the Pass Warden", () => {
+    const obj = map!.objective as { kind: "seize"; x: number; y: number };
+    const warden = map!.enemies.find((e) => e.name === "Pass Warden");
+    expect(warden).toBeDefined();
+    const dist = Math.abs(warden!.pos.x - obj.x) + Math.abs(warden!.pos.y - obj.y);
+    expect(dist).toBe(1);
+  });
+});
+
 describe("map objective sanity — defend (cinderFields)", () => {
   const map = PHASES.find((m) => m.id === "cinderFields");
 

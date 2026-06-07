@@ -7,7 +7,9 @@ export const frostspirePass: MapDef = {
   name: "Frostspire Pass",
   intro:
     "The trail narrows between two snow-rock ridges, their crowns crusted with ice and manned by perched archers. A frozen stream cuts the pass in two — solid enough to cross, save for the black deep-water pools at its heart. Force the crossing and clear the pass.",
-  objective: { kind: "rout" },
+  // Force the crossing: seize the tile beside the Pass Warden at (6,1).
+  // Routing every foe still wins (rout fallback in evaluateOutcome).
+  objective: { kind: "seize", x: 5, y: 1 },
   width: 14,
   height: 14,
   heights: [
