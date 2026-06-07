@@ -92,6 +92,10 @@ describe("state - corrupt save rejection", () => {
     ["non-array learnedSkillIds", corruptFirstUnit({ learnedSkillIds: "fireball" })],
     ["missing pos", corruptFirstUnit({ pos: undefined })],
     ["non-number pos.x", corruptFirstUnit({ pos: { x: "a", y: 0 } })],
+    ["NaN level", corruptFirstUnit({ level: NaN })],
+    ["Infinity level", corruptFirstUnit({ level: Infinity })],
+    ["zero level", corruptFirstUnit({ level: 0 })],
+    ["negative level", corruptFirstUnit({ level: -5 })],
   ];
 
   for (const [label, blob] of malformed) {
@@ -101,6 +105,33 @@ describe("state - corrupt save rejection", () => {
       expect(localStorage.getItem(SAVE_KEY)).toBeNull();
     });
   }
+});
+
+describe("state - back-compat xp/level coercion", () => {
+  it("coerces a non-finite xp to 0 so grantXp can't NaN/Infinity-climb", () => {
+    const raw = corruptFirstUnit({ xp: Infinity });
+    store(raw);
+    const loaded = loadGame();
+    expect(loaded).not.toBeNull();
+    expect(Number.isFinite(loaded!.party[0].xp)).toBe(true);
+    expect(loaded!.party[0].xp).toBe(0);
+  });
+
+  it("coerces a missing xp to 0", () => {
+    const raw = corruptFirstUnit({ xp: undefined });
+    store(raw);
+    const loaded = loadGame();
+    expect(loaded).not.toBeNull();
+    expect(loaded!.party[0].xp).toBe(0);
+  });
+
+  it("coerces a negative xp to 0", () => {
+    const raw = corruptFirstUnit({ xp: -100 });
+    store(raw);
+    const loaded = loadGame();
+    expect(loaded).not.toBeNull();
+    expect(loaded!.party[0].xp).toBe(0);
+  });
 });
 
 describe("state - refreshForBattle", () => {

@@ -299,7 +299,7 @@ function isValidSave(data: unknown): data is GameState {
     if (u.accessoryId !== undefined && (!EQUIPMENT[u.accessoryId] || EQUIPMENT[u.accessoryId].slot !== "accessory")) return false;
     if (u.reactionId !== undefined && !VALID_REACTIONS.includes(u.reactionId as Reaction)) return false;
     if (!u.stats || typeof u.stats.maxHp !== "number") return false;
-    if (typeof u.level !== "number" || !Array.isArray(u.learnedSkillIds)) return false;
+    if (!Number.isFinite(u.level) || u.level < 1 || !Array.isArray(u.learnedSkillIds)) return false;
     if (!u.pos || typeof u.pos.x !== "number" || typeof u.pos.y !== "number") return false;
   }
   return true;
@@ -329,6 +329,13 @@ export function loadGame(slot = 0): GameState | null {
       const legacyJp = (u as { jp?: unknown }).jp;
       if (u.sp === undefined && typeof legacyJp === "number") u.sp = legacyJp;
       if (typeof u.sp !== "number" || !isFinite(u.sp) || u.sp < 0) u.sp = 0;
+      // Back-compat: a missing/corrupt xp would let grantXp accumulate NaN or
+      // climb endlessly; coerce to a finite non-negative number (default 0).
+      if (typeof u.xp !== "number" || !isFinite(u.xp) || u.xp < 0) u.xp = 0;
+      // Defensive: a finite-but-sub-1 level passes isValidSave's >= 1 floor only
+      // because we reject below 1 — but clamp here too so any future loosening of
+      // the guard can't feed statsForLevel a level under 1.
+      if (u.level < 1) u.level = 1;
     }
     // Back-compat: old saves lack `gold`; normalise any missing/invalid value.
     if (typeof parsed.gold !== "number" || !isFinite(parsed.gold) || parsed.gold < 0) {
