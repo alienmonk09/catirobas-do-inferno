@@ -7,6 +7,20 @@ function living(units: Unit[]): Unit[] {
 }
 
 /**
+ * Tie-break for ready units, shared by {@link advanceToNextActor} and
+ * {@link previewOrder} so they can never disagree on who acts next:
+ * highest CT wins, then higher effective speed, then lower id for determinism.
+ */
+function compareReady(
+  a: { id: string; ct: number; spd: number },
+  b: { id: string; ct: number; spd: number },
+): number {
+  if (b.ct !== a.ct) return b.ct - a.ct;
+  if (b.spd !== a.spd) return b.spd - a.spd;
+  return a.id < b.id ? -1 : 1;
+}
+
+/**
  * Advance charge time until a living unit reaches the threshold, then return it.
  * Highest CT wins; ties broken by higher speed, then unit id for determinism.
  */
@@ -18,11 +32,12 @@ export function advanceToNextActor(units: Unit[]): Unit | null {
   for (let guard = 0; guard < 100000; guard++) {
     const ready = alive.filter((u) => u.ct >= CT_THRESHOLD);
     if (ready.length > 0) {
-      ready.sort((a, b) => {
-        if (b.ct !== a.ct) return b.ct - a.ct;
-        if (effectiveSpd(b) !== effectiveSpd(a)) return effectiveSpd(b) - effectiveSpd(a);
-        return a.id < b.id ? -1 : 1;
-      });
+      ready.sort((a, b) =>
+        compareReady(
+          { id: a.id, ct: a.ct, spd: effectiveSpd(a) },
+          { id: b.id, ct: b.ct, spd: effectiveSpd(b) },
+        ),
+      );
       return ready[0];
     }
     for (const u of alive) u.ct += effectiveSpd(u);
@@ -112,11 +127,7 @@ export function previewOrder(units: Unit[], count: number): TurnPreview[] {
     guard++;
     const ready = sim.filter((u) => u.ct >= CT_THRESHOLD);
     if (ready.length > 0) {
-      ready.sort((a, b) => {
-        if (b.ct !== a.ct) return b.ct - a.ct;
-        if (b.spd !== a.spd) return b.spd - a.spd;
-        return a.id < b.id ? -1 : 1;
-      });
+      ready.sort(compareReady);
       const top = ready[0];
       out.push({ unitId: top.id });
       top.ct -= CT_THRESHOLD;

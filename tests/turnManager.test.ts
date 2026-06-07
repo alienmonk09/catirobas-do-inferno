@@ -457,3 +457,72 @@ describe("previewOrder", () => {
     ]);
   });
 });
+
+describe("previewOrder and advanceToNextActor agree on the first actor", () => {
+  // The two functions duplicate the same ready-sort tie-break (CT desc,
+  // effectiveSpd desc, id asc). They must always pick the same first actor or
+  // the upcoming-turns bar would lie about who acts next. We clone for
+  // advanceToNextActor (it mutates CT) and run previewOrder on the originals.
+  function clone(units: Unit[]): Unit[] {
+    return units.map((u) => ({
+      ...u,
+      stats: { ...u.stats },
+      pos: { ...u.pos },
+      statuses: u.statuses.map((s) => ({ ...s })),
+    }));
+  }
+
+  const configs: { name: string; build: () => Unit[] }[] = [
+    {
+      name: "exact CT tie broken by speed then id",
+      build: () => [
+        makeUnit({ id: "z", spd: 10, ct: CT_THRESHOLD }),
+        makeUnit({ id: "a", spd: 20, ct: CT_THRESHOLD }),
+        makeUnit({ id: "m", spd: 20, ct: CT_THRESHOLD }),
+      ],
+    },
+    {
+      name: "strictly higher CT beats a faster rival",
+      build: () => [
+        makeUnit({ id: "ahead", spd: 10, ct: CT_THRESHOLD + 30 }),
+        makeUnit({ id: "behind", spd: 30, ct: CT_THRESHOLD }),
+      ],
+    },
+    {
+      name: "all start at zero and must charge up together",
+      build: () => [
+        makeUnit({ id: "a", spd: 13, ct: 0 }),
+        makeUnit({ id: "b", spd: 13, ct: 0 }),
+        makeUnit({ id: "c", spd: 7, ct: 0 }),
+      ],
+    },
+    {
+      name: "status-modified speed (haste) decides the tie",
+      build: () => {
+        const base = makeUnit({ id: "base", spd: 20, ct: CT_THRESHOLD });
+        const hasted = makeUnit({ id: "hasted", spd: 15, ct: CT_THRESHOLD });
+        hasted.statuses.push({ kind: "haste", turnsLeft: 3 });
+        return [base, hasted];
+      },
+    },
+    {
+      name: "mixed CT and speed across a small party",
+      build: () => [
+        makeUnit({ id: "p1", team: "player", spd: 12, ct: 40 }),
+        makeUnit({ id: "e1", team: "enemy", spd: 18, ct: 55 }),
+        makeUnit({ id: "p2", team: "player", spd: 9, ct: 90 }),
+        makeUnit({ id: "e2", team: "enemy", spd: 22, ct: 10 }),
+      ],
+    },
+  ];
+
+  for (const { name, build } of configs) {
+    it(name, () => {
+      const units = build();
+      const preview = previewOrder(units, 1);
+      const actor = advanceToNextActor(clone(units));
+      expect(actor).not.toBeNull();
+      expect(preview[0].unitId).toBe(actor!.id);
+    });
+  }
+});
