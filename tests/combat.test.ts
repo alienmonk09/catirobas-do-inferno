@@ -13,7 +13,28 @@ import { createUnit } from "../src/core/unit";
 import { RNG } from "../src/core/rng";
 import { getWeapon } from "../src/data/weapons";
 import { getSkill } from "../src/data/skills";
-import type { Unit } from "../src/core/types";
+import type { SkillDef, Unit } from "../src/core/types";
+
+/**
+ * Deterministic RNG stub: `next()` walks a scripted sequence so we can pin the
+ * exact variance roll and force/deny a crit. `chance(p)` reuses `next()` exactly
+ * like the real RNG (`next() < p`), so the script must account for both draws.
+ */
+class ScriptedRNG {
+  private i = 0;
+  constructor(private readonly seq: number[]) {}
+  next(): number {
+    const v = this.seq[Math.min(this.i, this.seq.length - 1)];
+    this.i++;
+    return v;
+  }
+  int(min: number, max: number): number {
+    return min + Math.floor(this.next() * (max - min + 1));
+  }
+  chance(p: number): boolean {
+    return this.next() < p;
+  }
+}
 
 function knight(overrides: Partial<Parameters<typeof createUnit>[0]> = {}): Unit {
   return createUnit({
@@ -258,6 +279,64 @@ describe("resolveSkillOnTarget - damage", () => {
     expect(res!.killed).toBe(true);
     expect(target.alive).toBe(false);
     expect(target.stats.hp).toBe(0);
+  });
+});
+
+/**
+ * Regression lock on the exact composed damage multiplier. facing × Protect ×
+ * element-weakness × crit all stack multiplicatively in resolveSkillOnTarget;
+ * the individual factors are tested elsewhere, but nothing pinned their exact
+ * PRODUCT through the live damage path. A deterministic RNG removes variance and
+ * forces (or denies) the crit so the number is fully determined.
+ *
+ * Fixture (physical damage skill, power 10, attacker ATK 100, def 0):
+ *   base       = (100 * 10) / 10 - 0           = 100
+ *   × rear     = 1.25                          -> 125
+ *   × Protect  = 0.75 (physical)               -> 93.75
+ *   × weakness = 1.5 (elf vs fire)             -> 140.625
+ *   × variance = 1.0 (roll 0.5)                -> 140.625
+ *   × crit     = 1.5                           -> 210.9375 -> round 211
+ *   (non-crit: round(140.625)                  -> 141)
+ */
+describe("resolveSkillOnTarget - composed multiplier (facing × defense × element × crit)", () => {
+  const composedSkill: SkillDef = {
+    id: "testComposed",
+    name: "Test Composed",
+    description: "fixture",
+    mpCost: 0,
+    spCost: 0,
+    range: 1,
+    aoe: "single",
+    power: 10,
+    element: "fire",
+    effect: "damage",
+    scaling: "physical",
+  };
+
+  function fixture(): { caster: Unit; target: Unit; ctx: { fromPos: { x: number; y: number } } } {
+    const caster = knight({ pos: { x: 0, y: -2 } });
+    caster.stats.atk = 100;
+    const target = enemyKnight({ pos: { x: 0, y: 0 }, raceId: "elf" }); // weak to fire, faces south by default
+    target.stats.def = 0;
+    addStatus(target, { kind: "protect", turnsLeft: 3 }); // physical -25%
+    // Attacker is due north of a south-facing target -> rear hit (×1.25).
+    return { caster, target, ctx: { fromPos: { x: 0, y: -2 } } };
+  }
+
+  it("pins the exact NON-crit composed product (1.25 × 0.75 × 1.5)", () => {
+    const { caster, target, ctx } = fixture();
+    // Script: variance roll 0.5 (neutral), then crit draw 0.99 -> no crit.
+    const res = resolveSkillOnTarget(caster, target, composedSkill, new ScriptedRNG([0.5, 0.99]) as unknown as RNG, ctx);
+    expect(res!.crit).toBe(false);
+    expect(res!.amount).toBe(141); // round(100 × 1.25 × 0.75 × 1.5)
+  });
+
+  it("pins the exact CRIT composed product (1.25 × 0.75 × 1.5 × 1.5)", () => {
+    const { caster, target, ctx } = fixture();
+    // Script: variance roll 0.5 (neutral), then crit draw 0 -> crit fires.
+    const res = resolveSkillOnTarget(caster, target, composedSkill, new ScriptedRNG([0.5, 0]) as unknown as RNG, ctx);
+    expect(res!.crit).toBe(true);
+    expect(res!.amount).toBe(211); // round(100 × 1.25 × 0.75 × 1.5 × 1.5)
   });
 });
 
