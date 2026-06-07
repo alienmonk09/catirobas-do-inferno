@@ -283,6 +283,9 @@ export interface MapDef {
   /** Optional treasure chests placed on the map. Each must sit on a walkable,
    *  reachable tile (validated in tests). */
   chests?: ChestSpawn[];
+  /** Hand-authored decoration accents. A `solid` prop (see PROPS) MUST sit on a
+   *  blocked tile; a `sightBlock` prop raises LOS occlusion on its tile. */
+  decor?: { pos: Point; propId: string }[];
 }
 
 export interface EnemySpawn {

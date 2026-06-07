@@ -8,6 +8,7 @@ import type { AttackContext } from "../battle/combat";
 import { getWeapon } from "../data/weapons";
 import { getItem } from "../data/items";
 import { terrainEffect } from "../data/terrain";
+import type { PlacedProp } from "../data/props";
 import { prefersReducedMotion } from "../engine/accessibility";
 import type { Rotation, ScreenPoint } from "../engine/iso";
 import type { ActiveEffect, BattleView, FloatingText, ForecastTag, OverlaySet } from "../engine/renderer";
@@ -57,6 +58,7 @@ interface ViewScene {
   time: number;
   map: MapDef;
   chests: { pos: Point; opened: boolean }[];
+  props: PlacedProp[];
   ctx: { animator: { animPos: BattleView["animPos"] } };
   inRangeTiles(tile: Point): boolean;
   posCtx(targetPos: Point): AttackContext;
@@ -122,6 +124,7 @@ export function buildView(scene: BattleScene, origin: ScreenPoint, scale: number
     time: s.time,
     screenShake: computeScreenShake(s),
     chests: s.chests.filter((c) => !c.opened).map((c) => ({ ...c.pos })),
+    props: s.props,
   };
 }
 

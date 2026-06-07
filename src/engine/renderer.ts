@@ -4,6 +4,7 @@ import { dirVector } from "../battle/facing";
 import { bakeSprite, spriteHeight, type AnimDef, type SpriteDef } from "./sprite";
 import { getUnitSprite } from "../data/sprites";
 import { TERRAIN } from "../data/terrain";
+import { PROPS, type PlacedProp } from "../data/props";
 import {
   TILE_W,
   TILE_H,
@@ -21,6 +22,7 @@ import {
  *  16x20 class art and 24x30 hero art render to the same footprint. */
 const CHAR_PX_H = 90;
 const VFX_SCALE = 3;
+const PROP_SCALE = 3;
 /** Bake scale for a sprite so it lands near CHAR_PX_H tall. */
 function charScale(def: SpriteDef): number {
   return Math.max(1, Math.round(CHAR_PX_H / spriteHeight(def)));
@@ -100,6 +102,8 @@ export interface BattleView {
   chests?: Point[];
   /** Uniform fit-to-viewport scale applied to the whole scene (1 = no scaling). */
   scale?: number;
+  /** Decoration props to draw on the field (baked into their tile's canvas). */
+  props?: PlacedProp[];
 }
 
 const COLOR = {
@@ -312,6 +316,9 @@ export class Renderer {
     const h = grid.height;
     const overlays = this.overlayColors(view);
 
+    const propByTile = new Map<string, string>();
+    for (const pr of view.props ?? []) propByTile.set(`${pr.pos.x},${pr.pos.y}`, pr.propId);
+
     type Item =
       | { kind: "tile"; depth: number; x: number; y: number }
       | { kind: "chest"; depth: number; x: number; y: number }
@@ -342,12 +349,13 @@ export class Renderer {
         const center = this.project(view, it.x, it.y, z);
         const terrain = grid.terrainAt(it.x, it.y);
         const ao = this.neighborShade(grid, it.x, it.y, z);
-        if (Renderer.ANIMATED.has(terrain)) {
+        const propId = propByTile.get(`${it.x},${it.y}`);
+        if (Renderer.ANIMATED.has(terrain) && !propId) {
           // Animated terrain can't be cached — draw live each frame.
           this.drawTileWalls(center, z, terrain);
           this.drawTileTop(center, z, terrain, it.x, it.y, ao, view.time);
         } else {
-          const { canvas, ax, ay } = this.bakeTile(terrain, z, ao);
+          const { canvas, ax, ay } = this.bakeTile(terrain, z, ao, propId);
           this.ctx.drawImage(canvas, Math.round(center.sx - ax), Math.round(center.sy - ay));
         }
         const cols = overlays.get(`${it.x},${it.y}`);
@@ -436,16 +444,19 @@ export class Renderer {
   /** Bake the static art for one tile (walls + textured top) to an offscreen
    *  canvas. The tile-top center is anchored at (anchorX, anchorY) within the
    *  canvas so the caller can blit by subtracting that anchor from screen center. */
-  private bakeTile(terrain: TerrainType, z: number, ao: number): { canvas: HTMLCanvasElement; ax: number; ay: number } {
-    const key = `${terrain}|${z}|${ao}`;
+  private bakeTile(terrain: TerrainType, z: number, ao: number, propId?: string): { canvas: HTMLCanvasElement; ax: number; ay: number } {
+    const key = `${terrain}|${z}|${ao}|${propId ?? ""}`;
     const wallH = z * TILE_Z;
+    const prop = propId ? PROPS[propId] : undefined;
+    const propCanvas = prop ? bakeSprite(prop.sprite, PROP_SCALE) : null;
+    const propH = propCanvas ? propCanvas.height : 0;
     const ax = TILE_W / 2 + 2;
-    const ay = TILE_H / 2 + 2;
+    const ay = TILE_H / 2 + 2 + propH; // headroom above the top for a tall prop
     const cached = this.tileBakes.get(key);
     if (cached) return { canvas: cached, ax, ay };
     const canvas = document.createElement("canvas");
     canvas.width = TILE_W + 4;
-    canvas.height = TILE_H + wallH + 4;
+    canvas.height = TILE_H + wallH + 4 + propH;
     const ctx = canvas.getContext("2d");
     if (ctx) {
       ctx.imageSmoothingEnabled = false;
@@ -455,6 +466,7 @@ export class Renderer {
       this.drawTileWalls(center, z, terrain);
       this.drawTileTop(center, z, terrain, 0, 0, ao, 0); // tx,ty=0 → stable bake texture; time=0
       this.ctxOverride = saved;
+      if (propCanvas) ctx.drawImage(propCanvas, Math.round(ax - propCanvas.width / 2), Math.round(ay - propCanvas.height + 4));
     }
     this.tileBakes.set(key, canvas);
     return { canvas, ax, ay };

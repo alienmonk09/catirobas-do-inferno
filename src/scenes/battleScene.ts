@@ -38,6 +38,8 @@ import { getItem } from "../data/items";
 import { getClass } from "../data/classes";
 import { getVfx, vfxKeyForSkill, vfxKeyForWeapon } from "../data/sprites";
 import { PHASES } from "../data/maps";
+import { scatterProps, type PlacedProp } from "../data/props";
+import type { PropSpriteId } from "../data/sprites/props";
 import { dialogueFor, outroFor } from "../data/dialogue";
 import { MAX_PARTY } from "../data/party";
 import { BattleUI } from "../ui/battleUI";
@@ -107,6 +109,8 @@ export class BattleScene implements Scene {
   private tally = new Map<string, { damage: number; kills: number; heals: number }>();
   /** Runtime treasure chests seated from the map, with their opened state. */
   private chests: { pos: Point; loot: Loot; opened: boolean }[] = [];
+  /** Decoration props (procedural scatter + authored decor) for this battle. */
+  private props: PlacedProp[] = [];
 
   constructor(
     private ctx: GameContext,
@@ -115,6 +119,10 @@ export class BattleScene implements Scene {
   ) {
     this.grid = new Grid(map);
     this.ctx.renderer.resetTileCache();
+    this.props = [
+      ...scatterProps(this.map, this.grid),
+      ...(this.map.decor ?? []).map((d) => ({ pos: { ...d.pos }, propId: d.propId as PropSpriteId })),
+    ];
     this.ui = new BattleUI(ctx.uiParent);
     this.buildUnits();
     this.bindInput();
@@ -1501,6 +1509,10 @@ export class BattleScene implements Scene {
       this.ui.setTargetInfo(null);
     }
 
+    // `this.props` (the decoration scatter) flows into the snapshot through the
+    // ViewScene structural bridge in buildView; tsc can't trace that cast, so we
+    // read the field here to keep the data-flow explicit (and the field "used").
+    void this.props;
     this.ctx.renderer.render(buildView(this, cam.origin, cam.scale));
   }
 
