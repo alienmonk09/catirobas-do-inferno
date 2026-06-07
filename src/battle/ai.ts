@@ -256,6 +256,7 @@ export function planEnemyTurn(unit: Unit, units: Unit[], grid: Grid): AIPlan {
         let kills = 0;
         let numHit = 0;
         let hitAlly = false;
+        let loneSurvivor: Unit | null = null;
         for (const cell of affected) {
           const occ = enemies.find((e) => samePoint(e.pos, cell));
           const ally = allies.find((a) => samePoint(a.pos, cell));
@@ -265,14 +266,22 @@ export function planEnemyTurn(unit: Unit, units: Unit[], grid: Grid): AIPlan {
           total += Math.min(dmg, occ.stats.hp);
           numHit += 1;
           if (dmg >= occ.stats.hp) kills += 1;
+          else loneSurvivor = occ;
         }
         if (total <= 0) continue;
         const penalty = hitAlly ? 40 : 0;
         // Reward clustering: each kill past the first, and catching 2+ foes, so the
         // AI saves a big AoE for a knot of enemies instead of nuking a lone target.
         const clusterBonus = (kills > 1 ? (kills - 1) * 30 : 0) + (numHit >= 3 ? 25 : numHit === 2 ? 10 : 0);
+        // Melee skills face the same punish as a basic swing: if this is a point-blank
+        // strike on a single foe that survives, weigh the counterattack it'll eat
+        // (0.6×, matching basic attacks). Ranged/AoE skills don't expose the caster.
+        let counterPenalty = 0;
+        if (skill.range <= 1 && numHit === 1 && loneSurvivor && manhattan(stand, loneSurvivor.pos) === 1) {
+          counterPenalty = counterRisk(unit, loneSurvivor, stand, grid) * 0.6;
+        }
         options.push({
-          score: total + kills * 50 + clusterBonus - penalty,
+          score: total + kills * 50 + clusterBonus - penalty - counterPenalty,
           destination: stand,
           action: { kind: "skill", skillId: skill.id, targetTile: { ...center } },
           kind: "damage",

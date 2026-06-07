@@ -460,3 +460,37 @@ describe("planEnemyTurn: healer behavior", () => {
     expect(manhattan(plan.destination, ally.pos)).toBeLessThanOrEqual(3);
   });
 });
+
+describe("planEnemyTurn: counter risk on range-1 damage skills", () => {
+  it("prefers striking the foe that cannot counter when a melee skill hits a lone survivor", () => {
+    const grid = flatGrid();
+    // Knight with Power Strike (range 1, single target, 4 MP) flanked by two
+    // paladins it cannot one-shot. Paladins do not counter innately; we grant
+    // Counter to only one of them via an equipped reaction.
+    const me = createUnit({
+      name: "Goblin",
+      team: "enemy",
+      classId: "knight",
+      learnedSkillIds: ["powerStrike"],
+      pos: { x: 5, y: 5 },
+    });
+    // Pin the attacker so both foes are struck from the same tile — this isolates
+    // the counter-risk weighting from flanking/positioning bonuses.
+    me.stats.move = 0;
+    // The countering foe is slightly more wounded, so absent any counter-risk
+    // weighting the AI would marginally prefer to hit it (lower-HP bonus). The
+    // expected counter punish must overcome that edge and flip the choice.
+    const counterFoe = createUnit({ name: "Punisher", team: "player", classId: "paladin", pos: { x: 4, y: 5 } });
+    counterFoe.reactionId = "counter";
+    counterFoe.stats.hp = 63; // maxHp 70 -> small low-HP bonus, still survives the skill
+    const safeFoe = createUnit({ name: "Sitting Duck", team: "player", classId: "paladin", pos: { x: 6, y: 5 } });
+
+    const plan = planEnemyTurn(me, [me, counterFoe, safeFoe], grid);
+
+    // The strongest action is the skill (more damage than a basic swing); with
+    // counter-risk applied it lands on the foe that won't punish back.
+    expect(plan.action.kind).toBe("skill");
+    expect(plan.action.skillId).toBe("powerStrike");
+    expect(samePt(plan.action.targetTile!, safeFoe.pos)).toBe(true);
+  });
+});
