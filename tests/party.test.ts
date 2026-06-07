@@ -12,6 +12,7 @@ import {
 } from "../src/data/party";
 import { CLASSES, getClass } from "../src/data/classes";
 import { RACES } from "../src/data/races";
+import { xpForLevel } from "../src/core/unit";
 
 describe("hero roster", () => {
   it("has unique ids and resolvable class + race for every hero", () => {
@@ -61,6 +62,23 @@ describe("hero roster", () => {
     expect(unit.learnedSkillIds.length).toBeGreaterThanOrEqual(1);
     // Joins at the party average (floored at 1 to match the level-1 start).
     expect(recruitHero(enzo, 1).level).toBe(1);
+  });
+
+  it("seeds a mid-campaign recruit with partial XP so it lands on the party curve, not a full level behind", () => {
+    const enzo = getHero("enzo")!;
+    const unit = recruitHero(enzo, 6);
+    const need = xpForLevel(6);
+    // ~halfway into the level — not a fresh 0/need that sits a full level behind.
+    expect(unit.xp).toBe(Math.floor(need * 0.5));
+    expect(unit.xp).toBeGreaterThan(0);
+    expect(unit.xp).toBeLessThan(need); // never enough to auto-level
+    // Deterministic.
+    expect(recruitHero(enzo, 6).xp).toBe(unit.xp);
+  });
+
+  it("keeps a level-1 recruit at 0 XP (fresh-start feel)", () => {
+    const enzo = getHero("enzo")!;
+    expect(recruitHero(enzo, 1).xp).toBe(0);
   });
 
   it("includes Enzo the Thief and Penelope the Druid", () => {

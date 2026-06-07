@@ -1,5 +1,5 @@
 import type { ClassId, RaceId, Unit } from "../core/types";
-import { createUnit } from "../core/unit";
+import { createUnit, xpForLevel } from "../core/unit";
 import { getClass } from "./classes";
 
 export interface HeroDef {
@@ -71,6 +71,11 @@ function buildHero(hero: HeroDef, level = 1): Unit {
     learnedSkillIds: c.skillIds.slice(0, skillCount),
   });
   unit.sp = 100;
+  // Seed a mid-campaign recruit ~halfway into its current level so it lands on
+  // the team's XP curve instead of a full level behind (createUnit starts at 0).
+  // Deterministic, always below the next-level threshold (50% < 100%), and a
+  // fresh level-1 starter keeps 0 XP for the clean new-game feel.
+  if (level > 1) unit.xp = Math.floor(xpForLevel(level) * 0.5);
   return unit;
 }
 
