@@ -8,13 +8,14 @@
 
 const STORAGE_KEY = "ashen-keybindings";
 
-export type Action = "rotateLeft" | "rotateRight" | "endTurn" | "cancel";
+export type Action = "rotateLeft" | "rotateRight" | "recenter" | "endTurn" | "cancel";
 
-export const ACTIONS: Action[] = ["rotateLeft", "rotateRight", "endTurn", "cancel"];
+export const ACTIONS: Action[] = ["rotateLeft", "rotateRight", "recenter", "endTurn", "cancel"];
 
 export const DEFAULT_BINDINGS: Record<Action, string> = {
   rotateLeft: ",",
   rotateRight: ".",
+  recenter: "c",
   endTurn: "e",
   cancel: "Escape",
 };
@@ -23,6 +24,7 @@ export const DEFAULT_BINDINGS: Record<Action, string> = {
 export const ACTION_LABELS: Record<Action, string> = {
   rotateLeft: "Rotate Left",
   rotateRight: "Rotate Right",
+  recenter: "Recenter",
   endTurn: "End Turn",
   cancel: "Cancel",
 };
