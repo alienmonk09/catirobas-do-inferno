@@ -80,7 +80,7 @@ export const CLASSES: Record<ClassId, ClassDef> = {
     description: "Master of tempo. Bends turn speed — hastes allies, slows and stops foes — and strikes with non-elemental comets.",
     base: { hp: 43, mp: 64, atk: 5, def: 6, mag: 14, res: 11, spd: 11, move: 3, jump: 2 },
     growth: { hp: 4, mp: 7, atk: 0.4, def: 0.6, mag: 2.1, res: 1.2, spd: 0.9 },
-    skillIds: ["comet", "timeSlow", "haste", "stop"],
+    skillIds: ["comet", "timeSlow", "hasten", "stop"],
     weaponIds: ["rod"],
     color: "#5fb0d6",
   },
