@@ -253,8 +253,8 @@ export class BattleUI {
 
   // --- Camera rotation control ---
 
-  /** Show the always-on rotate-camera control (two buttons + a facing label). */
-  showRotateControl(onLeft: () => void, onRight: () => void): void {
+  /** Show the always-on view control (rotate buttons + facing label + recenter). */
+  showRotateControl(onLeft: () => void, onRight: () => void, onRecenter: () => void): void {
     clear(this.rotateCtl);
     const muteBtn = this.audioButton();
     this.rotateCtl.appendChild(
@@ -263,6 +263,9 @@ export class BattleUI {
     this.rotateCtl.appendChild(this.rotLabel);
     this.rotateCtl.appendChild(
       el("button", { className: "btn small rbtn", text: "⟳", attrs: { title: "Rotate view right (.)" }, onClick: onRight }),
+    );
+    this.rotateCtl.appendChild(
+      el("button", { className: "btn small rbtn recenter-btn", text: "⊙", attrs: { title: "Recenter on the active unit (c)", "aria-label": "Recenter camera" }, onClick: onRecenter }),
     );
     this.rotateCtl.appendChild(muteBtn);
     this.rotateCtl.style.display = "flex";

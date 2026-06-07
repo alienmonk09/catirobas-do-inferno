@@ -27,7 +27,7 @@ import { hasLineOfSight } from "../battle/los";
 import { directionTo } from "../battle/facing";
 import { advanceToNextActor, endTurn, evaluateOutcome, previewOrder } from "../battle/turnManager";
 import { planEnemyTurn } from "../battle/ai";
-import { screenToTile, worldToScreen, rotateTile, type Rotation, type ScreenPoint } from "../engine/iso";
+import { screenToTile, worldToScreen, rotateTile, tileScreen, type Rotation, type ScreenPoint } from "../engine/iso";
 import { Camera } from "../engine/camera";
 import { sfx } from "../engine/audio";
 import { startMusic, stopMusic, battleThemeForPhase } from "../engine/music";
@@ -72,6 +72,13 @@ export class BattleScene implements Scene {
   private cam: Camera;
   /** Last camera origin/scale, to skip the menu re-anchor when nothing moved. */
   private camPrev = { sx: NaN, sy: NaN, z: NaN };
+  /** True while a manual pan/zoom has taken over — suppresses follow until a turn
+   *  start, a recenter, or the player committing a move/action re-arms it. */
+  private followSuspended = false;
+  /** The first turn keeps SP1's whole-map boot framing (no follow). Cleared when
+   *  that first turn ends, so the second actor onward is auto-centered. IS the
+   *  first-turn marker — no turn-count compare. Recenter also clears it. */
+  private bootFraming = true;
   private units: Unit[] = [];
   private ui: BattleUI;
   private rng = new RNG(0x1234 + 17);
@@ -131,6 +138,8 @@ export class BattleScene implements Scene {
     this.ctx.renderer.resetTileCache();
     this.cam = new Camera({ w: this.ctx.renderer.width, h: this.ctx.renderer.height });
     this.cam.reset(this.grid, this.rot);
+    this.bootFraming = true;       // first turn keeps whole-map framing
+    this.followSuspended = true;   // no follow until the first turn ends
     this.props = [
       ...scatterProps(this.map, this.grid),
       ...(this.map.decor ?? []).map((d) => ({ pos: { ...d.pos }, propId: d.propId as PropSpriteId })),
@@ -249,14 +258,17 @@ export class BattleScene implements Scene {
     this.ctx.input.onRightClick = () => this.cancelToMenu();
     this.ctx.input.onKey = (key) => this.handleKey(key);
     // Drag-pan + wheel-zoom only while the player holds control (not on the AI's
-    // turn or mid-animation). Task 4 adds follow + suspends it on manual input here.
+    // turn or mid-animation — there, follow owns the frame). Manual input suspends
+    // follow until a turn start / recenter / committed move re-arms it.
     this.ctx.input.onDrag = (dx, dy) => {
       if (!this.playerInControl) return;
       this.cam.panBy(dx, dy);
+      this.followSuspended = true;
     };
     this.ctx.input.onWheel = (nd, x, y) => {
       if (!this.playerInControl) return;
       this.cam.zoomAt(Math.exp(-nd * ZOOM_SENS), x, y);
+      this.followSuspended = true;
     };
   }
 
@@ -321,6 +333,12 @@ export class BattleScene implements Scene {
 
     this.active = advanceToNextActor(this.units);
     if (!this.active) return;
+    // Turn start: center on the new actor and re-arm follow — but the FIRST turn
+    // keeps the whole-map boot framing (bootFraming clears when that turn ends).
+    if (!this.bootFraming) {
+      this.cam.snapTo(this.unitCenter(this.active));
+      this.followSuspended = false;
+    }
     this.ui.setObjective(this.objectiveText());
     this.hasMoved = false;
     this.hasActed = false;
@@ -329,7 +347,7 @@ export class BattleScene implements Scene {
     this.rangeTiles = [];
     this.refreshTurnBar();
     this.ui.setActiveUnit(this.active);
-    this.ui.showRotateControl(() => this.rotateView(-1), () => this.rotateView(1));
+    this.ui.showRotateControl(() => this.rotateView(-1), () => this.rotateView(1), () => this.recenter());
     this.ui.setRotationLabel(this.rot);
     this.pushLog(`— ${this.active.name}'s turn —`);
 
@@ -380,6 +398,9 @@ export class BattleScene implements Scene {
     // shortcut, or a resolution that already won) — don't run the turn loop on
     // top of a finished battle.
     if (this.phase === "over") return;
+    // The first turn (whoever acts, even an auto-resolved Stop/charging turn) ends
+    // boot framing; the next actor onward is auto-centered (see beginNextTurn).
+    if (this.bootFraming) this.bootFraming = false;
     if (this.active) {
       // Damage/heal-over-time (Poison, Regen) resolve as the turn ends. A poison
       // tick can finish off an enemy — credit that kill to whoever damaged/​debuffed it.
@@ -533,6 +554,34 @@ export class BattleScene implements Scene {
     const z = this.grid.heightAt(this.active.pos.x, this.active.pos.y);
     const p = this.projectTile(this.active.pos.x, this.active.pos.y, z);
     this.ui.setMenuAnchor({ x: p.sx, y: p.sy });
+  }
+
+  /** The unit the camera should track: the active player unit on a player turn,
+   *  the acting enemy on an AI turn, else null (intro / battle over). */
+  private get focusUnit(): Unit | null {
+    return this.active ?? null;
+  }
+
+  /** Exact tile-screen center the active unit's sprite is drawn at (fractional +
+   *  interpolated z while a move animates), so follow and recenter share one
+   *  computation and stay pixel-aligned with the sprite. */
+  private unitCenter(u: Unit): ScreenPoint {
+    const ap = this.ctx.animator.animPos.get(u.id) ?? u.pos;
+    const z = this.grid.interpHeightAt(ap.x, ap.y);
+    const v = rotateTile(ap.x, ap.y, this.rot, this.grid.width, this.grid.height);
+    return tileScreen(v.x, v.y, z);
+  }
+
+  /** Recenter on the focus unit (or re-fit the whole map when none); exits boot
+   *  framing and re-arms follow. The explicit "follow from here" affordance. */
+  private recenter(): void {
+    // No-op before the battle is framed (intro) or after it ends (over) — recenter
+    // there would only shove the camera behind the banner.
+    if (this.phase === "intro" || this.phase === "over") return;
+    this.bootFraming = false;
+    this.followSuspended = false;
+    if (this.focusUnit) this.cam.snapTo(this.unitCenter(this.focusUnit));
+    else this.cam.recenterFit();
   }
 
   /** Re-anchor the floating menu to the active unit as the camera pans/zooms/
@@ -709,10 +758,11 @@ export class BattleScene implements Scene {
 
   private handleKey(key: string): void {
     const action = actionForKey(key);
-    // Camera rotation is a pure view operation (never mutates game state), so
-    // it's allowed any time — even mid-animation or on the enemy's turn.
+    // Camera rotation + recenter are pure view operations (never mutate game
+    // state), so they're allowed any time — even mid-animation or on the enemy's turn.
     if (action === "rotateLeft") return this.rotateView(-1);
     if (action === "rotateRight") return this.rotateView(1);
+    if (action === "recenter") return this.recenter();
     // Enter always works as an end-turn shortcut regardless of bindings so
     // players aren't locked out if they rebind the "e" key to something else.
     if (key === "Enter") {
@@ -757,6 +807,7 @@ export class BattleScene implements Scene {
     this.phase = "resolving";
     this.rangeTiles = [];
     this.ui.hideCombatControls();
+    this.followSuspended = false; // re-arm: follow the committed walk even if the player panned while planning
     await this.ctx.animator.moveAlong(this.active.id, path);
     if (path.length > 1) this.active.facing = directionTo(path[path.length - 2], path[path.length - 1]);
     this.active.pos = { ...tile };
@@ -1046,6 +1097,7 @@ export class BattleScene implements Scene {
 
   private afterAction(): void {
     this.hasActed = true;
+    this.followSuspended = false; // re-arm follow on a committed action (attack/skill/item/recruit)
     this.preMove = null;
     this.selectedSkill = null;
     this.selectedItemId = null;
@@ -1530,7 +1582,13 @@ export class BattleScene implements Scene {
       if (k.has("ArrowDown") || k.has("s")) ky += 1;
       // Camera-move convention (right pans the camera right ⇒ center.sx up), so
       // negate the grab-the-map drag delta.
-      if (kx || ky) this.cam.panBy(-kx * PAN_SPEED * dt, -ky * PAN_SPEED * dt);
+      if (kx || ky) { this.cam.panBy(-kx * PAN_SPEED * dt, -ky * PAN_SPEED * dt); this.followSuspended = true; }
+    }
+    // Smart-follow the active unit (player + AI) once past the first turn, unless a
+    // manual pan/zoom suspended it. Uses the sprite's exact (animated) center so the
+    // camera tracks a move mid-animation.
+    if (this.focusUnit && !this.followSuspended && !this.bootFraming) {
+      this.cam.followTo(this.unitCenter(this.focusUnit));
     }
     this.cam.update(dt);
     this.trackMenuToCamera();
