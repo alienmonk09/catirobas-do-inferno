@@ -57,12 +57,12 @@ describe("sprite data", () => {
     for (const w of Object.values(WEAPONS)) expect(VFX[vfxKeyForWeapon(w)]).toBeTruthy();
   });
 
-  it("every roster hero has a unique 24x30 hero sprite", () => {
+  it("every roster hero has a unique 38x50 hero sprite", () => {
     for (const h of ROSTER) {
       const def = HERO_SPRITES[h.id];
       expect(def, `missing hero sprite for ${h.id}`).toBeTruthy();
-      expect(spriteWidth(def)).toBe(24);
-      expect(spriteHeight(def)).toBe(30);
+      expect(spriteWidth(def)).toBe(38);
+      expect(spriteHeight(def)).toBe(50);
     }
   });
 });

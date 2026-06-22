@@ -19,7 +19,7 @@ import {
 } from "./iso";
 
 /** Target on-screen sprite height (px) — bake scale is derived per sprite so
- *  16x20 class art and 24x30 hero art render to the same footprint. */
+ *  16x20 class art and 38x50 hero art render to the same footprint. */
 const CHAR_PX_H = 90;
 const VFX_SCALE = 3;
 const PROP_SCALE = 3;
