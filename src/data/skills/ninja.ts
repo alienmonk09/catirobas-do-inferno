@@ -1,11 +1,10 @@
 import type { SkillDef } from "../../core/types";
 
-/** Ninja skills. */
 export const NINJA_SKILLS: Record<string, SkillDef> = {
   shadowStrike: {
     id: "shadowStrike",
-    name: "Shadow Strike",
-    description: "Close the gap in a blink and slash from the dark.",
+    name: "Ataque Sombrio",
+    description: "Fecha a distância num piscar e corta das sombras.",
     mpCost: 4,
     spCost: 100,
     range: 1,
@@ -17,8 +16,8 @@ export const NINJA_SKILLS: Record<string, SkillDef> = {
   },
   throwFlame: {
     id: "throwFlame",
-    name: "Throw Flame",
-    description: "Fling a fire-charged shuriken at a distant foe.",
+    name: "Lança-Chamas",
+    description: "Arremessa uma shuriken em chamas em um inimigo distante.",
     mpCost: 6,
     spCost: 150,
     range: 4,
@@ -30,8 +29,8 @@ export const NINJA_SKILLS: Record<string, SkillDef> = {
   },
   throwShock: {
     id: "throwShock",
-    name: "Throw Shock",
-    description: "Loose a lightning-etched blade that crackles on impact.",
+    name: "Lança-Raio",
+    description: "Arremessa uma lâmina gravada com relâmpago que estala no impacto.",
     mpCost: 7,
     spCost: 200,
     range: 4,
@@ -43,8 +42,8 @@ export const NINJA_SKILLS: Record<string, SkillDef> = {
   },
   shadowbind: {
     id: "shadowbind",
-    name: "Shadowbind",
-    description: "Pin a foe's shadow with throwing spikes, dragging its tempo to a crawl.",
+    name: "Prisão Sombria",
+    description: "Crava a sombra de um inimigo com espinhos, arrastando seu tempo a um rastejar.",
     mpCost: 5,
     spCost: 180,
     range: 4,

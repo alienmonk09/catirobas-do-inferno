@@ -1,11 +1,10 @@
 import type { SkillDef } from "../../core/types";
 
-/** Knight skills. */
 export const KNIGHT_SKILLS: Record<string, SkillDef> = {
   powerStrike: {
     id: "powerStrike",
-    name: "Power Strike",
-    description: "A heavy melee blow.",
+    name: "Golpe Brilhante",
+    description: "Um golpe melee pesado.",
     mpCost: 4,
     spCost: 100,
     range: 1,
@@ -18,8 +17,8 @@ export const KNIGHT_SKILLS: Record<string, SkillDef> = {
   },
   guard: {
     id: "guard",
-    name: "Guard",
-    description: "Raise own defense for 2 turns.",
+    name: "Guarda",
+    description: "Aumenta a própria defesa por 2 turnos.",
     mpCost: 3,
     spCost: 150,
     range: 0,
@@ -32,8 +31,8 @@ export const KNIGHT_SKILLS: Record<string, SkillDef> = {
   },
   shieldBash: {
     id: "shieldBash",
-    name: "Shield Bash",
-    description: "Slam an adjacent foe with the shield, knocking it back and slowing it.",
+    name: "Escudada",
+    description: "Esmaga um inimigo adjacente com o escudo, empurrando-o e atrasando-o.",
     mpCost: 5,
     spCost: 150,
     range: 1,
@@ -48,8 +47,8 @@ export const KNIGHT_SKILLS: Record<string, SkillDef> = {
   },
   rallyingCry: {
     id: "rallyingCry",
-    name: "Rallying Cry",
-    description: "Bolster the defense of all allies in a 3×3 area around the Knight.",
+    name: "Grito de Guerra",
+    description: "Fortalece a defesa de todos os aliados em uma área 3×3 ao redor do Cavaleiro.",
     mpCost: 10,
     spCost: 250,
     range: 0,

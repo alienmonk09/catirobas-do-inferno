@@ -1,11 +1,10 @@
 import type { SkillDef } from "../../core/types";
 
-/** Lancer skills. */
 export const LANCER_SKILLS: Record<string, SkillDef> = {
   jump: {
     id: "jump",
-    name: "Jump",
-    description: "Leap over walls and allies to crash down on a distant foe with devastating force.",
+    name: "Pular",
+    description: "Salta sobre muros e aliados para cair sobre um inimigo distante com força devastadora.",
     mpCost: 6,
     spCost: 100,
     range: 4,
@@ -18,8 +17,8 @@ export const LANCER_SKILLS: Record<string, SkillDef> = {
   },
   lanceThrust: {
     id: "lanceThrust",
-    name: "Lance Thrust",
-    description: "Drive the spear forward with full body weight for a piercing blow.",
+    name: "Estocada",
+    description: "Crava a lança com peso total do corpo para um golpe perfurante.",
     mpCost: 4,
     spCost: 150,
     range: 2,
@@ -31,8 +30,8 @@ export const LANCER_SKILLS: Record<string, SkillDef> = {
   },
   sweep: {
     id: "sweep",
-    name: "Sweep",
-    description: "Spin the spear in a wide arc, striking all foes in a cross around the target.",
+    name: "Varrer",
+    description: "Gira a lança em um arco amplo, ferindo todos os inimigos em uma cruz ao redor do alvo.",
     mpCost: 8,
     spCost: 250,
     range: 1,
@@ -44,8 +43,8 @@ export const LANCER_SKILLS: Record<string, SkillDef> = {
   },
   hobble: {
     id: "hobble",
-    name: "Hobble",
-    description: "Clip a foe's legs with the spear tip, slowing its turn speed.",
+    name: "Coxear",
+    description: "Acerta as pernas de um inimigo com a ponta da lança, atrasando sua velocidade de turno.",
     mpCost: 5,
     spCost: 180,
     range: 2,
@@ -58,8 +57,8 @@ export const LANCER_SKILLS: Record<string, SkillDef> = {
   },
   harpoon: {
     id: "harpoon",
-    name: "Harpoon",
-    description: "Hurl the spear on a chain. Deals a glancing blow then yanks the foe one tile closer.",
+    name: "Arpão",
+    description: "Arremessa a lança numa corrente. Causa um golpe de raspão e puxa o inimigo um tile para mais perto.",
     mpCost: 5,
     spCost: 200,
     range: 3,

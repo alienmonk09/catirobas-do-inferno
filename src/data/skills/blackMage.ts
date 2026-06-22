@@ -1,11 +1,10 @@
 import type { SkillDef } from "../../core/types";
 
-/** Black Mage skills. */
 export const BLACK_MAGE_SKILLS: Record<string, SkillDef> = {
   fire: {
     id: "fire",
-    name: "Fire",
-    description: "A bolt of flame.",
+    name: "Fogo",
+    description: "Uma rajada de chamas.",
     mpCost: 5,
     spCost: 100,
     range: 4,
@@ -17,8 +16,8 @@ export const BLACK_MAGE_SKILLS: Record<string, SkillDef> = {
   },
   fireball: {
     id: "fireball",
-    name: "Fireball",
-    description: "Flame that bursts over a 3x3 area.",
+    name: "Bola de Fogo",
+    description: "Chamas que explodem sobre uma área 3×3.",
     mpCost: 12,
     spCost: 250,
     range: 4,
@@ -30,8 +29,8 @@ export const BLACK_MAGE_SKILLS: Record<string, SkillDef> = {
   },
   bolt: {
     id: "bolt",
-    name: "Bolt",
-    description: "A strike of lightning.",
+    name: "Raio",
+    description: "Um relâmpago cortante.",
     mpCost: 6,
     spCost: 200,
     range: 5,
@@ -43,8 +42,8 @@ export const BLACK_MAGE_SKILLS: Record<string, SkillDef> = {
   },
   poison: {
     id: "poison",
-    name: "Poison",
-    description: "Wreathe a foe in toxin that gnaws its HP each turn.",
+    name: "Veneno",
+    description: "Envolve um inimigo em toxinas que corroem seu HP a cada turno.",
     mpCost: 6,
     spCost: 180,
     range: 4,
@@ -58,8 +57,8 @@ export const BLACK_MAGE_SKILLS: Record<string, SkillDef> = {
   },
   stop: {
     id: "stop",
-    name: "Stop",
-    description: "Freeze a foe in time, robbing it of its turns.",
+    name: "Parar",
+    description: "Congela um inimigo no tempo, roubando seus turnos.",
     mpCost: 16,
     spCost: 350,
     range: 4,
@@ -73,8 +72,8 @@ export const BLACK_MAGE_SKILLS: Record<string, SkillDef> = {
   },
   meteor: {
     id: "meteor",
-    name: "Meteor",
-    description: "Call down a crushing boulder of star-rock. Announced this turn; crashes down next turn.",
+    name: "Meteoro",
+    description: "Invoca um rocha estelar esmagadora. Anunciado neste turno; cai no próximo.",
     mpCost: 18,
     spCost: 400,
     range: 4,

@@ -1,11 +1,10 @@
 import type { SkillDef } from "../../core/types";
 
-/** Geomancer skills. */
 export const GEOMANCER_SKILLS: Record<string, SkillDef> = {
   boulder: {
     id: "boulder",
-    name: "Boulder",
-    description: "Hurl a massive stone at a single foe for heavy non-elemental damage.",
+    name: "Pedregulho",
+    description: "Arremessa uma pedra massiva em um inimigo para dano pesado não-elemental.",
     mpCost: 7,
     spCost: 100,
     range: 3,
@@ -17,8 +16,8 @@ export const GEOMANCER_SKILLS: Record<string, SkillDef> = {
   },
   quagmire: {
     id: "quagmire",
-    name: "Quagmire",
-    description: "Saturate the ground beneath a foe, slowing its movement.",
+    name: "Atoladouro",
+    description: "Satura o chão sob um inimigo, atrasando seu movimento.",
     mpCost: 6,
     spCost: 180,
     range: 3,
@@ -33,7 +32,7 @@ export const GEOMANCER_SKILLS: Record<string, SkillDef> = {
   tremor: {
     id: "tremor",
     name: "Tremor",
-    description: "Shake the earth, dealing nature damage across a 3×3 area.",
+    description: "Sacode a terra, causando dano de natureza em uma área 3×3.",
     mpCost: 12,
     spCost: 250,
     range: 3,
@@ -45,8 +44,8 @@ export const GEOMANCER_SKILLS: Record<string, SkillDef> = {
   },
   petrify: {
     id: "petrify",
-    name: "Petrify",
-    description: "Turn a foe to stone, robbing it of its turns.",
+    name: "Petrificar",
+    description: "Transforma um inimigo em pedra, roubando seus turnos.",
     mpCost: 15,
     spCost: 320,
     range: 3,

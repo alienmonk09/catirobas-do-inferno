@@ -1,11 +1,10 @@
 import type { SkillDef } from "../../core/types";
 
-/** Archer skills. */
 export const ARCHER_SKILLS: Record<string, SkillDef> = {
   aimedShot: {
     id: "aimedShot",
-    name: "Aimed Shot",
-    description: "A precise ranged shot with bonus damage.",
+    name: "Tiro Preciso",
+    description: "Um tiro à distância preciso com dano bônus.",
     mpCost: 3,
     spCost: 100,
     range: 4,
@@ -17,8 +16,8 @@ export const ARCHER_SKILLS: Record<string, SkillDef> = {
   },
   cripple: {
     id: "cripple",
-    name: "Cripple",
-    description: "Slow a target, lowering its turn speed.",
+    name: "Aleijar",
+    description: "Atrasa um alvo, reduzindo sua velocidade de turno.",
     mpCost: 5,
     spCost: 150,
     range: 4,
@@ -31,8 +30,8 @@ export const ARCHER_SKILLS: Record<string, SkillDef> = {
   },
   multishot: {
     id: "multishot",
-    name: "Multishot",
-    description: "Loose a volley, peppering foes in a cross around the target.",
+    name: "Tiro Múltiplo",
+    description: "Dispara uma saraivada, alvejando inimigos em uma cruz ao redor do alvo.",
     mpCost: 8,
     spCost: 200,
     range: 4,
@@ -44,8 +43,8 @@ export const ARCHER_SKILLS: Record<string, SkillDef> = {
   },
   pinningShot: {
     id: "pinningShot",
-    name: "Pinning Shot",
-    description: "Pin a foe with a heavy bolt, driving it back and slowing it.",
+    name: "Tiro de Fixação",
+    description: "Crava um inimigo com um tiro pesado, empurrando-o e atrasando-o.",
     mpCost: 6,
     spCost: 280,
     range: 4,

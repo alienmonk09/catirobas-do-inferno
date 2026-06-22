@@ -1,11 +1,10 @@
 import type { SkillDef } from "../../core/types";
 
-/** Summoner skills. */
 export const SUMMONER_SKILLS: Record<string, SkillDef> = {
   callIfrit: {
     id: "callIfrit",
-    name: "Call Ifrit",
-    description: "Summon the infernal lord. Scorching fire erupts across a 3×3 area.",
+    name: "Invocar Ifrit",
+    description: "Invoca o senhor infernal. Fogo escaldante erupta sobre uma área 3×3.",
     mpCost: 12,
     spCost: 100,
     range: 4,
@@ -17,8 +16,8 @@ export const SUMMONER_SKILLS: Record<string, SkillDef> = {
   },
   callShiva: {
     id: "callShiva",
-    name: "Call Shiva",
-    description: "Summon the ice queen. Blizzard diamonds shatter across a 3×3 area.",
+    name: "Invocar Shiva",
+    description: "Invoca a rainha do gelo. Diamantes de nevasca estilhaçam sobre uma área 3×3.",
     mpCost: 14,
     spCost: 250,
     range: 4,
@@ -30,8 +29,8 @@ export const SUMMONER_SKILLS: Record<string, SkillDef> = {
   },
   callRamuh: {
     id: "callRamuh",
-    name: "Call Ramuh",
-    description: "Summon the thunder sage. Lightning strikes rain down in a cross.",
+    name: "Invocar Ramuh",
+    description: "Invoca o sábio do trovão. Relâmpagos chovem em uma cruz.",
     mpCost: 16,
     spCost: 300,
     range: 4,
@@ -43,8 +42,8 @@ export const SUMMONER_SKILLS: Record<string, SkillDef> = {
   },
   callTitan: {
     id: "callTitan",
-    name: "Call Titan",
-    description: "Summon the earth colossus. The ground heaves, crushing a 3×3 area.",
+    name: "Invocar Titan",
+    description: "Invoca o colosso da terra. O chão se ergue, esmagando uma área 3×3.",
     mpCost: 18,
     spCost: 350,
     range: 3,

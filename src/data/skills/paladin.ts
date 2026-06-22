@@ -1,11 +1,10 @@
 import type { SkillDef } from "../../core/types";
 
-/** Paladin skills. */
 export const PALADIN_SKILLS: Record<string, SkillDef> = {
   smite: {
     id: "smite",
-    name: "Smite",
-    description: "A consecrated melee blow that staggers the wicked.",
+    name: "Punir",
+    description: "Um golpe melee consagrado que faz o maligno cambalear.",
     mpCost: 5,
     spCost: 100,
     range: 1,
@@ -18,8 +17,8 @@ export const PALADIN_SKILLS: Record<string, SkillDef> = {
   },
   layOnHands: {
     id: "layOnHands",
-    name: "Lay on Hands",
-    description: "Channel holy light into an adjacent ally, mending deep wounds.",
+    name: "Imposição de Mãos",
+    description: "Canaliza luz sagrada em um aliado adjacente, curando feridas profundas.",
     mpCost: 6,
     spCost: 130,
     range: 1,
@@ -31,8 +30,8 @@ export const PALADIN_SKILLS: Record<string, SkillDef> = {
   },
   holyLance: {
     id: "holyLance",
-    name: "Holy Lance",
-    description: "Hurl a spear of light at a distant foe.",
+    name: "Lança Sagrada",
+    description: "Arremessa uma lança de luz em um inimigo distante.",
     mpCost: 7,
     spCost: 200,
     range: 3,
@@ -44,8 +43,8 @@ export const PALADIN_SKILLS: Record<string, SkillDef> = {
   },
   sanctuary: {
     id: "sanctuary",
-    name: "Sanctuary",
-    description: "Raise a holy ward over a 3×3 area, shielding allies from physical blows.",
+    name: "Santuário",
+    description: "Ergue uma ward sagrada sobre uma área 3×3, protegendo aliados de golpes físicos.",
     mpCost: 12,
     spCost: 250,
     range: 3,

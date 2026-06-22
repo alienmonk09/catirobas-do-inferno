@@ -1,11 +1,10 @@
 import type { SkillDef } from "../../core/types";
 
-/** Druid skills. */
 export const DRUID_SKILLS: Record<string, SkillDef> = {
   regrowth: {
     id: "regrowth",
-    name: "Regrowth",
-    description: "Coax living growth to restore an ally's HP.",
+    name: "Regeneração",
+    description: "Conduz crescimento vivo para restaurar o HP de um aliado.",
     mpCost: 5,
     spCost: 100,
     range: 3,
@@ -17,8 +16,8 @@ export const DRUID_SKILLS: Record<string, SkillDef> = {
   },
   thornLash: {
     id: "thornLash",
-    name: "Thorn Lash",
-    description: "Whip a foe with thorned vines for nature damage.",
+    name: "Açoite de Espinhos",
+    description: "Chicoteia um inimigo com vinhas espinhentas causando dano de natureza.",
     mpCost: 5,
     spCost: 150,
     range: 4,
@@ -30,8 +29,8 @@ export const DRUID_SKILLS: Record<string, SkillDef> = {
   },
   entangle: {
     id: "entangle",
-    name: "Entangle",
-    description: "Roots snare a distant foe, slowing its turn speed.",
+    name: "Emaranhar",
+    description: "Raizes prendem um inimigo distante, atrasando sua velocidade de turno.",
     mpCost: 6,
     spCost: 200,
     range: 4,
@@ -44,8 +43,8 @@ export const DRUID_SKILLS: Record<string, SkillDef> = {
   },
   rejuvenate: {
     id: "rejuvenate",
-    name: "Rejuvenate",
-    description: "Living growth knits an ally's wounds over several turns (Regen).",
+    name: "Rejuvenescer",
+    description: "Crescimento vivo costura as feridas de um aliado ao longo de vários turnos (Regen).",
     mpCost: 6,
     spCost: 180,
     range: 3,

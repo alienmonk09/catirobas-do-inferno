@@ -1,11 +1,10 @@
 import type { SkillDef } from "../../core/types";
 
-/** Thief skills. */
 export const THIEF_SKILLS: Record<string, SkillDef> = {
   backstab: {
     id: "backstab",
-    name: "Backstab",
-    description: "A vicious strike from the shadows for heavy damage.",
+    name: "Apunhalar",
+    description: "Um golpe cruel pelas sombras para dano pesado.",
     mpCost: 4,
     spCost: 100,
     range: 1,
@@ -17,8 +16,8 @@ export const THIEF_SKILLS: Record<string, SkillDef> = {
   },
   hamstring: {
     id: "hamstring",
-    name: "Hamstring",
-    description: "Cut a foe's legs, slowing its turn speed.",
+    name: "Tendão",
+    description: "Corta as pernas de um inimigo, atrasando sua velocidade de turno.",
     mpCost: 5,
     spCost: 150,
     range: 1,
@@ -31,8 +30,8 @@ export const THIEF_SKILLS: Record<string, SkillDef> = {
   },
   fanOfKnives: {
     id: "fanOfKnives",
-    name: "Fan of Knives",
-    description: "Hurl blades, striking foes in a cross around the target.",
+    name: "Leque de Facas",
+    description: "Arremessa lâminas, ferindo inimigos em uma cruz ao redor do alvo.",
     mpCost: 9,
     spCost: 250,
     range: 1,

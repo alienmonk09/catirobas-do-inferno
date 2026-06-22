@@ -1,11 +1,10 @@
 import type { SkillDef } from "../../core/types";
 
-/** Berserker skills. */
 export const BERSERKER_SKILLS: Record<string, SkillDef> = {
   rampage: {
     id: "rampage",
-    name: "Rampage",
-    description: "A wild, overcommitted swing that knocks the target back.",
+    name: "Fúria",
+    description: "Um golpe selvagem e exagerado que empurra o alvo para trás.",
     mpCost: 4,
     spCost: 100,
     range: 1,
@@ -18,8 +17,8 @@ export const BERSERKER_SKILLS: Record<string, SkillDef> = {
   },
   cleave: {
     id: "cleave",
-    name: "Cleave",
-    description: "A sweeping arc that bites every foe in a cross around the target.",
+    name: "Cortar",
+    description: "Um arco varrido que morde todo inimigo em uma cruz ao redor do alvo.",
     mpCost: 8,
     spCost: 200,
     range: 1,
@@ -31,8 +30,8 @@ export const BERSERKER_SKILLS: Record<string, SkillDef> = {
   },
   frenzy: {
     id: "frenzy",
-    name: "Frenzy",
-    description: "Whip yourself into a blood rage, acting far more often for a few turns.",
+    name: "Delírio",
+    description: "Entra em fúria sangrenta, agindo muito mais por alguns turnos.",
     mpCost: 6,
     spCost: 150,
     range: 0,
@@ -46,8 +45,8 @@ export const BERSERKER_SKILLS: Record<string, SkillDef> = {
   },
   crushingBlow: {
     id: "crushingBlow",
-    name: "Crushing Blow",
-    description: "A devastating two-handed smash that hurls the victim away.",
+    name: "Golpe Esmagador",
+    description: "Um smash de duas mãos devastador que arremessa a vítima para longe.",
     mpCost: 10,
     spCost: 280,
     range: 1,

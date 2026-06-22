@@ -1,11 +1,10 @@
 import type { SkillDef } from "../../core/types";
 
-/** Monk skills. */
 export const MONK_SKILLS: Record<string, SkillDef> = {
   palmStrike: {
     id: "palmStrike",
-    name: "Palm Strike",
-    description: "A focused unarmed blow that hits hard.",
+    name: "Palma Viscosa",
+    description: "Um golpe desarmado focado que bate forte.",
     mpCost: 4,
     spCost: 100,
     range: 1,
@@ -19,7 +18,7 @@ export const MONK_SKILLS: Record<string, SkillDef> = {
   chakra: {
     id: "chakra",
     name: "Chakra",
-    description: "Channel inner energy to heal self or an ally.",
+    description: "Canaliza energia interior para curar a si ou a um aliado.",
     mpCost: 4,
     spCost: 150,
     range: 1,
@@ -31,8 +30,8 @@ export const MONK_SKILLS: Record<string, SkillDef> = {
   },
   bodySlam: {
     id: "bodySlam",
-    name: "Body Slam",
-    description: "Grab and hurl a foe 3 tiles, passing over any unit in the way. Synergizes with hazard terrain.",
+    name: "Abraço Mortal",
+    description: "Agarra e arremessa um inimigo 3 tiles, passando sobre qualquer unidade no caminho. Sinergiza com terreno perigoso.",
     mpCost: 8,
     spCost: 200,
     range: 1,
@@ -46,8 +45,8 @@ export const MONK_SKILLS: Record<string, SkillDef> = {
   },
   earthShake: {
     id: "earthShake",
-    name: "Earth Shake",
-    description: "Slam the ground, damaging nearby foes in a cross.",
+    name: "Terremoto",
+    description: "Esmurga o chão, ferindo inimigos próximos em uma cruz.",
     mpCost: 10,
     spCost: 250,
     range: 3,

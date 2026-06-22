@@ -1,11 +1,10 @@
 import type { SkillDef } from "../../core/types";
 
-/** Time Mage skills. */
 export const TIME_MAGE_SKILLS: Record<string, SkillDef> = {
   comet: {
     id: "comet",
-    name: "Comet",
-    description: "Call down a shard of non-elemental star-stuff (ignores resistances).",
+    name: "Cometa",
+    description: "Invoca um fragmento de star-stuff não-elemental (ignora resistências).",
     mpCost: 6,
     spCost: 100,
     range: 4,
@@ -17,8 +16,8 @@ export const TIME_MAGE_SKILLS: Record<string, SkillDef> = {
   },
   timeSlow: {
     id: "timeSlow",
-    name: "Slow",
-    description: "Drag a foe out of step with time, halving its turn speed.",
+    name: "Lentidão",
+    description: "Arrasta um inimigo para fora do compasso do tempo, cortando sua velocidade de turno pela metade.",
     mpCost: 6,
     spCost: 150,
     range: 4,
@@ -32,8 +31,8 @@ export const TIME_MAGE_SKILLS: Record<string, SkillDef> = {
   },
   hasten: {
     id: "hasten",
-    name: "Hasten",
-    description: "Bend time around a 3×3 area, quickening every ally caught within.",
+    name: "Acelerar",
+    description: "Dobra o tempo ao redor de uma área 3×3, acelerando todo aliado dentro dela.",
     mpCost: 12,
     spCost: 300,
     range: 3,

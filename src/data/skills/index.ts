@@ -13,12 +13,8 @@ import { GEOMANCER_SKILLS } from "./geomancer";
 import { PALADIN_SKILLS } from "./paladin";
 import { BERSERKER_SKILLS } from "./berserker";
 import { NINJA_SKILLS } from "./ninja";
+import { COMBO_SKILLS } from "./combos";
 
-/**
- * All ability definitions, assembled from the per-class modules in this
- * directory. Add a class's skills in its own file and spread it in here — no
- * single shared file to contend on (mirrors the per-phase maps/ layout).
- */
 export const SKILLS: Record<string, SkillDef> = {
   ...KNIGHT_SKILLS,
   ...ARCHER_SKILLS,
@@ -34,6 +30,7 @@ export const SKILLS: Record<string, SkillDef> = {
   ...PALADIN_SKILLS,
   ...BERSERKER_SKILLS,
   ...NINJA_SKILLS,
+  ...COMBO_SKILLS,
 };
 
 export function getSkill(id: string): SkillDef {
