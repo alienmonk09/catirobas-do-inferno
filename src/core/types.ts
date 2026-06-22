@@ -188,7 +188,12 @@ export type StatusKind =
   | "regen"
   | "stop"
   | "protect"
-  | "shell";
+  | "shell"
+  | "confuse"
+  | "critUp"
+  | "reflect"
+  | "atkUp"
+  | "defDown";
 
 export interface ActiveStatus {
   kind: StatusKind;
@@ -263,6 +268,25 @@ export interface ChestSpawn {
   loot: Loot;
 }
 
+/**
+ * Per-biome mechanical rules applied at battle start or per-turn.
+ * GDD biomas: Deserto (confusão a cada 3 turnos), Vulcão (dano passivo por turno).
+ */
+export interface BiomeRules {
+  /** Applied to each living player unit at the start of each turn. */
+  passiveDamage?: {
+    /** Flat HP lost each turn (before resist). */
+    amount: number;
+  };
+  /** Chance per turn of applying the "confuse" status to a random living player unit. */
+  confusion?: {
+    /** 0..1 probability of triggering each interval. */
+    chance: number;
+    /** Apply every N turns (1 = every turn, 3 = every third turn). */
+    interval: number;
+  };
+}
+
 export interface MapDef {
   id: string;
   name: string;
@@ -288,6 +312,8 @@ export interface MapDef {
   /** Hand-authored decoration accents. A `solid` prop (see PROPS) MUST sit on a
    *  blocked tile; a `sightBlock` prop raises LOS occlusion on its tile. */
   decor?: { pos: Point; propId: string }[];
+  /** Per-biome mechanical rules (confusion, passive damage, etc.). */
+  biomeRules?: BiomeRules;
 }
 
 export interface EnemySpawn {
@@ -306,7 +332,7 @@ export interface EnemySpawn {
 
 export const CT_THRESHOLD = 100;
 
-export type Difficulty = "easy" | "normal" | "hard";
+export type Difficulty = "easy" | "normal" | "hard" | "ironic";
 
 /**
  * A single level-up event, captured at the moment a unit crosses one or more
@@ -346,4 +372,20 @@ export interface BattleRewards {
   heroes: HeroXpResult[];
   /** Optional "most valuable" callout from the per-battle stat tally. */
   mvp?: { unitId: string; name: string; reason: string };
+  /** Ending reached on the final battle, if any. Set by battleScene on the last phase. */
+  endingId?: EndingId;
 }
+
+/**
+ * The four possible endings of the Catirobas do Inferno campaign.
+ * A = physical kill of Senhora Razão, B = magical/item kill,
+ * C = party defeated (game over), D = Zezé redemption (10+ encounters).
+ */
+export type EndingId = "a" | "b" | "c" | "d";
+
+/**
+ * How the killing blow against the final boss was dealt.
+ * Drives the A/B ending split. Physical weapons → "physical",
+ * spells → "magical", items → "item".
+ */
+export type AttackKind = "physical" | "magical" | "item";

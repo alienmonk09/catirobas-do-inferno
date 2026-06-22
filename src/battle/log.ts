@@ -1,16 +1,6 @@
 import type { HitResult } from "./combat";
 import type { StatusKind } from "../core/types";
-
-const STATUS_WORDING: Record<StatusKind, string> = {
-  poison: "afflicted with",
-  slow: "afflicted with",
-  stop: "afflicted with",
-  guard: "blessed with",
-  haste: "granted",
-  regen: "blessed with",
-  protect: "granted",
-  shell: "granted",
-};
+import { t } from "../i18n";
 
 /**
  * Format a single HitResult into a human-readable battle log line.
@@ -20,23 +10,22 @@ export function formatHit(result: HitResult, nameOf: (id: string) => string): st
   const name = nameOf(result.unitId);
   switch (result.kind) {
     case "damage": {
-      let line = `${name} takes ${result.amount} damage`;
-      if (result.crit) line += " (critical!)";
-      if (result.killed) line += " — KO!";
+      let line = t("battle.log.damage", { name, amount: result.amount });
+      if (result.crit) line += t("battle.log.damageCrit");
+      if (result.killed) line += t("battle.log.ko");
       return line;
     }
     case "heal":
-      return `${name} recovers ${result.amount} HP`;
+      return t("battle.log.heal", { name, amount: result.amount });
     case "mp":
-      return `${name} recovers ${result.amount} MP`;
+      return t("battle.log.mp", { name, amount: result.amount });
     case "revive":
-      return `${name} is revived`;
+      return t("battle.log.revive", { name });
     case "status": {
       const sk = result.status as StatusKind | undefined;
       // No `status` field means a cure (Remedy strips debuffs), not a new status.
-      if (!sk) return `${name} is cured of debuffs`;
-      const wording = STATUS_WORDING[sk] ?? "affected by";
-      return `${name} is ${wording} ${sk}`;
+      if (!sk) return t("battle.log.cured", { name });
+      return t(`battle.log.statusApplied.${sk}`, { name });
     }
   }
 }

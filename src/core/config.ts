@@ -6,4 +6,4 @@
  * Disabled for now per design — the dialogue data and helpers are kept intact,
  * so flipping this back to `true` re-enables every chapter's intro/outro.
  */
-export const DIALOGUE_ENABLED = false;
+export const DIALOGUE_ENABLED = true;

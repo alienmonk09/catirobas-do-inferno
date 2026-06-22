@@ -7,7 +7,7 @@ import { PHASES } from "./data/maps";
 import { injectStyles } from "./ui/styles";
 import { applyAccessibility } from "./engine/accessibility";
 import { SceneManager, type GameContext } from "./scenes/sceneManager";
-import { TitleScene, VictoryScene } from "./scenes/menuScenes";
+import { TitleScene, VictoryScene, EndingScene } from "./scenes/menuScenes";
 import { BattleScene } from "./scenes/battleScene";
 import { PartyScene } from "./scenes/partyScene";
 import { PartySelectScene } from "./scenes/partySelectScene";
@@ -39,6 +39,7 @@ function boot(): void {
       toBattle: (i: number) => manager.change(new BattleScene(ctx, PHASES[i], i)),
       toParty: () => manager.change(new PartyScene(ctx)),
       toVictory: () => manager.change(new VictoryScene(ctx)),
+      toEnding: (endingId: string) => manager.change(new EndingScene(ctx, endingId)),
     },
   };
 
@@ -77,7 +78,7 @@ try {
 } catch (err) {
   // A throw during boot would otherwise leave the player on a blank dark canvas
   // with the error buried in devtools. Surface a minimal visible fallback.
-  console.error("Ashen Banner failed to start:", err);
+  console.error("Catirobas do Inferno failed to start:", err);
   const app = document.getElementById("app");
   if (app) {
     app.textContent = "Failed to start. Open the browser console for details.";

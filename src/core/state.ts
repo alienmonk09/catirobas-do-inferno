@@ -1,4 +1,4 @@
-import type { ClassId, Difficulty, RaceId, Reaction, Unit } from "./types";
+import type { ClassId, Difficulty, RaceId, Reaction, Unit, AttackKind } from "./types";
 import { createStartingParty } from "../data/party";
 import { startingInventory, getItem } from "../data/items";
 import { CLASSES } from "../data/classes";
@@ -6,6 +6,7 @@ import { RACES } from "../data/races";
 import { WEAPONS, getWeapon } from "../data/weapons";
 import { EQUIPMENT, getEquipment } from "../data/equipment";
 import { equip } from "./unit";
+import { REPUTATION_START, canShop, effectivePrice } from "./reputation";
 
 export interface GameState {
   /** Persistent player units carried across phases. */
@@ -28,6 +29,16 @@ export interface GameState {
   ngPlus: number;
   /** Classic mode: a party member who falls in battle is lost permanently. */
   permadeath: boolean;
+  /** Shopkeeper opinion of the party; -20..+20, starts at -10. */
+  reputation: number;
+  /** Unlocked achievement ids. */
+  achievements: string[];
+  /** Times Zezé was encountered (ally/enemy/dialogue). Drives ending D. */
+  zezeEncounters: number;
+  /** Affinity progress per pair key ("a:b" -> 0..100). */
+  affinityProgress: Record<string, number>;
+  /** How the killing blow on the final boss was dealt. Drives A/B ending. */
+  lastAttackKind?: AttackKind;
 }
 
 export function createGameState(): GameState {
@@ -44,6 +55,10 @@ export function createGameState(): GameState {
     slot: 0,
     ngPlus: 0,
     permadeath: false,
+    reputation: REPUTATION_START,
+    achievements: [],
+    zezeEncounters: 0,
+    affinityProgress: {},
   };
 }
 
@@ -84,8 +99,10 @@ export function buyItem(state: GameState, itemId: string): boolean {
   } catch {
     return false;
   }
-  if (state.gold < item.price) return false;
-  state.gold -= item.price;
+  if (!canShop(state.reputation)) return false;
+  const price = effectivePrice(item.price, state.reputation);
+  if (state.gold < price) return false;
+  state.gold -= price;
   state.inventory[itemId] = (state.inventory[itemId] ?? 0) + 1;
   return true;
 }
@@ -110,9 +127,11 @@ export function buyEquipment(state: GameState, id: string): boolean {
   } catch {
     return false;
   }
+  if (!canShop(state.reputation)) return false;
   if (ownsEquipment(state, id)) return false;
-  if (state.gold < equipment.price) return false;
-  state.gold -= equipment.price;
+  const price = effectivePrice(equipment.price, state.reputation);
+  if (state.gold < price) return false;
+  state.gold -= price;
   state.ownedEquipment.push(id);
   return true;
 }
@@ -182,9 +201,11 @@ export function buyWeapon(state: GameState, id: string): boolean {
   } catch {
     return false;
   }
+  if (!canShop(state.reputation)) return false;
   if (ownsWeapon(state, id)) return false;
-  if (state.gold < weapon.price) return false;
-  state.gold -= weapon.price;
+  const price = effectivePrice(weapon.price, state.reputation);
+  if (state.gold < price) return false;
+  state.gold -= price;
   state.ownedWeapons.push(id);
   return true;
 }
@@ -212,7 +233,7 @@ export function sellWeapon(state: GameState, id: string): boolean {
   return true;
 }
 
-const VALID_DIFFICULTIES: Difficulty[] = ["easy", "normal", "hard"];
+const VALID_DIFFICULTIES: Difficulty[] = ["easy", "normal", "hard", "ironic"];
 const VALID_REACTIONS: Reaction[] = ["counter", "autoPotion", "cover"];
 
 /**
@@ -231,7 +252,7 @@ const VALID_REACTIONS: Reaction[] = ["counter", "autoPotion", "cover"];
  * @param offset 0-based rank of this enemy within its map (0 = weakest tier)
  */
 export function enemyLevelFor(partyAvgLevel: number, offset: number, difficulty: Difficulty, ngPlus = 0): number {
-  const diffDelta = difficulty === "easy" ? -2 : difficulty === "hard" ? 0 : -1;
+  const diffDelta = difficulty === "easy" ? -2 : difficulty === "hard" ? 0 : difficulty === "ironic" ? -3 : -1;
   return Math.max(1, Math.round(partyAvgLevel) + diffDelta + offset + ngPlus * 3);
 }
 
@@ -363,6 +384,18 @@ export function loadGame(slot = 0): GameState | null {
     // Back-compat: old saves lack `permadeath`; normalise any missing/invalid value.
     if (typeof parsed.permadeath !== "boolean") {
       parsed.permadeath = false;
+    }
+    if (typeof parsed.reputation !== "number" || !isFinite(parsed.reputation)) {
+      parsed.reputation = REPUTATION_START;
+    }
+    if (!Array.isArray(parsed.achievements)) {
+      parsed.achievements = [];
+    }
+    if (typeof parsed.zezeEncounters !== "number" || !isFinite(parsed.zezeEncounters) || parsed.zezeEncounters < 0) {
+      parsed.zezeEncounters = 0;
+    }
+    if (!parsed.affinityProgress || typeof parsed.affinityProgress !== "object") {
+      parsed.affinityProgress = {};
     }
     // Migration: any gear a unit already has equipped should be in ownedEquipment.
     const owned = parsed.ownedEquipment as string[];
