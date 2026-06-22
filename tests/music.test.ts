@@ -258,30 +258,29 @@ describe("battleThemeForPhase — chapter-to-theme resolver", () => {
     expect(VALID_BATTLE_THEME_IDS.has(large)).toBe(true);
   });
 
-  it("phase 3 (Cinder Fields) returns battle_driving", () => {
+  it("phase 2 (Deserto) returns battle_driving", () => {
+    expect(battleThemeForPhase(2)).toBe("battle_driving");
+  });
+
+  it("phase 3 (Caverna) returns battle_driving", () => {
     expect(battleThemeForPhase(3)).toBe("battle_driving");
   });
 
-  it("phase 5 (Outer Ramparts) returns battle_dark", () => {
+  it("phase 4 (Vulcão) returns battle_dark", () => {
+    expect(battleThemeForPhase(4)).toBe("battle_dark");
+  });
+
+  it("phase 5 (finale — Monte Macheza) returns battle_dark", () => {
     expect(battleThemeForPhase(5)).toBe("battle_dark");
   });
 
-  it("phase 6 (finale) returns battle_dark", () => {
-    expect(battleThemeForPhase(6)).toBe("battle_dark");
-  });
-
-  it("early phases 0, 1, 2 return the standard battle theme", () => {
+  it("early phases 0, 1 return the standard battle theme", () => {
     expect(battleThemeForPhase(0)).toBe("battle");
     expect(battleThemeForPhase(1)).toBe("battle");
-    expect(battleThemeForPhase(2)).toBe("battle");
-  });
-
-  it("phase 4 returns the standard battle theme", () => {
-    expect(battleThemeForPhase(4)).toBe("battle");
   });
 
   it("startMusic does not throw for any phase's battle theme (node-safe)", () => {
-    for (let i = 0; i <= 6; i++) {
+    for (let i = 0; i <= 5; i++) {
       expect(() => startMusic(battleThemeForPhase(i))).not.toThrow();
     }
   });

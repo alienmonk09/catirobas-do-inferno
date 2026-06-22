@@ -220,11 +220,10 @@ describe("caster weapon upgrade path", () => {
 // ---------------------------------------------------------------------------
 
 describe("consumable tier monotonicity", () => {
-  // Each tier ordered weakest -> strongest. Price AND restore amount must climb.
   const TIERS: ReadonlyArray<readonly string[]> = [
-    ["potion", "hiPotion", "xPotion"], // healHp
-    ["ether", "turboEther"],           // healMp
-    ["phoenixDown", "megaPhoenix"],    // revive
+    ["hiPotion", "potion", "xPotion"], // healHp: Pizza Fria(20) < Cerveja(30) < Foto(45)
+    ["ether"],                        // healMp: Energético(50) — standalone
+    ["phoenixDown", "megaPhoenix"],   // revive: Phoenix Down(20) < Maconha(80)
   ];
 
   for (const tier of TIERS) {

@@ -174,75 +174,10 @@ describe("evaluateOutcome — escort", () => {
   });
 });
 
-describe("map objective sanity — escort (phase4)", () => {
-  const map = PHASES.find((m) => m.id === "phase4");
+describe("map objective sanity — seize (cavernaDoConstrangimento)", () => {
+  const map = PHASES.find((m) => m.id === "cavernaDoConstrangimento");
 
-  it("phase4 exists and has an escort objective", () => {
-    expect(map).toBeDefined();
-    expect(map!.objective).toBeDefined();
-    expect(map!.objective!.kind).toBe("escort");
-  });
-
-  it("goal tile is in-bounds", () => {
-    const obj = map!.objective as { kind: "escort"; vipName: string; x: number; y: number };
-    expect(obj.x).toBeGreaterThanOrEqual(0);
-    expect(obj.x).toBeLessThan(map!.width);
-    expect(obj.y).toBeGreaterThanOrEqual(0);
-    expect(obj.y).toBeLessThan(map!.height);
-  });
-
-  it("goal tile is not blocked", () => {
-    const obj = map!.objective as { kind: "escort"; vipName: string; x: number; y: number };
-    expect(map!.blocked?.[obj.y][obj.x] ?? false).toBe(false);
-  });
-
-  it("goal tile is not on a player spawn", () => {
-    const obj = map!.objective as { kind: "escort"; vipName: string; x: number; y: number };
-    const onSpawn = map!.playerSpawns.some((s) => s.x === obj.x && s.y === obj.y);
-    expect(onSpawn).toBe(false);
-  });
-
-  it("goal tile is not on an enemy spawn", () => {
-    const obj = map!.objective as { kind: "escort"; vipName: string; x: number; y: number };
-    const onEnemy = map!.enemies.some((e) => e.pos.x === obj.x && e.pos.y === obj.y);
-    expect(onEnemy).toBe(false);
-  });
-
-  it("goal tile is not on the guest's starting position", () => {
-    const obj = map!.objective as { kind: "escort"; vipName: string; x: number; y: number };
-    const onAlly = (map!.allies ?? []).some((a) => a.pos.x === obj.x && a.pos.y === obj.y);
-    expect(onAlly).toBe(false);
-  });
-
-  it("the named vip exists in map.allies", () => {
-    const obj = map!.objective as { kind: "escort"; vipName: string; x: number; y: number };
-    const vip = (map!.allies ?? []).find((a) => a.name === obj.vipName);
-    expect(vip).toBeDefined();
-  });
-
-  it("every ally spawn is in-bounds, unblocked, and does not collide with player/enemy spawns or other allies", () => {
-    const allies = map!.allies ?? [];
-    const seen = new Set<string>([
-      ...map!.playerSpawns.map((s) => `${s.x},${s.y}`),
-      ...map!.enemies.map((e) => `${e.pos.x},${e.pos.y}`),
-    ]);
-    for (const a of allies) {
-      expect(a.pos.x).toBeGreaterThanOrEqual(0);
-      expect(a.pos.y).toBeGreaterThanOrEqual(0);
-      expect(a.pos.x).toBeLessThan(map!.width);
-      expect(a.pos.y).toBeLessThan(map!.height);
-      expect(map!.blocked?.[a.pos.y][a.pos.x] ?? false).toBe(false);
-      const k = `${a.pos.x},${a.pos.y}`;
-      expect(seen.has(k)).toBe(false);
-      seen.add(k);
-    }
-  });
-});
-
-describe("map objective sanity — seize (outerRamparts)", () => {
-  const map = PHASES.find((m) => m.id === "outerRamparts");
-
-  it("outerRamparts exists and has a seize objective", () => {
+  it("cavernaDoConstrangimento exists and has a seize objective", () => {
     expect(map).toBeDefined();
     expect(map!.objective).toBeDefined();
     expect(map!.objective!.kind).toBe("seize");
@@ -274,52 +209,10 @@ describe("map objective sanity — seize (outerRamparts)", () => {
   });
 });
 
-describe("map objective sanity — seize (frostspirePass)", () => {
-  const map = PHASES.find((m) => m.id === "frostspirePass");
+describe("map objective sanity — defend (desertoDoEsquecimento)", () => {
+  const map = PHASES.find((m) => m.id === "desertoDoEsquecimento");
 
-  it("frostspirePass exists and has a seize objective", () => {
-    expect(map).toBeDefined();
-    expect(map!.objective).toBeDefined();
-    expect(map!.objective!.kind).toBe("seize");
-  });
-
-  it("seize tile is in-bounds", () => {
-    const obj = map!.objective as { kind: "seize"; x: number; y: number };
-    expect(obj.x).toBeGreaterThanOrEqual(0);
-    expect(obj.x).toBeLessThan(map!.width);
-    expect(obj.y).toBeGreaterThanOrEqual(0);
-    expect(obj.y).toBeLessThan(map!.height);
-  });
-
-  it("seize tile is not blocked and not water/lava", () => {
-    const obj = map!.objective as { kind: "seize"; x: number; y: number };
-    expect(map!.blocked?.[obj.y][obj.x] ?? false).toBe(false);
-    const t = map!.terrain?.[obj.y][obj.x];
-    expect(t).not.toBe("water");
-    expect(t).not.toBe("lava");
-  });
-
-  it("seize tile is not on a player or enemy spawn", () => {
-    const obj = map!.objective as { kind: "seize"; x: number; y: number };
-    const onSpawn = map!.playerSpawns.some((s) => s.x === obj.x && s.y === obj.y);
-    const onEnemy = map!.enemies.some((e) => e.pos.x === obj.x && e.pos.y === obj.y);
-    expect(onSpawn).toBe(false);
-    expect(onEnemy).toBe(false);
-  });
-
-  it("seize tile is adjacent to the Pass Warden", () => {
-    const obj = map!.objective as { kind: "seize"; x: number; y: number };
-    const warden = map!.enemies.find((e) => e.name === "Pass Warden");
-    expect(warden).toBeDefined();
-    const dist = Math.abs(warden!.pos.x - obj.x) + Math.abs(warden!.pos.y - obj.y);
-    expect(dist).toBe(1);
-  });
-});
-
-describe("map objective sanity — defend (cinderFields)", () => {
-  const map = PHASES.find((m) => m.id === "cinderFields");
-
-  it("cinderFields exists and has a defend objective", () => {
+  it("desertoDoEsquecimento exists and has a defend objective", () => {
     expect(map).toBeDefined();
     expect(map!.objective).toBeDefined();
     expect(map!.objective!.kind).toBe("defend");
@@ -354,5 +247,33 @@ describe("map objective sanity — defend (cinderFields)", () => {
     const obj = map!.objective as { kind: "defend"; x: number; y: number; turns: number };
     expect(obj.turns).toBeGreaterThanOrEqual(6);
     expect(obj.turns).toBeLessThanOrEqual(8);
+  });
+});
+
+describe("map ally sanity — vulcaoDaVerdade (Zezé Iluminado)", () => {
+  const map = PHASES.find((m) => m.id === "vulcaoDaVerdade");
+
+  it("vulcaoDaVerdade exists and has allies", () => {
+    expect(map).toBeDefined();
+    expect(map!.allies).toBeDefined();
+    expect(map!.allies!.length).toBeGreaterThan(0);
+  });
+
+  it("every ally spawn is in-bounds, unblocked, and does not collide with player/enemy spawns or other allies", () => {
+    const allies = map!.allies ?? [];
+    const seen = new Set<string>([
+      ...map!.playerSpawns.map((s) => `${s.x},${s.y}`),
+      ...map!.enemies.map((e) => `${e.pos.x},${e.pos.y}`),
+    ]);
+    for (const a of allies) {
+      expect(a.pos.x).toBeGreaterThanOrEqual(0);
+      expect(a.pos.y).toBeGreaterThanOrEqual(0);
+      expect(a.pos.x).toBeLessThan(map!.width);
+      expect(a.pos.y).toBeLessThan(map!.height);
+      expect(map!.blocked?.[a.pos.y][a.pos.x] ?? false).toBe(false);
+      const k = `${a.pos.x},${a.pos.y}`;
+      expect(seen.has(k)).toBe(false);
+      seen.add(k);
+    }
   });
 });

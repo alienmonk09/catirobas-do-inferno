@@ -138,8 +138,8 @@ describe("resolveAutoPotion", () => {
 
     resolveAutoPotion(unit, inventory);
 
-    // potion heals 18 HP; 20 + 18 = 38 (well under maxHp, so full amount applied)
-    expect(unit.stats.hp).toBe(38);
+    // potion (Cerveja) heals 30 HP; 20 + 30 = 50 (well under maxHp, so full amount applied)
+    expect(unit.stats.hp).toBe(50);
   });
 
   it("heals the correct amount from a hi-potion (42 HP)", () => {
@@ -150,8 +150,8 @@ describe("resolveAutoPotion", () => {
 
     resolveAutoPotion(unit, inventory);
 
-    // hiPotion heals 42 HP; 20 + 42 = 62 (under maxHp)
-    expect(unit.stats.hp).toBe(62);
+    // hiPotion (Pizza Fria) heals 20 HP; 20 + 20 = 40 (under maxHp)
+    expect(unit.stats.hp).toBe(40);
   });
 
   it("falls back to 'xPotion' when neither 'potion' nor 'hiPotion' is available", () => {
@@ -167,8 +167,8 @@ describe("resolveAutoPotion", () => {
     expect(inventory["potion"]).toBe(0); // unchanged
     expect(inventory["hiPotion"]).toBe(0); // unchanged
     expect(inventory["xPotion"]).toBe(1); // decremented
-    // xPotion heals 84 HP; 20 + 84 = 104 (under maxHp 200)
-    expect(unit.stats.hp).toBe(104);
+    // xPotion (Foto do Boleto) heals 45 HP; 20 + 45 = 65 (under maxHp 200)
+    expect(unit.stats.hp).toBe(65);
   });
 
   it("prefers cheaper potions: hiPotion over xPotion when both are present", () => {

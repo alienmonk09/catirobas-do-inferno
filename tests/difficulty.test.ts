@@ -38,6 +38,11 @@ describe("enemyLevelFor (party-relative)", () => {
     expect(enemyLevelFor(5, 0, "hard")).toBe(5);
   });
 
+  it("ironic is three below the party (very easy story mode)", () => {
+    expect(enemyLevelFor(5, 0, "ironic")).toBe(2);
+    expect(enemyLevelFor(10, 0, "ironic")).toBe(7);
+  });
+
   it("the per-enemy tier offset raises that foe within the band", () => {
     expect(enemyLevelFor(5, 1, "normal")).toBe(5); // an elite: party-1 + 1 = party
     expect(enemyLevelFor(5, 1, "hard")).toBe(6);

@@ -3,20 +3,20 @@ import { speakerSprite } from "../src/data/sprites";
 
 describe("speakerSprite", () => {
   it("returns a SpriteDef for a known hero name", () => {
-    const sprite = speakerSprite("Garan");
+    const sprite = speakerSprite("Boleto");
     expect(sprite).not.toBeNull();
     expect(sprite).toHaveProperty("palette");
     expect(sprite).toHaveProperty("rows");
   });
 
   it("is case-insensitive for hero names", () => {
-    expect(speakerSprite("garan")).not.toBeNull();
-    expect(speakerSprite("LYRA")).not.toBeNull();
-    expect(speakerSprite("Vex")).not.toBeNull();
+    expect(speakerSprite("boleto")).not.toBeNull();
+    expect(speakerSprite("PORQUINHO")).not.toBeNull();
+    expect(speakerSprite("Caveira")).not.toBeNull();
   });
 
   it("returns a SpriteDef for every roster hero name", () => {
-    for (const name of ["Garan", "Lyra", "Vex", "Mira", "Bron", "Enzo", "Penelope"]) {
+    for (const name of ["Boleto", "Porquinho", "Meleca", "Caveira"]) {
       expect(speakerSprite(name), `expected sprite for ${name}`).not.toBeNull();
     }
   });

@@ -53,7 +53,7 @@ describe("turnChipBadge — turn-order legibility", () => {
     });
     const badge = turnChipBadge(u);
     expect(badge?.cls).toBe("debuff");
-    expect(badge?.text).toBe("P2"); // first letter of "Poison" + turns left
+    expect(badge?.text).toBe("V2"); // first letter of "Veneno" (PT-BR) + turns left
   });
 
   it("shows a buff when no debuff is present", () => {

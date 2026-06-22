@@ -27,19 +27,16 @@ describe("hero roster", () => {
     expect(ROSTER.length).toBeGreaterThanOrEqual(PARTY_SIZE);
   });
 
-  it("grows the party cap across the 17-phase campaign without exceeding the roster", () => {
-    expect(partyCapForPhase(0)).toBe(PARTY_SIZE); // start: three-strong
+  it("grows the party cap across the 6-phase campaign without exceeding the roster", () => {
+    expect(partyCapForPhase(0)).toBe(PARTY_SIZE); // start: four-strong
     expect(partyCapForPhase(1)).toBe(PARTY_SIZE);
-    expect(partyCapForPhase(2)).toBe(4); // fourth slot opens
-    expect(partyCapForPhase(5)).toBe(4); // still four through the early march
-    expect(partyCapForPhase(6)).toBe(5); // fifth slot opens mid-campaign
-    expect(partyCapForPhase(10)).toBe(5);
-    expect(partyCapForPhase(11)).toBe(6); // sixth slot for the long final stretch
-    expect(partyCapForPhase(16)).toBe(6); // finale (last phase) at full company
-    expect(partyCapForPhase(16)).toBeLessThanOrEqual(MAX_PARTY);
-    expect(partyCapForPhase(16)).toBeGreaterThan(partyCapForPhase(0));
-    // Monotonic, non-decreasing growth across the whole campaign.
-    for (let p = 1; p <= 16; p++) {
+    expect(partyCapForPhase(2)).toBe(5); // fifth slot opens at Deserto
+    expect(partyCapForPhase(3)).toBe(5);
+    expect(partyCapForPhase(4)).toBe(6); // sixth slot opens at Vulcão
+    expect(partyCapForPhase(5)).toBe(6); // finale (Monte Macheza) at full company
+    expect(partyCapForPhase(5)).toBeLessThanOrEqual(MAX_PARTY);
+    expect(partyCapForPhase(5)).toBeGreaterThan(partyCapForPhase(0));
+    for (let p = 1; p <= 5; p++) {
       expect(partyCapForPhase(p)).toBeGreaterThanOrEqual(partyCapForPhase(p - 1));
     }
   });
@@ -53,60 +50,57 @@ describe("hero roster", () => {
   });
 
   it("recruits a reinforcement at the requested level (floored at 1) with the right identity", () => {
-    const enzo = getHero("enzo")!;
-    const unit = recruitHero(enzo, 6);
-    expect(unit.id).toBe("enzo");
+    const caveira = getHero("caveira")!;
+    const unit = recruitHero(caveira, 6);
+    expect(unit.id).toBe("caveira");
     expect(unit.classId).toBe("thief");
     expect(unit.level).toBe(6);
     expect(unit.team).toBe("player");
     expect(unit.learnedSkillIds.length).toBeGreaterThanOrEqual(1);
-    // Joins at the party average (floored at 1 to match the level-1 start).
-    expect(recruitHero(enzo, 1).level).toBe(1);
+    expect(recruitHero(caveira, 1).level).toBe(1);
   });
 
   it("seeds a mid-campaign recruit with partial XP so it lands on the party curve, not a full level behind", () => {
-    const enzo = getHero("enzo")!;
-    const unit = recruitHero(enzo, 6);
+    const caveira = getHero("caveira")!;
+    const unit = recruitHero(caveira, 6);
     const need = xpForLevel(6);
-    // ~halfway into the level — not a fresh 0/need that sits a full level behind.
     expect(unit.xp).toBe(Math.floor(need * 0.5));
     expect(unit.xp).toBeGreaterThan(0);
-    expect(unit.xp).toBeLessThan(need); // never enough to auto-level
-    // Deterministic.
-    expect(recruitHero(enzo, 6).xp).toBe(unit.xp);
+    expect(unit.xp).toBeLessThan(need);
+    expect(recruitHero(caveira, 6).xp).toBe(unit.xp);
   });
 
   it("keeps a level-1 recruit at 0 XP (fresh-start feel)", () => {
-    const enzo = getHero("enzo")!;
-    expect(recruitHero(enzo, 1).xp).toBe(0);
+    const caveira = getHero("caveira")!;
+    expect(recruitHero(caveira, 1).xp).toBe(0);
   });
 
-  it("includes Enzo the Thief and Penelope the Druid", () => {
-    const enzo = getHero("enzo");
-    const penelope = getHero("penelope");
-    expect(enzo).toMatchObject({ name: "Enzo", classId: "thief" });
-    expect(penelope).toMatchObject({ name: "Penelope", classId: "druid" });
+  it("includes Caveira the Assassino and Porquinho the Mago", () => {
+    const caveira = getHero("caveira");
+    const porquinho = getHero("porquinho");
+    expect(caveira).toMatchObject({ name: "Caveira", classId: "thief" });
+    expect(porquinho).toMatchObject({ name: "Porquinho", classId: "whiteMage" });
   });
 });
 
 describe("createParty", () => {
   it("builds a level-1 unit per hero, with the first class skill and banked SP", () => {
-    const party = createParty(["enzo", "penelope"]);
+    const party = createParty(["caveira", "porquinho"]);
     expect(party).toHaveLength(2);
-    const enzo = party[0];
-    expect(enzo.name).toBe("Enzo");
-    expect(enzo.classId).toBe("thief");
-    expect(enzo.raceId).toBe("halfling");
-    expect(enzo.team).toBe("player");
-    expect(enzo.level).toBe(1);
-    expect(enzo.sp).toBe(100);
-    expect(enzo.learnedSkillIds).toEqual([getClass("thief").skillIds[0]]);
-    expect(enzo.alive).toBe(true);
+    const caveira = party[0];
+    expect(caveira.name).toBe("Caveira");
+    expect(caveira.classId).toBe("thief");
+    expect(caveira.raceId).toBe("elf");
+    expect(caveira.team).toBe("player");
+    expect(caveira.level).toBe(1);
+    expect(caveira.sp).toBe(100);
+    expect(caveira.learnedSkillIds).toEqual([getClass("thief").skillIds[0]]);
+    expect(caveira.alive).toBe(true);
   });
 
   it("skips unknown hero ids", () => {
-    const party = createParty(["enzo", "nobody", "penelope"]);
-    expect(party.map((u) => u.name)).toEqual(["Enzo", "Penelope"]);
+    const party = createParty(["caveira", "nobody", "porquinho"]);
+    expect(party.map((u) => u.name)).toEqual(["Caveira", "Porquinho"]);
   });
 
   it("gives every unit a distinct id", () => {
@@ -117,9 +111,12 @@ describe("createParty", () => {
 });
 
 describe("createStartingParty", () => {
-  it("returns a default party of PARTY_SIZE player heroes", () => {
+  it("returns the four canonical roster heroes with fixed class/race", () => {
     const party = createStartingParty();
     expect(party).toHaveLength(PARTY_SIZE);
+    expect(party.map((u) => ({ id: u.id, classId: u.classId, raceId: u.raceId }))).toEqual(
+      ROSTER.slice(0, PARTY_SIZE).map((h) => ({ id: h.id, classId: h.classId, raceId: h.raceId })),
+    );
     for (const u of party) {
       expect(u.team).toBe("player");
       expect(u.level).toBe(1);

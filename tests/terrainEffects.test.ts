@@ -2,8 +2,8 @@ import { describe, it, expect } from "vitest";
 import { terrainEffect } from "../src/data/terrain";
 import { applyTerrainEffect } from "../src/battle/combat";
 import { createUnit } from "../src/core/unit";
-import { cinderFields } from "../src/data/maps/cinderFields";
-import { phase3 } from "../src/data/maps/phase3";
+import { vulcaoDaVerdade as cinderFields } from "../src/data/maps/vulcaoDaVerdade";
+import { florestaDaRejeicao as phase3 } from "../src/data/maps/florestaDaRejeicao";
 import type { Unit } from "../src/core/types";
 
 function makeUnit(overrides: Partial<Parameters<typeof createUnit>[0]> = {}): Unit {
