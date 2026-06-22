@@ -1,4 +1,4 @@
-import type { MapDef } from "../../core/types";
+import type { MapDef } from "../../../core/types";
 
 // Outer Ramparts — the keep's fortified outer wall, the last line before the
 // throne. A raised stone rampart (height 2-3) walls off the courtyard; the face

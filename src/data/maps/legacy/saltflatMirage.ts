@@ -1,4 +1,4 @@
-import type { MapDef } from "../../core/types";
+import type { MapDef } from "../../../core/types";
 
 // Saltflat Mirage — enlarged battle map (SP2b). Validated: dims 22x18, spawns,
 // enemy class/weapon/skill legality, and BFS reachability (jump 2).

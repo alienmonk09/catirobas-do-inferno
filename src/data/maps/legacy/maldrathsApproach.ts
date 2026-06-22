@@ -1,4 +1,4 @@
-import type { MapDef } from "../../core/types";
+import type { MapDef } from "../../../core/types";
 
 // Maldrath's Approach — enlarged battle map (SP2b). 21x21. Validated: dims,
 // spawns, enemy class/weapon/skill legality, and BFS reachability (jump 2).

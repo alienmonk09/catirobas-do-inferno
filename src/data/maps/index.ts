@@ -1,43 +1,21 @@
 import type { MapDef } from "../../core/types";
-import { phase1 } from "./phase1";
-import { phase2 } from "./phase2";
-import { phase3 } from "./phase3";
-import { cinderFields } from "./cinderFields";
-import { phase4 } from "./phase4";
-import { outerRamparts } from "./outerRamparts";
-import { phase5 } from "./phase5";
-import { frostspirePass } from "./frostspirePass";
-import { sunkenCauseway } from "./sunkenCauseway";
-import { emberfallQuarry } from "./emberfallQuarry";
-import { howlingSteppe } from "./howlingSteppe";
-import { gravewatchHollow } from "./gravewatchHollow";
-import { verdantRuins } from "./verdantRuins";
-import { ironholdGate } from "./ironholdGate";
-import { saltflatMirage } from "./saltflatMirage";
-import { drownedVault } from "./drownedVault";
-import { maldrathsApproach } from "./maldrathsApproach";
+import { tavernaDoLamento } from "./tavernaDoLamento";
+import { florestaDaRejeicao } from "./florestaDaRejeicao";
+import { desertoDoEsquecimento } from "./desertoDoEsquecimento";
+import { cavernaDoConstrangimento } from "./cavernaDoConstrangimento";
+import { vulcaoDaVerdade } from "./vulcaoDaVerdade";
+import { monteMacheza } from "./monteMacheza";
 
 /**
- * All phases in play order. The early chapters set the march; ten larger terrain
- * battles (frostspire → Maldrath's approach) extend the long campaign toward the
- * keep, and Maldrath's stand (phase5) stays the finale.
+ * Os 6 biomas do Catirobas do Inferno em ordem de jogabilidade. Da taverna ao
+ * topo do Monte Macheza, dificuldade crescente com mecânicas de bioma ativas no
+ * Deserto (confusão a cada 3 turnos) e Vulcão (dano passivo por temperatura).
  */
 export const PHASES: MapDef[] = [
-  phase1,
-  phase2,
-  phase3,
-  cinderFields,
-  phase4,
-  outerRamparts,
-  frostspirePass,
-  sunkenCauseway,
-  emberfallQuarry,
-  howlingSteppe,
-  gravewatchHollow,
-  verdantRuins,
-  ironholdGate,
-  saltflatMirage,
-  drownedVault,
-  maldrathsApproach,
-  phase5,
+  tavernaDoLamento,
+  florestaDaRejeicao,
+  desertoDoEsquecimento,
+  cavernaDoConstrangimento,
+  vulcaoDaVerdade,
+  monteMacheza,
 ];

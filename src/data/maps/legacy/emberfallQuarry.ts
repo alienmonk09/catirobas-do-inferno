@@ -1,4 +1,4 @@
-import type { MapDef } from "../../core/types";
+import type { MapDef } from "../../../core/types";
 
 // Emberfall Quarry — enlarged for SP2b (19x22). Validated: dims, spawns,
 // enemy class/weapon/skill legality, and BFS reachability (jump 2).

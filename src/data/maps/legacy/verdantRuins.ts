@@ -1,4 +1,4 @@
-import type { MapDef } from "../../core/types";
+import type { MapDef } from "../../../core/types";
 
 // The Verdant Ruins — enlarged to 21x21 for SP2b. Validated: dims, spawns,
 // enemy class/weapon/skill legality, and BFS reachability (jump 2).

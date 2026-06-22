@@ -1,4 +1,4 @@
-import type { MapDef } from "../../core/types";
+import type { MapDef } from "../../../core/types";
 
 // The Drowned Vault — re-authored at 19x20. Validated: dims, spawns,
 // enemy class/weapon/skill legality, separation, and BFS reachability (jump 2).

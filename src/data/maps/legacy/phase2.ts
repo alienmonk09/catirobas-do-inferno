@@ -1,4 +1,4 @@
-import type { MapDef } from "../../core/types";
+import type { MapDef } from "../../../core/types";
 
 // Phase 2 — Ambush in the Hills. Elevation + the first enemy mage.
 // Sorcerer kept at L3 (was L4) to soften the spike right after the tutorial.

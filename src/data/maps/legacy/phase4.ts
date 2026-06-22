@@ -1,4 +1,4 @@
-import type { MapDef } from "../../core/types";
+import type { MapDef } from "../../../core/types";
 
 // Phase 4 — Sorcerer's Court. Tiered platforms, mage-stack + healers.
 // An envoy bearing a peace accord must be shepherded through the court's crossfire

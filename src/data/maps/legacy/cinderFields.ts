@@ -1,4 +1,4 @@
-import type { MapDef, TerrainType } from "../../core/types";
+import type { MapDef, TerrainType } from "../../../core/types";
 
 // Cinder Fields — a wide, open stretch of burned farmland after the bridge.
 // Larger terrain than the early maps: scattered low rises and rubble mounds

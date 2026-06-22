@@ -1,4 +1,4 @@
-import type { MapDef } from "../../core/types";
+import type { MapDef } from "../../../core/types";
 
 // Frostspire Pass — enlarged battle map (SP2b). Validated: dims 20x18, spawns,
 // enemy class/weapon/skill legality, and BFS reachability (jump 2).

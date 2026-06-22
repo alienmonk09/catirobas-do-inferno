@@ -1,4 +1,4 @@
-import type { MapDef } from "../../core/types";
+import type { MapDef } from "../../../core/types";
 
 // Ironhold Gate — enlarged for SP2b (20x18). Validated: dims, spawns,
 // enemy class/weapon/skill legality, and BFS reachability (jump 2).

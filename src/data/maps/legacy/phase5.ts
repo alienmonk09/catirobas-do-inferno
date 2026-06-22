@@ -1,4 +1,4 @@
-import type { MapDef } from "../../core/types";
+import type { MapDef } from "../../../core/types";
 
 // Phase 5 — The Tyrant's Stand (Boss). The shattered keep, now a sprawling
 // throne arena. Two great chasms (blocked bands) split the approach, funneling

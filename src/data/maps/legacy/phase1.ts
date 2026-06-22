@@ -1,4 +1,4 @@
-import type { MapDef } from "../../core/types";
+import type { MapDef } from "../../../core/types";
 
 // Phase 1 — Tutorial Skirmish. Flat field, 3 weak enemies, comfortable win.
 export const phase1: MapDef = {

@@ -1,4 +1,4 @@
-import type { MapDef, TerrainType } from "../../core/types";
+import type { MapDef, TerrainType } from "../../../core/types";
 
 // Phase 3 — The Bridge. A river (blocked band) split by a single-tile bridge.
 // Two healing springs flank the south riverbank (row 5, columns 1 and 7).
