@@ -1,10 +1,15 @@
 import type { ClassDef, ClassId } from "../core/types";
 
+/**
+ * Classes do Catirobas do Inferno. As 4 classes primárias (Cavaleiro, Mago,
+ * Tanque, Assassino) são locked para os heróis fixos. As ~10 restantes são
+ * sub-jobs equipáveis na Taverna do Lamento.
+ */
 export const CLASSES: Record<ClassId, ClassDef> = {
   knight: {
     id: "knight",
-    name: "Knight",
-    description: "Frontline tank. High HP and defense, strong melee.",
+    name: "Cavaleiro",
+    description: "Linha de frente. Muito HP e defesa, melee forte. (Boleto)",
     base: { hp: 72, mp: 20, atk: 14, def: 12, mag: 4, res: 6, spd: 9, move: 4, jump: 2 },
     growth: { hp: 7, mp: 2, atk: 2.2, def: 1.8, mag: 0.4, res: 0.8, spd: 0.6 },
     skillIds: ["powerStrike", "guard", "shieldBash", "rallyingCry"],
@@ -14,8 +19,8 @@ export const CLASSES: Record<ClassId, ClassDef> = {
   },
   archer: {
     id: "archer",
-    name: "Archer",
-    description: "Ranged physical damage. Fast and accurate.",
+    name: "Mestre do Mulet",
+    description: "Dano físico à distância. Rápido e preciso.",
     base: { hp: 54, mp: 24, atk: 11, def: 7, mag: 5, res: 7, spd: 12, move: 5, jump: 3 },
     growth: { hp: 5, mp: 3, atk: 1.8, def: 0.9, mag: 0.5, res: 0.9, spd: 1.0 },
     skillIds: ["aimedShot", "cripple", "multishot", "pinningShot"],
@@ -24,8 +29,8 @@ export const CLASSES: Record<ClassId, ClassDef> = {
   },
   blackMage: {
     id: "blackMage",
-    name: "Black Mage",
-    description: "Offensive magic, including area spells. Fragile.",
+    name: "Mago de Latim Errado",
+    description: "Magia ofensiva, incluindo spells de área. Frágil.",
     base: { hp: 42, mp: 60, atk: 5, def: 5, mag: 16, res: 10, spd: 10, move: 3, jump: 2 },
     growth: { hp: 4, mp: 7, atk: 0.4, def: 0.6, mag: 2.4, res: 1.2, spd: 0.8 },
     skillIds: ["fire", "bolt", "fireball", "poison", "stop", "meteor"],
@@ -34,18 +39,18 @@ export const CLASSES: Record<ClassId, ClassDef> = {
   },
   whiteMage: {
     id: "whiteMage",
-    name: "White Mage",
-    description: "Healing and support magic. Keeps the party alive.",
+    name: "Mago",
+    description: "Magia de cura e suporte. Mantém o grupo vivo. (Porquinho)",
     base: { hp: 47, mp: 64, atk: 5, def: 6, mag: 14, res: 12, spd: 10, move: 3, jump: 2 },
     growth: { hp: 4, mp: 7, atk: 0.4, def: 0.7, mag: 2.0, res: 1.4, spd: 0.8 },
-    skillIds: ["cure", "cura", "raise", "protect", "shell", "haste"],
+    skillIds: ["cure", "cura", "raise", "protect", "shell", "haste", "abracadabrumSexicus", "incantumConfusus", "magicusRidiculum", "levitatusPenosos"],
     weaponIds: ["staff"],
     color: "#d6cf5f",
   },
   monk: {
     id: "monk",
-    name: "Monk",
-    description: "Unarmed bruiser. High HP and damage with self-sustain.",
+    name: "Tanque",
+    description: "Bruiser desarmado. Alto HP e dano com auto-sustain. (Meleca)",
     base: { hp: 66, mp: 30, atk: 15, def: 9, mag: 8, res: 8, spd: 11, move: 4, jump: 3 },
     growth: { hp: 6, mp: 3, atk: 2.0, def: 1.2, mag: 1.0, res: 0.9, spd: 0.9 },
     skillIds: ["palmStrike", "chakra", "bodySlam", "earthShake"],
@@ -55,8 +60,8 @@ export const CLASSES: Record<ClassId, ClassDef> = {
   },
   thief: {
     id: "thief",
-    name: "Thief",
-    description: "Swift skirmisher. Fastest in the field, hits hard, but fragile — keeps a potion ready for when things go south.",
+    name: "Assassino",
+    description: "Skirmisher veloz. O mais rápido do campo, bate forte, mas frágil. (Caveira)",
     base: { hp: 49, mp: 28, atk: 13, def: 7, mag: 5, res: 7, spd: 14, move: 5, jump: 3 },
     growth: { hp: 4, mp: 3, atk: 1.9, def: 0.9, mag: 0.5, res: 0.9, spd: 1.2 },
     skillIds: ["backstab", "hamstring", "fanOfKnives"],
@@ -66,8 +71,8 @@ export const CLASSES: Record<ClassId, ClassDef> = {
   },
   druid: {
     id: "druid",
-    name: "Druid",
-    description: "Nature hybrid. Heals, nature damage, and control — sturdier than a mage.",
+    name: "Druida do Mato",
+    description: "Híbrido da natureza. Cura, dano nature, e controle — mais duro que um mago.",
     base: { hp: 53, mp: 50, atk: 7, def: 7, mag: 13, res: 11, spd: 10, move: 4, jump: 2 },
     growth: { hp: 5, mp: 6, atk: 0.6, def: 0.8, mag: 1.8, res: 1.2, spd: 0.8 },
     skillIds: ["regrowth", "thornLash", "entangle", "rejuvenate"],
@@ -76,8 +81,8 @@ export const CLASSES: Record<ClassId, ClassDef> = {
   },
   timeMage: {
     id: "timeMage",
-    name: "Time Mage",
-    description: "Master of tempo. Bends turn speed — hastes allies, slows and stops foes — and strikes with non-elemental comets.",
+    name: "Mago do Tempo",
+    description: "Mestre do tempo. Acelera aliados, atrasa e paralisa inimigos, e ataca com cometas.",
     base: { hp: 43, mp: 64, atk: 5, def: 6, mag: 14, res: 11, spd: 11, move: 3, jump: 2 },
     growth: { hp: 4, mp: 7, atk: 0.4, def: 0.6, mag: 2.1, res: 1.2, spd: 0.9 },
     skillIds: ["comet", "timeSlow", "hasten", "stop"],
@@ -86,8 +91,8 @@ export const CLASSES: Record<ClassId, ClassDef> = {
   },
   summoner: {
     id: "summoner",
-    name: "Summoner",
-    description: "Calls mighty elemental spirits. Devastating wide-area nukes at the cost of speed and durability.",
+    name: "Invocador de Falácias",
+    description: "Invoca espíritos elementais. Nukes devastadores de área, mas lento e frágil.",
     base: { hp: 46, mp: 66, atk: 5, def: 5, mag: 15, res: 11, spd: 9, move: 3, jump: 2 },
     growth: { hp: 4, mp: 7, atk: 0.4, def: 0.6, mag: 2.3, res: 1.2, spd: 0.7 },
     skillIds: ["callIfrit", "callShiva", "callRamuh", "callTitan"],
@@ -96,8 +101,8 @@ export const CLASSES: Record<ClassId, ClassDef> = {
   },
   geomancer: {
     id: "geomancer",
-    name: "Geomancer",
-    description: "Durable earth caster. Grinds the field with tremors and locks foes in place with petrify.",
+    name: "Geomante do Deserto",
+    description: "Caster de terra durável. Tritura o campo com tremores e petrifica inimigos.",
     base: { hp: 56, mp: 54, atk: 6, def: 9, mag: 13, res: 10, spd: 9, move: 4, jump: 2 },
     growth: { hp: 5, mp: 6, atk: 0.5, def: 1.0, mag: 1.9, res: 1.1, spd: 0.8 },
     skillIds: ["boulder", "quagmire", "tremor", "petrify"],
@@ -106,8 +111,8 @@ export const CLASSES: Record<ClassId, ClassDef> = {
   },
   lancer: {
     id: "lancer",
-    name: "Lancer",
-    description: "Mobile spear fighter. Leaps over walls and allies to strike from unexpected angles.",
+    name: "Lanceiro Mítico",
+    description: "Lanceiro móvel. Salta sobre muros e aliados para atacar de ângulos inesperados.",
     base: { hp: 62, mp: 24, atk: 14, def: 10, mag: 4, res: 7, spd: 11, move: 4, jump: 3 },
     growth: { hp: 6, mp: 2, atk: 2.1, def: 1.3, mag: 0.4, res: 0.8, spd: 1.0 },
     skillIds: ["jump", "lanceThrust", "hobble", "harpoon", "sweep"],
@@ -116,8 +121,8 @@ export const CLASSES: Record<ClassId, ClassDef> = {
   },
   paladin: {
     id: "paladin",
-    name: "Paladin",
-    description: "Holy defender. A durable frontliner who heals, shields the line, and smites with light — part tank, part priest.",
+    name: "Paladino da Macheza",
+    description: "Defensor sagrado. Frontliner durável que cura, protege, e smita com luz — meio tank, meio padre.",
     base: { hp: 70, mp: 38, atk: 12, def: 11, mag: 10, res: 10, spd: 9, move: 4, jump: 2 },
     growth: { hp: 6, mp: 4, atk: 1.8, def: 1.6, mag: 1.2, res: 1.3, spd: 0.6 },
     skillIds: ["smite", "layOnHands", "holyLance", "sanctuary"],
@@ -127,8 +132,8 @@ export const CLASSES: Record<ClassId, ClassDef> = {
   },
   berserker: {
     id: "berserker",
-    name: "Berserker",
-    description: "Unhinged axe-wielder. Enormous HP and the hardest hits in the game, but almost no defense or magic — a glass wrecking ball.",
+    name: "Berserker Rejeitado",
+    description: "Machado descontrolado. HP enorme e os hits mais fortes do jogo, mas quase sem defesa ou magia — uma bola de demolição de vidro.",
     base: { hp: 76, mp: 12, atk: 17, def: 8, mag: 2, res: 4, spd: 10, move: 4, jump: 2 },
     growth: { hp: 7, mp: 1, atk: 2.6, def: 1.0, mag: 0.2, res: 0.5, spd: 0.8 },
     skillIds: ["rampage", "frenzy", "cleave", "crushingBlow"],
@@ -138,8 +143,8 @@ export const CLASSES: Record<ClassId, ClassDef> = {
   },
   ninja: {
     id: "ninja",
-    name: "Ninja",
-    description: "Lightning-fast skirmisher. Acts more often than anyone and throws elemental blades from range — fragile, but everywhere at once.",
+    name: "Ninja das Sombras",
+    description: "Skirmisher relâmpago. Age mais que todos e ataca com lâminas elementais à distância — frágil, mas em todo lugar ao mesmo tempo.",
     base: { hp: 50, mp: 30, atk: 13, def: 7, mag: 9, res: 8, spd: 15, move: 5, jump: 3 },
     growth: { hp: 4, mp: 3, atk: 1.8, def: 0.8, mag: 1.0, res: 0.9, spd: 1.3 },
     skillIds: ["shadowStrike", "throwFlame", "throwShock", "shadowbind"],
@@ -150,4 +155,12 @@ export const CLASSES: Record<ClassId, ClassDef> = {
 
 export function getClass(id: ClassId): ClassDef {
   return CLASSES[id];
+}
+
+/** IDs das classes primárias locked dos 4 heróis. */
+export const PRIMARY_CLASS_IDS: ClassId[] = ["knight", "whiteMage", "monk", "thief"];
+
+/** Retorna true se a classe é primária (locked para o herói correspondente). */
+export function isPrimaryClass(id: ClassId): boolean {
+  return PRIMARY_CLASS_IDS.includes(id);
 }

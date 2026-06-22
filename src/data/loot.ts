@@ -73,6 +73,7 @@ const DROP_COUNT: Record<Difficulty, { base: number; extra: number }> = {
   easy: { base: 0, extra: 0.5 },
   normal: { base: 1, extra: 0.5 },
   hard: { base: 1, extra: 0.9 },
+  ironic: { base: 0, extra: 0.3 },
 };
 
 /** Hard upper bound on battle-drop count regardless of difficulty. */

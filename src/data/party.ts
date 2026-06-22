@@ -10,41 +10,39 @@ export interface HeroDef {
   raceId: RaceId;
 }
 
-/** The roster of named heroes who can carry the Ashen Banner. Pick PARTY_SIZE. */
+/**
+ * The roster of named heroes who carry the Catirobas do Inferno. Fixed party of 4.
+ * Each hero has a locked primary class; sub-jobs are equipable at the Party Camp.
+ */
 export const ROSTER: HeroDef[] = [
-  { id: "garan", name: "Garan", classId: "knight", raceId: "dwarf" },
-  { id: "lyra", name: "Lyra", classId: "archer", raceId: "elf" },
-  { id: "vex", name: "Vex", classId: "blackMage", raceId: "human" },
-  { id: "mira", name: "Mira", classId: "whiteMage", raceId: "human" },
-  { id: "bron", name: "Bron", classId: "monk", raceId: "orc" },
-  { id: "enzo", name: "Enzo", classId: "thief", raceId: "halfling" },
-  { id: "penelope", name: "Penelope", classId: "druid", raceId: "elf" },
-  { id: "aldric", name: "Aldric", classId: "paladin", raceId: "human" },
-  { id: "throk", name: "Throk", classId: "berserker", raceId: "saurian" },
-  { id: "kira", name: "Kira", classId: "ninja", raceId: "sylph" },
+  { id: "boleto", name: "Boleto", classId: "knight", raceId: "dwarf" },
+  { id: "porquinho", name: "Porquinho", classId: "whiteMage", raceId: "gnome" },
+  { id: "meleca", name: "Meleca", classId: "monk", raceId: "saurian" },
+  { id: "caveira", name: "Caveira", classId: "thief", raceId: "elf" },
 ];
 
-/** How many heroes you deploy at the start of a new game. Smaller than the
- *  late-game cap so the roster visibly grows across the campaign. */
-export const PARTY_SIZE = 3;
+/** How many heroes you deploy at the start of a new game. */
+export const PARTY_SIZE = 4;
 
-/** Hard ceiling on party size (the whole roster). */
-export const MAX_PARTY = ROSTER.length;
+/**
+ * Hard ceiling on party size. The 4 fixed heroes plus up to 2 slots for
+ * recruited enemies and guest allies (e.g. Zezé).
+ */
+export const MAX_PARTY = 6;
 
 /**
  * Deployment / recruit cap for a chapter (0-based phase index). The party starts
- * at three and earns a slot a few times across the campaign, reaching a six-strong
- * company for the long final stretch, so reinforcements arrive at a readable pace.
+ * at four and earns a slot twice across the 6-bioma campaign — five from the
+ * Deserto onward, and a six-strong company for the Vulcão and Monte Macheza —
+ * so reinforcements arrive at a readable pace.
  * Maps must offer at least this many spawns.
  */
 export function partyCapForPhase(phaseIndex: number): number {
-  // 17-phase campaign (indices 0–16): the army grows one slot a few times over the
-  // long march — three at the start, four through the early chapters, five mid-
-  // campaign, and a six-strong company for the final stretch — so reinforcements
-  // arrive at a steady, readable pace instead of maxing out a third of the way in.
-  if (phaseIndex >= 11) return Math.min(6, MAX_PARTY);
-  if (phaseIndex >= 6) return 5;
-  if (phaseIndex >= 2) return 4;
+  // 6-phase campaign (indices 0–5): four at the start, five through the mid-game,
+  // and six for the final stretch — reinforcements (recruited enemies, Zezé)
+  // arrive at a steady pace instead of maxing out early.
+  if (phaseIndex >= 4) return Math.min(6, MAX_PARTY);
+  if (phaseIndex >= 2) return 5;
   return PARTY_SIZE;
 }
 
@@ -82,22 +80,6 @@ function buildHero(hero: HeroDef, level = 1): Unit {
 /** Build a party from a list of roster hero ids (unknown ids are skipped). */
 export function createParty(heroIds: string[]): Unit[] {
   return heroIds.map(getHero).filter((h): h is HeroDef => Boolean(h)).map((h) => buildHero(h));
-}
-
-/**
- * Build a party from per-hero customizations: the player may re-class and
- * re-race any starting hero (keeping their name + identity/sprite via the roster
- * id). Falls back to the roster defaults for anything omitted. Used by the
- * New Game screen's party customizer.
- */
-export function createCustomParty(picks: { id: string; classId?: ClassId; raceId?: RaceId }[]): Unit[] {
-  return picks
-    .map((p) => {
-      const base = getHero(p.id);
-      if (!base) return null;
-      return buildHero({ ...base, classId: p.classId ?? base.classId, raceId: p.raceId ?? base.raceId });
-    })
-    .filter((u): u is Unit => u !== null);
 }
 
 /** Default party: the first PARTY_SIZE heroes of the roster, at level 1. */

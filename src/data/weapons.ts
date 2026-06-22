@@ -3,7 +3,7 @@ import type { WeaponDef } from "../core/types";
 export const WEAPONS: Record<string, WeaponDef> = {
   sword: {
     id: "sword",
-    name: "Iron Sword",
+    name: "Espada de Madeira",
     power: 6,
     range: 1,
     kind: "physical",
@@ -12,7 +12,7 @@ export const WEAPONS: Record<string, WeaponDef> = {
   },
   greatsword: {
     id: "greatsword",
-    name: "Greatsword",
+    name: "Espada Grande",
     power: 9,
     range: 1,
     kind: "physical",
@@ -21,7 +21,7 @@ export const WEAPONS: Record<string, WeaponDef> = {
   },
   bow: {
     id: "bow",
-    name: "Short Bow",
+    name: "Arco Curto",
     power: 5,
     range: 3,
     kind: "physical",
@@ -30,7 +30,7 @@ export const WEAPONS: Record<string, WeaponDef> = {
   },
   longbow: {
     id: "longbow",
-    name: "Longbow",
+    name: "Arco Longo",
     power: 7,
     range: 4,
     kind: "physical",
@@ -39,7 +39,7 @@ export const WEAPONS: Record<string, WeaponDef> = {
   },
   rod: {
     id: "rod",
-    name: "Rod",
+    name: "Varinha de Galho",
     power: 3,
     range: 1,
     kind: "magical",
@@ -48,7 +48,7 @@ export const WEAPONS: Record<string, WeaponDef> = {
   },
   staff: {
     id: "staff",
-    name: "Healing Staff",
+    name: "Cajado de Cura",
     power: 3,
     range: 1,
     kind: "magical",
@@ -57,7 +57,7 @@ export const WEAPONS: Record<string, WeaponDef> = {
   },
   knuckles: {
     id: "knuckles",
-    name: "Iron Knuckles",
+    name: "Punhos Viscosos",
     power: 5,
     range: 1,
     kind: "physical",
@@ -66,7 +66,7 @@ export const WEAPONS: Record<string, WeaponDef> = {
   },
   fellKnuckles: {
     id: "fellKnuckles",
-    name: "Fell Knuckles",
+    name: "Punhos Vis",
     power: 8,
     range: 1,
     kind: "physical",
@@ -75,7 +75,7 @@ export const WEAPONS: Record<string, WeaponDef> = {
   },
   dagger: {
     id: "dagger",
-    name: "Dagger",
+    name: "Punhal de Osso",
     power: 4,
     range: 1,
     kind: "physical",
@@ -84,7 +84,7 @@ export const WEAPONS: Record<string, WeaponDef> = {
   },
   rapier: {
     id: "rapier",
-    name: "Rapier",
+    name: "Florete",
     power: 7,
     range: 1,
     kind: "physical",
@@ -93,7 +93,7 @@ export const WEAPONS: Record<string, WeaponDef> = {
   },
   heartwood: {
     id: "heartwood",
-    name: "Heartwood Staff",
+    name: "Cajado de Madeira Viva",
     power: 3,
     range: 1,
     kind: "magical",
@@ -102,7 +102,7 @@ export const WEAPONS: Record<string, WeaponDef> = {
   },
   grimoire: {
     id: "grimoire",
-    name: "Summoner's Grimoire",
+    name: "Grimório de Falácias",
     power: 3,
     range: 1,
     kind: "magical",
@@ -111,7 +111,7 @@ export const WEAPONS: Record<string, WeaponDef> = {
   },
   gaiaStaff: {
     id: "gaiaStaff",
-    name: "Gaia Staff",
+    name: "Cajado da Terra",
     power: 3,
     range: 1,
     kind: "magical",
@@ -120,7 +120,7 @@ export const WEAPONS: Record<string, WeaponDef> = {
   },
   spear: {
     id: "spear",
-    name: "Spear",
+    name: "Lança",
     power: 6,
     range: 2,
     kind: "physical",
@@ -129,7 +129,7 @@ export const WEAPONS: Record<string, WeaponDef> = {
   },
   mace: {
     id: "mace",
-    name: "Mace",
+    name: "Maça da Macheza",
     power: 6,
     range: 1,
     kind: "physical",
@@ -138,7 +138,7 @@ export const WEAPONS: Record<string, WeaponDef> = {
   },
   warhammer: {
     id: "warhammer",
-    name: "Warhammer",
+    name: "Martelo de Guerra",
     power: 9,
     range: 1,
     kind: "physical",
@@ -147,7 +147,7 @@ export const WEAPONS: Record<string, WeaponDef> = {
   },
   axe: {
     id: "axe",
-    name: "Battle Axe",
+    name: "Machado de Batalha",
     power: 7,
     range: 1,
     kind: "physical",
@@ -156,7 +156,7 @@ export const WEAPONS: Record<string, WeaponDef> = {
   },
   warAxe: {
     id: "warAxe",
-    name: "War Axe",
+    name: "Machado de Guerra",
     power: 10,
     range: 1,
     kind: "physical",
@@ -165,7 +165,7 @@ export const WEAPONS: Record<string, WeaponDef> = {
   },
   katana: {
     id: "katana",
-    name: "Katana",
+    name: "Katana das Sombras",
     power: 6,
     range: 1,
     kind: "physical",
@@ -181,10 +181,9 @@ export const WEAPONS: Record<string, WeaponDef> = {
     classes: ["ninja"],
     price: 170,
   },
-  // ── Caster mid-tier upgrades — modest magical weapons (gold sink) ─────────
   oakRod: {
     id: "oakRod",
-    name: "Oak Rod",
+    name: "Varinha de Carvalho",
     power: 5,
     range: 1,
     kind: "magical",
@@ -193,7 +192,7 @@ export const WEAPONS: Record<string, WeaponDef> = {
   },
   chronoWand: {
     id: "chronoWand",
-    name: "Chrono Wand",
+    name: "Varinha do Tempo",
     power: 5,
     range: 1,
     kind: "magical",
@@ -202,7 +201,7 @@ export const WEAPONS: Record<string, WeaponDef> = {
   },
   sanctifiedStaff: {
     id: "sanctifiedStaff",
-    name: "Sanctified Staff",
+    name: "Cajado Santificado",
     power: 5,
     range: 1,
     kind: "magical",
@@ -211,7 +210,7 @@ export const WEAPONS: Record<string, WeaponDef> = {
   },
   ironwoodStaff: {
     id: "ironwoodStaff",
-    name: "Ironwood Staff",
+    name: "Cajado de Madeira Dura",
     power: 5,
     range: 1,
     kind: "magical",
@@ -220,7 +219,7 @@ export const WEAPONS: Record<string, WeaponDef> = {
   },
   eidolonTome: {
     id: "eidolonTome",
-    name: "Eidolon Tome",
+    name: "Tomo de Eidolon",
     power: 5,
     range: 1,
     kind: "magical",
@@ -229,17 +228,16 @@ export const WEAPONS: Record<string, WeaponDef> = {
   },
   terraStaff: {
     id: "terraStaff",
-    name: "Terra Staff",
+    name: "Cajado de Terra",
     power: 5,
     range: 1,
     kind: "magical",
     classes: ["geomancer"],
     price: 170,
   },
-  // ── Premium "legendary" tier — costly aspirational upgrades ───────────────
   runeBlade: {
     id: "runeBlade",
-    name: "Rune Blade",
+    name: "Lâmina Rúnica",
     power: 12,
     range: 1,
     kind: "physical",
@@ -248,7 +246,7 @@ export const WEAPONS: Record<string, WeaponDef> = {
   },
   warbow: {
     id: "warbow",
-    name: "War Bow",
+    name: "Arco de Guerra",
     power: 10,
     range: 4,
     kind: "physical",
@@ -257,7 +255,7 @@ export const WEAPONS: Record<string, WeaponDef> = {
   },
   dragonClaws: {
     id: "dragonClaws",
-    name: "Dragon Claws",
+    name: "Garras de Dragão",
     power: 11,
     range: 1,
     kind: "physical",
@@ -266,7 +264,7 @@ export const WEAPONS: Record<string, WeaponDef> = {
   },
   assassinBlade: {
     id: "assassinBlade",
-    name: "Assassin's Blade",
+    name: "Lâmina do Assassino",
     power: 10,
     range: 1,
     kind: "physical",
@@ -275,7 +273,7 @@ export const WEAPONS: Record<string, WeaponDef> = {
   },
   dragoonLance: {
     id: "dragoonLance",
-    name: "Dragoon Lance",
+    name: "Lança Dragoon",
     power: 9,
     range: 2,
     kind: "physical",
@@ -284,7 +282,7 @@ export const WEAPONS: Record<string, WeaponDef> = {
   },
   mjolnir: {
     id: "mjolnir",
-    name: "Mjolnir",
+    name: "Mjölnir",
     power: 12,
     range: 1,
     kind: "physical",
@@ -293,7 +291,7 @@ export const WEAPONS: Record<string, WeaponDef> = {
   },
   bloodAxe: {
     id: "bloodAxe",
-    name: "Blood Axe",
+    name: "Machado de Sangue",
     power: 13,
     range: 1,
     kind: "physical",
