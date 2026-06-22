@@ -10,6 +10,7 @@ import { getItem } from "../data/items";
 import { terrainEffect } from "../data/terrain";
 import type { PlacedProp } from "../data/props";
 import { prefersReducedMotion } from "../engine/accessibility";
+import { t } from "../i18n";
 import type { Rotation, ScreenPoint } from "../engine/iso";
 import type { ActiveEffect, BattleView, FloatingText, ForecastTag, OverlaySet } from "../engine/renderer";
 import type { BattleScene } from "./battleScene";
@@ -81,11 +82,11 @@ export function buildView(scene: BattleScene, origin: ScreenPoint, scale: number
     overlays.move = s.rangeTiles;
     // Flag reachable tiles whose terrain bites (lava), heals (spring), or snares
     // (mire) so the player weighs the hazard before committing the move.
-    overlays.hazards = s.rangeTiles.flatMap((t) => {
-      const eff = terrainEffect(s.grid.terrainAt(t.x, t.y));
+    overlays.hazards = s.rangeTiles.flatMap((tile) => {
+      const eff = terrainEffect(s.grid.terrainAt(tile.x, tile.y));
       if (!eff) return [];
       const kind = eff.kind === "status" ? "slow" : eff.kind;
-      return [{ tile: t, kind } as { tile: Point; kind: "damage" | "heal" | "slow" }];
+      return [{ tile, kind } as { tile: Point; kind: "damage" | "heal" | "slow" }];
     });
     if (s.hoverTile && s.inRangeTiles(s.hoverTile) && s.active) {
       const { solid, passThrough } = moveBlockers(s.units, s.active);
@@ -152,9 +153,9 @@ function computeUnitOffsets(s: ViewScene): Map<string, { dx: number; dy: number 
       const za = s.grid.heightAt(att.pos.x, att.pos.y);
       const a = s.projectTile(att.pos.x, att.pos.y, za);
       const zt = s.grid.heightAt(s.lunge.tx, s.lunge.ty);
-      const t = s.projectTile(s.lunge.tx, s.lunge.ty, zt);
-      let vx = t.sx - a.sx;
-      let vy = t.sy - a.sy;
+      const tgt = s.projectTile(s.lunge.tx, s.lunge.ty, zt);
+      let vx = tgt.sx - a.sx;
+      let vy = tgt.sy - a.sy;
       const m = Math.hypot(vx, vy) || 1;
       vx /= m;
       vy /= m;
@@ -177,11 +178,11 @@ function positionalMods(ctx: AttackContext, target: Unit): string[] {
   const mods: string[] = [];
   const from = ctx.fromPos ?? target.pos;
   const angle = attackAngle(from, target.pos, target.facing);
-  if (angle === "rear") mods.push("rear");
-  else if (angle === "flank") mods.push("flank");
+  if (angle === "rear") mods.push(t("battle.forecast.rear"));
+  else if (angle === "flank") mods.push(t("battle.forecast.flank"));
   const hd = ctx.heightDelta ?? 0;
-  if (hd > 0) mods.push("high");
-  else if (hd < 0) mods.push("low");
+  if (hd > 0) mods.push(t("battle.forecast.high"));
+  else if (hd < 0) mods.push(t("battle.forecast.low"));
   return mods;
 }
 
@@ -200,7 +201,7 @@ function computeForecast(s: ViewScene, tile: Point): ForecastTag | null {
     const f = forecastWeapon(s.active, enemy, weapon, ctx);
     const parts = [`${f.amount}`];
     if (weapon.kind === "physical") parts.push(...positionalMods(ctx, enemy));
-    if (f.lethal) parts.push("KO");
+    if (f.lethal) parts.push(t("battle.forecast.ko"));
     return { tile, text: parts.join(" · "), color: POPUP_COLORS.damage, strong: f.lethal };
   }
 
@@ -227,9 +228,9 @@ function computeForecast(s: ViewScene, tile: Point): ForecastTag | null {
       const f = forecastSkill(s.active, enemy, sk, ctx);
       const parts = [`${f.amount}`];
       if (sk.scaling === "physical") parts.push(...positionalMods(ctx, enemy));
-      if (f.affinity === "weak") parts.push("weak");
-      else if (f.affinity === "resist") parts.push("resist");
-      if (f.lethal) parts.push("KO");
+      if (f.affinity === "weak") parts.push(t("battle.forecast.weak"));
+      else if (f.affinity === "resist") parts.push(t("battle.forecast.resist"));
+      if (f.lethal) parts.push(t("battle.forecast.ko"));
       return { tile, text: parts.join(" · "), color: POPUP_COLORS.damage, strong: f.lethal || f.affinity === "weak" };
     }
     if (sk.effect === "heal") {
@@ -240,12 +241,12 @@ function computeForecast(s: ViewScene, tile: Point): ForecastTag | null {
     }
     if (sk.effect === "revive") {
       if (!deadAlly) return null;
-      return { tile, text: "Revive", color: POPUP_COLORS.revive, strong: false };
+      return { tile, text: t("battle.forecast.revive"), color: POPUP_COLORS.revive, strong: false };
     }
     if (sk.effect === "buff" || sk.effect === "debuff") {
-      const t = sk.effect === "buff" ? ally : enemy;
-      if (!t || !sk.statusKind) return null;
-      return { tile, text: sk.statusKind, color: POPUP_COLORS.status, strong: false };
+      const target2 = sk.effect === "buff" ? ally : enemy;
+      if (!target2 || !sk.statusKind) return null;
+      return { tile, text: t(`battle.status.${sk.statusKind}.label`), color: POPUP_COLORS.status, strong: false };
     }
     return null;
   }
@@ -264,15 +265,15 @@ function computeForecast(s: ViewScene, tile: Point): ForecastTag | null {
     }
     if (item.effect === "revive") {
       if (!deadAlly) return null;
-      return { tile, text: "Revive", color: POPUP_COLORS.revive, strong: false };
+      return { tile, text: t("battle.forecast.revive"), color: POPUP_COLORS.revive, strong: false };
     }
     if (item.effect === "buff") {
       if (!ally || !item.statusKind) return null;
-      return { tile, text: item.statusKind, color: POPUP_COLORS.status, strong: false };
+      return { tile, text: t(`battle.status.${item.statusKind}.label`), color: POPUP_COLORS.status, strong: false };
     }
     if (item.effect === "cureStatus") {
       if (!ally) return null;
-      return { tile, text: "Cure", color: POPUP_COLORS.status, strong: false };
+      return { tile, text: t("battle.forecast.cure"), color: POPUP_COLORS.status, strong: false };
     }
   }
   return null;

@@ -5,7 +5,7 @@ import { PHASES } from "../data/maps";
 import { el } from "../ui/dom";
 import type { GameContext, Scene } from "./sceneManager";
 import { isMuted, setMuted, getVolume, setVolume } from "../engine/audio";
-import { isMusicMuted, setMusicMuted } from "../engine/music";
+import { isMusicMuted, setMusicMuted, startMusic } from "../engine/music";
 import {
   getTextScale,
   setTextScale,
@@ -17,13 +17,14 @@ import {
 } from "../engine/accessibility";
 import {
   ACTIONS,
-  ACTION_LABELS,
+  actionLabel,
   getBinding,
   setBinding,
   resetBindings,
   formatKey,
   type Action,
 } from "../engine/keybindings";
+import { t } from "../i18n";
 
 function resetState(state: GameState): void {
   state.party = createStartingParty();
@@ -36,6 +37,11 @@ function resetState(state: GameState): void {
   state.slot = 0;
   state.ngPlus = 0;
   state.permadeath = false;
+  state.reputation = -10;
+  state.achievements = [];
+  state.zezeEncounters = 0;
+  state.affinityProgress = {};
+  state.lastAttackKind = undefined;
 }
 
 function applyLoaded(state: GameState, loaded: GameState): void {
@@ -49,6 +55,11 @@ function applyLoaded(state: GameState, loaded: GameState): void {
   state.slot = loaded.slot;
   state.ngPlus = loaded.ngPlus;
   state.permadeath = loaded.permadeath;
+  state.reputation = loaded.reputation;
+  state.achievements = loaded.achievements;
+  state.zezeEncounters = loaded.zezeEncounters;
+  state.affinityProgress = loaded.affinityProgress;
+  state.lastAttackKind = loaded.lastAttackKind;
 }
 
 /** A simple full-screen menu built from a banner card. */
@@ -92,22 +103,22 @@ class BannerScene implements Scene {
  */
 function buildSettingsPanel(onBack: () => void): HTMLElement {
   const banner = el("div", { className: "banner" });
-  const card = el("div", { className: "banner-card", attrs: { role: "dialog", "aria-label": "Settings" } });
-  card.appendChild(el("h1", { text: "Settings", attrs: { id: "settings-title" } }));
+  const card = el("div", { className: "banner-card", attrs: { role: "dialog", "aria-label": t("menu.settings.title") } });
+  card.appendChild(el("h1", { text: t("menu.settings.title"), attrs: { id: "settings-title" } }));
 
   const settingsBody = el("div", { className: "settings-body", attrs: { role: "group", "aria-labelledby": "settings-title" } });
 
   // --- Sound (master mute) toggle ---
   const soundRow = el("div", { className: "settings-row" });
-  soundRow.appendChild(el("span", { className: "settings-label", text: "Sound" }));
+  soundRow.appendChild(el("span", { className: "settings-label", text: t("menu.settings.sound") }));
   const soundToggle = el("button", {
     className: `btn small settings-toggle${isMuted() ? " settings-toggle-off" : ""}`,
-    text: isMuted() ? "Off" : "On",
-    attrs: { role: "switch", "aria-label": "Sound", "aria-checked": isMuted() ? "false" : "true" },
+    text: isMuted() ? t("common.off") : t("common.on"),
+    attrs: { role: "switch", "aria-label": t("menu.settings.sound"), "aria-checked": isMuted() ? "false" : "true" },
     onClick: () => {
       const nowMuted = !isMuted();
       setMuted(nowMuted);
-      soundToggle.textContent = nowMuted ? "Off" : "On";
+      soundToggle.textContent = nowMuted ? t("common.off") : t("common.on");
       soundToggle.setAttribute("aria-checked", nowMuted ? "false" : "true");
       soundToggle.className = `btn small settings-toggle${nowMuted ? " settings-toggle-off" : ""}`;
     },
@@ -117,15 +128,15 @@ function buildSettingsPanel(onBack: () => void): HTMLElement {
 
   // --- Music toggle ---
   const musicRow = el("div", { className: "settings-row" });
-  musicRow.appendChild(el("span", { className: "settings-label", text: "Music" }));
+  musicRow.appendChild(el("span", { className: "settings-label", text: t("menu.settings.music") }));
   const musicToggle = el("button", {
     className: `btn small settings-toggle${isMusicMuted() ? " settings-toggle-off" : ""}`,
-    text: isMusicMuted() ? "Off" : "On",
-    attrs: { role: "switch", "aria-label": "Music", "aria-checked": isMusicMuted() ? "false" : "true" },
+    text: isMusicMuted() ? t("common.off") : t("common.on"),
+    attrs: { role: "switch", "aria-label": t("menu.settings.music"), "aria-checked": isMusicMuted() ? "false" : "true" },
     onClick: () => {
       const nowMuted = !isMusicMuted();
       setMusicMuted(nowMuted);
-      musicToggle.textContent = nowMuted ? "Off" : "On";
+      musicToggle.textContent = nowMuted ? t("common.off") : t("common.on");
       musicToggle.setAttribute("aria-checked", nowMuted ? "false" : "true");
       musicToggle.className = `btn small settings-toggle${nowMuted ? " settings-toggle-off" : ""}`;
     },
@@ -135,7 +146,7 @@ function buildSettingsPanel(onBack: () => void): HTMLElement {
 
   // --- Volume slider ---
   const volumeRow = el("div", { className: "settings-row" });
-  volumeRow.appendChild(el("span", { className: "settings-label", text: "Volume" }));
+  volumeRow.appendChild(el("span", { className: "settings-label", text: t("menu.settings.volume") }));
   const sliderWrap = el("div", { className: "settings-slider-wrap" });
   const slider = document.createElement("input");
   slider.type = "range";
@@ -143,12 +154,12 @@ function buildSettingsPanel(onBack: () => void): HTMLElement {
   slider.max = "100";
   slider.value = String(Math.round(getVolume() * 100));
   slider.className = "settings-slider";
-  slider.setAttribute("aria-label", "Volume");
-  slider.setAttribute("aria-valuetext", `${slider.value} percent`);
+  slider.setAttribute("aria-label", t("menu.settings.volume"));
+  slider.setAttribute("aria-valuetext", t("menu.settings.volumePercent", { value: slider.value }));
   slider.addEventListener("input", () => {
     setVolume(Number(slider.value) / 100);
     volLabel.textContent = slider.value;
-    slider.setAttribute("aria-valuetext", `${slider.value} percent`);
+    slider.setAttribute("aria-valuetext", t("menu.settings.volumePercent", { value: slider.value }));
   });
   const volLabel = el("span", {
     className: "settings-vol-label",
@@ -161,13 +172,13 @@ function buildSettingsPanel(onBack: () => void): HTMLElement {
 
   // --- Text size selector ---
   const textSizeRow = el("div", { className: "settings-row" });
-  textSizeRow.appendChild(el("span", { className: "settings-label", text: "Text size" }));
+  textSizeRow.appendChild(el("span", { className: "settings-label", text: t("menu.settings.textSize") }));
   const scales: Array<{ value: TextScale; label: string }> = [
-    { value: "normal", label: "Normal" },
-    { value: "large", label: "Large" },
-    { value: "larger", label: "Larger" },
+    { value: "normal", label: t("menu.settings.textSizeNormal") },
+    { value: "large", label: t("menu.settings.textSizeLarge") },
+    { value: "larger", label: t("menu.settings.textSizeLarger") },
   ];
-  const scaleGroup = el("div", { className: "settings-scale-group", attrs: { role: "radiogroup", "aria-label": "Text size" } });
+  const scaleGroup = el("div", { className: "settings-scale-group", attrs: { role: "radiogroup", "aria-label": t("menu.settings.textSize") } });
   const scaleButtons: HTMLButtonElement[] = [];
   for (const s of scales) {
     const btn = el("button", {
@@ -191,15 +202,15 @@ function buildSettingsPanel(onBack: () => void): HTMLElement {
 
   // --- High contrast toggle ---
   const hcRow = el("div", { className: "settings-row" });
-  hcRow.appendChild(el("span", { className: "settings-label", text: "High contrast" }));
+  hcRow.appendChild(el("span", { className: "settings-label", text: t("menu.settings.highContrast") }));
   const hcToggle = el("button", {
     className: `btn small settings-toggle${isHighContrast() ? "" : " settings-toggle-off"}`,
-    text: isHighContrast() ? "On" : "Off",
-    attrs: { role: "switch", "aria-label": "High contrast", "aria-checked": isHighContrast() ? "true" : "false" },
+    text: isHighContrast() ? t("common.on") : t("common.off"),
+    attrs: { role: "switch", "aria-label": t("menu.settings.highContrast"), "aria-checked": isHighContrast() ? "true" : "false" },
     onClick: () => {
       const nowOn = !isHighContrast();
       setHighContrast(nowOn);
-      hcToggle.textContent = nowOn ? "On" : "Off";
+      hcToggle.textContent = nowOn ? t("common.on") : t("common.off");
       hcToggle.setAttribute("aria-checked", nowOn ? "true" : "false");
       hcToggle.className = `btn small settings-toggle${nowOn ? "" : " settings-toggle-off"}`;
     },
@@ -209,15 +220,15 @@ function buildSettingsPanel(onBack: () => void): HTMLElement {
 
   // --- Reduced motion toggle ---
   const rmRow = el("div", { className: "settings-row" });
-  rmRow.appendChild(el("span", { className: "settings-label", text: "Reduced motion" }));
+  rmRow.appendChild(el("span", { className: "settings-label", text: t("menu.settings.reducedMotion") }));
   const rmToggle = el("button", {
     className: `btn small settings-toggle${prefersReducedMotion() ? "" : " settings-toggle-off"}`,
-    text: prefersReducedMotion() ? "On" : "Off",
-    attrs: { role: "switch", "aria-label": "Reduced motion", "aria-checked": prefersReducedMotion() ? "true" : "false" },
+    text: prefersReducedMotion() ? t("common.on") : t("common.off"),
+    attrs: { role: "switch", "aria-label": t("menu.settings.reducedMotion"), "aria-checked": prefersReducedMotion() ? "true" : "false" },
     onClick: () => {
       const nowOn = !prefersReducedMotion();
       setReducedMotion(nowOn);
-      rmToggle.textContent = nowOn ? "On" : "Off";
+      rmToggle.textContent = nowOn ? t("common.on") : t("common.off");
       rmToggle.setAttribute("aria-checked", nowOn ? "true" : "false");
       rmToggle.className = `btn small settings-toggle${nowOn ? "" : " settings-toggle-off"}`;
     },
@@ -229,12 +240,12 @@ function buildSettingsPanel(onBack: () => void): HTMLElement {
 
   // --- Controls section ---
   const controlsSection = el("div", { className: "settings-controls-section" });
-  controlsSection.appendChild(el("div", { className: "settings-section-title", text: "Controls" }));
+    controlsSection.appendChild(el("div", { className: "settings-section-title", text: t("menu.settings.controls") }));
 
-  /** Rebuild the controls section after a binding change. */
-  const rebuildControls = (): void => {
-    controlsSection.innerHTML = "";
-    controlsSection.appendChild(el("div", { className: "settings-section-title", text: "Controls" }));
+    /** Rebuild the controls section after a binding change. */
+    const rebuildControls = (): void => {
+      controlsSection.innerHTML = "";
+      controlsSection.appendChild(el("div", { className: "settings-section-title", text: t("menu.settings.controls") }));
 
     let pendingAction: Action | null = null;
     let pendingBtn: HTMLButtonElement | null = null;
@@ -252,12 +263,12 @@ function buildSettingsPanel(onBack: () => void): HTMLElement {
 
     for (const action of ACTIONS) {
       const row = el("div", { className: "settings-row" });
-      row.appendChild(el("span", { className: "settings-label", text: ACTION_LABELS[action] }));
+      row.appendChild(el("span", { className: "settings-label", text: actionLabel(action) }));
 
       const rebindBtn = el("button", {
         className: "btn small settings-rebind-btn",
         text: formatKey(getBinding(action)),
-        attrs: { "aria-label": `${ACTION_LABELS[action]} key: ${formatKey(getBinding(action))}` },
+        attrs: { "aria-label": `${actionLabel(action)} key: ${formatKey(getBinding(action))}` },
         onClick: () => {
           if (pendingAction === action) {
             // Second click cancels capture.
@@ -267,7 +278,7 @@ function buildSettingsPanel(onBack: () => void): HTMLElement {
           cancelCapture();
           pendingAction = action;
           pendingBtn = rebindBtn as HTMLButtonElement;
-          rebindBtn.textContent = "…press a key";
+          rebindBtn.textContent = t("menu.settings.pressKey");
           rebindBtn.className = "btn small settings-rebind-btn settings-rebind-listening";
 
           keydownHandler = (e: KeyboardEvent): void => {
@@ -296,7 +307,7 @@ function buildSettingsPanel(onBack: () => void): HTMLElement {
     const resetRow = el("div", { attrs: { style: "display:flex;justify-content:flex-end;margin-top:4px" } });
     resetRow.appendChild(el("button", {
       className: "btn small",
-      text: "Reset to defaults",
+      text: t("menu.settings.resetToDefaults"),
       onClick: () => {
         resetBindings();
         rebuildControls();
@@ -310,7 +321,7 @@ function buildSettingsPanel(onBack: () => void): HTMLElement {
 
   // --- Back button ---
   const backRow = el("div", { attrs: { style: "display:flex;gap:10px;justify-content:center;margin-top:18px" } });
-  backRow.appendChild(el("button", { className: "btn", text: "Back", onClick: onBack }));
+  backRow.appendChild(el("button", { className: "btn", text: t("menu.settings.back"), onClick: onBack }));
   card.appendChild(backRow);
 
   banner.appendChild(card);
@@ -348,7 +359,7 @@ export class TitleScene extends BannerScene {
 
       // --- Brand mark ---
       const mark = el("div", { className: "title-mark" });
-      mark.appendChild(el("h1", { text: "Ashen Banner" }));
+      mark.appendChild(el("h1", { text: t("menu.title.name") }));
       const rule = el("div", { className: "title-rule" });
       rule.appendChild(el("span", { className: "diamond" }));
       mark.appendChild(rule);
@@ -357,12 +368,12 @@ export class TitleScene extends BannerScene {
       card.appendChild(
         el("div", {
           className: "title-tagline",
-          text: "The kingdom burned. A scorched banner, and those who still carry it.",
+          text: t("menu.title.tagline"),
         }),
       );
       card.appendChild(
         el("p", {
-          text: "An isometric, turn-based tactics campaign. Muster a company of heroes and lead them through seven battles of rising peril — move, strike, cast, and grow as the realm closes in.",
+          text: t("menu.title.description"),
         }),
       );
 
@@ -375,26 +386,26 @@ export class TitleScene extends BannerScene {
       if (hasSave) {
         actions.appendChild(
           el("button", {
-            className: "btn btn-primary",
-            text: "Continue",
+             className: "btn btn-primary",
+             text: t("menu.title.continue"),
             onClick: () => continueSlot(firstSaved),
           }),
         );
         actions.appendChild(
-          el("button", { className: "btn btn-ghost", text: "New Game", onClick: () => this.ctx.nav.toPartySelect() }),
-        );
-      } else {
-        actions.appendChild(
-          el("button", { className: "btn btn-primary", text: "New Game", onClick: () => this.ctx.nav.toPartySelect() }),
-        );
-      }
-      actions.appendChild(el("button", { className: "btn btn-ghost", text: "Settings", onClick: openSettings }));
+           el("button", { className: "btn btn-ghost", text: t("menu.title.newGame"), onClick: () => this.ctx.nav.toPartySelect() }),
+         );
+       } else {
+         actions.appendChild(
+           el("button", { className: "btn btn-primary", text: t("menu.title.newGame"), onClick: () => this.ctx.nav.toPartySelect() }),
+         );
+       }
+       actions.appendChild(el("button", { className: "btn btn-ghost", text: t("menu.title.settings"), onClick: openSettings }));
       card.appendChild(actions);
 
       // --- Save slots (only meaningful when at least one exists) ---
       if (hasSave) {
         const slotsEl = el("div", { className: "save-slots" });
-        slotsEl.appendChild(el("div", { className: "save-slots-label", text: "Saved Campaigns" }));
+        slotsEl.appendChild(el("div", { className: "save-slots-label", text: t("menu.title.savedCampaigns") }));
         for (let i = 0; i < SAVE_SLOTS; i++) {
           const summary = saves[i];
           const row = el("div", { className: "save-slot-row" });
@@ -402,12 +413,12 @@ export class TitleScene extends BannerScene {
             row.appendChild(
               el("button", {
                 className: "btn small",
-                text: `Slot ${i + 1} — Phase ${summary.phaseIndex + 1} · ${summary.partySize} heroes`,
+                 text: t("menu.title.slotPhase", { slot: i + 1, phase: summary.phaseIndex + 1, heroes: summary.partySize }),
                 onClick: () => continueSlot(i),
               }),
             );
           } else {
-            row.appendChild(el("div", { className: "save-slot-empty", text: `Slot ${i + 1} — empty` }));
+            row.appendChild(el("div", { className: "save-slot-empty", text: t("menu.title.slotEmpty", { slot: i + 1 }) }));
           }
           slotsEl.appendChild(row);
         }
@@ -417,14 +428,14 @@ export class TitleScene extends BannerScene {
       // --- Dev-only: jump straight into any phase with a fresh party. ---
       if (isDev) {
         const selector = el("div", { className: "phase-select" });
-        selector.appendChild(el("span", { className: "label", text: "Jump to phase (dev):" }));
+        selector.appendChild(el("span", { className: "label", text: t("menu.title.jumpToPhase") }));
         const row = el("div", { className: "phase-row" });
         PHASES.forEach((p, i) => {
           row.appendChild(
             el("button", {
               className: "btn small",
               text: `${i + 1}`,
-              attrs: { title: `Phase ${i + 1}: ${p.name}` },
+              attrs: { title: t("menu.title.phaseTitle", { index: i + 1, name: p.name }) },
               onClick: () => startAtPhase(i),
             }),
           );
@@ -444,6 +455,7 @@ export class TitleScene extends BannerScene {
     };
 
     rebuildTitle();
+    startMusic("title");
   }
 }
 
@@ -455,10 +467,10 @@ export class VictoryScene extends BannerScene {
     const maxLevel = Math.max(...ctx.state.party.map((u) => u.level));
     const currentCycle = ctx.state.ngPlus;
     const nextCycle = currentCycle + 1;
-    const ngPlusLabel = currentCycle > 0 ? `New Game+ (cycle ${nextCycle})` : "New Game+";
+    const ngPlusLabel = currentCycle > 0 ? t("menu.victory.ngPlusCycle", { cycle: nextCycle }) : t("menu.victory.ngPlus");
     this.showCard(
-      "Campaign Complete",
-      `The tyrant is undone and the realm breathes free. Your party reached level ${maxLevel}, with ${survivors} heroes standing at the end. New Game+ is available — keep your leveled party and face enemies ${nextCycle * 3} levels tougher. Thank you for playing.`,
+      t("menu.victory.campaignComplete"),
+      t("menu.victory.body", { level: maxLevel, survivors, levels: nextCycle * 3 }),
       [
         {
           label: ngPlusLabel,
@@ -469,7 +481,7 @@ export class VictoryScene extends BannerScene {
           },
         },
         {
-          label: "Play Again",
+          label: t("menu.victory.playAgain"),
           onClick: () => {
             resetState(this.ctx.state);
             this.ctx.nav.toTitle();
@@ -477,5 +489,23 @@ export class VictoryScene extends BannerScene {
         },
       ],
     );
+  }
+}
+
+export class EndingScene extends BannerScene {
+  constructor(ctx: GameContext, endingId: string) {
+    super(ctx);
+    clearSave(ctx.state.slot);
+    const title = t(`endings.${endingId}.title`);
+    const body = t(`endings.${endingId}.text`);
+    this.showCard(title, body, [
+      {
+        label: t("menu.victory.playAgain"),
+        onClick: () => {
+          resetState(this.ctx.state);
+          this.ctx.nav.toTitle();
+        },
+      },
+    ]);
   }
 }

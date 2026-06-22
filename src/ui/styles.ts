@@ -1,7 +1,7 @@
 const CSS = `
 :root {
   --ui-scale: 1;
-  /* Ashen Banner palette — scorched ash & ember, not generic blue. */
+  /* Catirobas do Inferno palette — scorched ash & ember, not generic blue. */
   --void: #0b0b10;
   --ash-900: #131219;
   --ash-800: #1b1922;
@@ -221,66 +221,71 @@ const CSS = `
 .banner {
   position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
   padding: 16px;
-  /* Atmosphere: a low ember glow rising from the dark, with a heavy vignette —
-     the realm still smoulders. */
   background:
-    radial-gradient(120% 80% at 50% 118%, rgba(232,120,40,0.20), rgba(160,60,20,0.05) 40%, transparent 62%),
-    radial-gradient(100% 100% at 50% 0%, rgba(40,44,70,0.10), transparent 55%),
-    radial-gradient(140% 120% at 50% 50%, transparent 55%, rgba(0,0,0,0.55)),
-    rgba(6, 7, 12, 0.86);
+    radial-gradient(120% 80% at 50% 118%, rgba(255, 42, 0, 0.4), rgba(255, 0, 128, 0.2) 40%, transparent 62%),
+    linear-gradient(0deg, rgba(255, 42, 0, 0.15) 0%, transparent 25%),
+    repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(255, 0, 128, 0.08) 3px, rgba(255, 0, 128, 0.08) 4px),
+    rgba(10, 5, 15, 0.95);
 }
 .banner-card {
   position: relative;
   background:
-    linear-gradient(180deg, rgba(33,29,38,0.98), rgba(20,18,26,0.98));
-  border: 1px solid var(--ash-edge-strong);
-  border-radius: 14px; padding: 32px 40px; text-align: center; max-width: 540px;
-  box-shadow: 0 18px 64px rgba(0,0,0,0.7), inset 0 1px 0 rgba(255,220,180,0.06);
+    linear-gradient(180deg, rgba(20, 5, 20, 0.95), rgba(10, 0, 10, 0.98));
+  border: 2px solid #ff007f;
+  border-radius: 0; padding: 32px 40px; text-align: center; max-width: 540px;
+  box-shadow: 0 0 25px rgba(255, 0, 128, 0.6), inset 0 0 15px rgba(255, 0, 128, 0.3);
   /* Never overflow the viewport: a tall card (save slots, phase jump, settings
      with all rebinds) scrolls internally instead of clipping off-screen. */
   max-height: calc(100vh - 32px); overflow-y: auto;
   animation: card-rise 0.5s cubic-bezier(0.2,0.8,0.2,1) both;
+  clip-path: polygon(0 20px, 20px 0, 100% 0, 100% calc(100% - 20px), calc(100% - 20px) 100%, 0 100%);
 }
 .banner-card::-webkit-scrollbar { width: 7px; }
-.banner-card::-webkit-scrollbar-thumb { background: rgba(232,151,60,0.3); border-radius: 3px; }
+.banner-card::-webkit-scrollbar-thumb { background: rgba(255, 0, 128, 0.6); border-radius: 0; }
 @keyframes card-rise { from { opacity: 0; transform: translateY(14px) scale(0.985); } to { opacity: 1; transform: none; } }
 .banner-card h1 {
-  font-family: var(--font-display); font-size: 32px; font-weight: 700;
-  letter-spacing: 0.04em; margin-bottom: 12px; color: var(--ink);
+  font-family: var(--font-display); font-size: 32px; font-weight: 800;
+  letter-spacing: 0.04em; margin-bottom: 12px; color: #fff;
+  text-shadow: 0 0 8px rgba(255, 0, 128, 0.8);
 }
-.banner-card p { font-size: 15px; color: var(--ink-dim); line-height: 1.55; margin-bottom: 20px; white-space: pre-line; }
-.banner-card .btn { font-size: 16px; padding: 10px 24px; }
+.banner-card p { font-size: 15px; color: #ffb3d9; line-height: 1.55; margin-bottom: 20px; white-space: pre-line; }
+.banner-card .btn { font-size: 16px; padding: 10px 24px; border-radius: 0; text-transform: uppercase; font-weight: 800; letter-spacing: 1px; }
 
 /* Title screen — the brand mark, set apart from ordinary banner headings. */
 .title-mark { display: flex; flex-direction: column; align-items: center; gap: 6px; margin-bottom: 8px; }
 .banner-card .title-mark h1 {
   font-family: var(--font-display);
-  font-size: calc(46px * var(--ui-scale)); font-weight: 700;
-  letter-spacing: 0.16em; text-transform: uppercase; margin: 0; line-height: 1.05;
-  background: linear-gradient(180deg, #fff3df 0%, var(--gold) 42%, var(--ember) 78%, #9c5320 100%);
+  font-size: calc(46px * var(--ui-scale)); font-weight: 900;
+  letter-spacing: 0.1em; text-transform: uppercase; margin: 0; line-height: 1.05;
+  background: linear-gradient(180deg, #fff 0%, #ff007f 40%, #ff8c00 70%, #ff0000 100%);
   -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
-  filter: drop-shadow(0 2px 10px rgba(232,151,60,0.35));
-  animation: title-glow 4.5s ease-in-out infinite;
+  filter: drop-shadow(0 0 12px rgba(255, 0, 128, 0.8));
+  animation: title-glow 2s ease-in-out infinite alternate;
+  transform: skewX(-8deg);
 }
 @keyframes title-glow {
-  0%,100% { filter: drop-shadow(0 2px 10px rgba(232,151,60,0.30)); }
-  50% { filter: drop-shadow(0 2px 18px rgba(255,184,102,0.55)); }
+  0% { filter: drop-shadow(0 0 5px rgba(255, 0, 128, 0.5)) drop-shadow(0 0 10px rgba(255, 140, 0, 0.3)); }
+  100% { filter: drop-shadow(0 0 15px rgba(255, 0, 128, 0.9)) drop-shadow(0 0 25px rgba(255, 140, 0, 0.7)); }
 }
 .title-rule {
-  display: flex; align-items: center; gap: 10px; width: 78%; opacity: 0.85;
+  display: flex; align-items: center; gap: 10px; width: 90%; opacity: 1;
 }
 .title-rule::before, .title-rule::after {
-  content: ""; flex: 1; height: 1px;
-  background: linear-gradient(90deg, transparent, var(--ash-edge-strong), transparent);
+  content: ""; flex: 1; height: 2px;
+  background: linear-gradient(90deg, transparent, #00ffff, transparent);
+  box-shadow: 0 0 8px #00ffff;
 }
-.title-rule .diamond { width: 6px; height: 6px; background: var(--ember); transform: rotate(45deg); box-shadow: 0 0 8px rgba(232,151,60,0.8); flex: none; }
+.title-rule .diamond { width: 8px; height: 8px; background: #00ffff; transform: rotate(45deg); box-shadow: 0 0 12px #00ffff; flex: none; }
 .title-tagline {
-  font-family: var(--font-display); font-style: italic;
-  font-size: calc(15px * var(--ui-scale)); color: var(--ink-dim); margin-bottom: 22px; line-height: 1.5;
+  font-family: var(--font-display); font-style: italic; font-weight: 800;
+  font-size: calc(16px * var(--ui-scale)); color: #00ffff; margin-bottom: 22px; line-height: 1.5;
+  text-shadow: 0 0 6px rgba(0, 255, 255, 0.6);
+  letter-spacing: 1px;
 }
 /* Staggered reveal of the menu actions on the title screen. */
 .title-actions { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
-.title-actions .btn { animation: fade-up 0.45s ease both; }
+.title-actions .btn { animation: fade-up 0.45s ease both; background: transparent; border: 2px solid #ff007f; color: #ff007f; box-shadow: 0 0 10px rgba(255, 0, 128, 0.2), inset 0 0 10px rgba(255, 0, 128, 0.2); }
+.title-actions .btn:hover { background: #ff007f; color: #fff; box-shadow: 0 0 20px rgba(255, 0, 128, 0.7), inset 0 0 10px rgba(255, 255, 255, 0.4); border-color: #ff007f; }
 .title-actions .btn:nth-child(1) { animation-delay: 0.10s; }
 .title-actions .btn:nth-child(2) { animation-delay: 0.18s; }
 .title-actions .btn:nth-child(3) { animation-delay: 0.26s; }
@@ -442,7 +447,7 @@ const CSS = `
 .camp-gold { font-size: 13px; color: #ffd34d; font-weight: 600; margin-top: 6px; }
 .section-title { text-align: center; font-family: var(--font-display); font-size: 18px; font-weight: 700; letter-spacing: 0.05em; margin: 18px 0 4px; color: var(--ember-bright); }
 .section-title:first-child { margin-top: 4px; }
-.party-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 14px; max-width: 1100px; margin: 0 auto; }
+.party-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; max-width: 1100px; margin: 0 auto; }
 .unit-card { background: rgba(26,23,31,0.95); border: 1px solid var(--ash-edge); border-radius: 10px; padding: 11px 12px; }
 .unit-card.selectable { cursor: pointer; transition: border-color 0.12s, box-shadow 0.12s, transform 0.05s; }
 .unit-card.selectable:hover { border-color: rgba(232,151,60,0.55); transform: translateY(-1px); }
@@ -521,13 +526,13 @@ const CSS = `
 .reaction-help-desc { font-size: 11px; line-height: 1.35; opacity: 0.75; }
 
 /* Character-sheet read-outs on the Party Camp unit card. Each sub-section is a
-   compact, labeled block in the ashen/ember language — no generic blue. */
+   compact, labeled block in the scorched/ember language — no generic blue. */
 .cs-section { margin-top: 8px; }
 .cs-label {
   font-size: 10px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase;
   color: var(--ink-faint); margin-bottom: 3px;
 }
-/* XP bar — ember fill on an ashen track, with a "have / need" count. */
+/* XP bar — ember fill on a scorched track, with a "have / need" count. */
 .cs-xp-row { display: flex; align-items: center; gap: 8px; }
 .cs-xp-track {
   flex: 1; height: 7px; border-radius: 4px; overflow: hidden;

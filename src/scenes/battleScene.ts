@@ -5,6 +5,11 @@ import { ACTION_XP_OFFENSIVE, ACTION_XP_SUPPORT, battleClearXp, grantXpTracked, 
 import { DIALOGUE_ENABLED } from "../core/config";
 import { rollBattleDrops, rollEnemyDrop } from "../data/loot";
 import { enemyLevelFor, partyAverageLevel, enemyTierOffset, refreshForBattle, survivorsAfterBattle, goldForKill } from "../core/state";
+import { adjustAffinity, getAvailableCombos, AFFINITY_VICTORY_GAIN, AFFINITY_DEFEAT_LOSS } from "../data/affinity";
+import { COMBO_FAIL_CHANCES } from "../data/skills/combos";
+import { resolveEnding } from "../data/endings";
+import { adjustReputation, REPUTATION_VICTORY_GAIN, REPUTATION_DEFEAT_LOSS } from "../core/reputation";
+import { unlockAchievement } from "../data/achievements";
 import { Grid, manhattan, moveBlockers, samePoint, zoneOfControl } from "../battle/grid";
 import { pathTo, reachable } from "../battle/pathfinding";
 import { aoeTiles, knockbackTo, leapLanding, tilesInRange } from "../battle/targeting";
@@ -47,6 +52,7 @@ import { BattleUI } from "../ui/battleUI";
 import { formatHit } from "../battle/log";
 import type { GameContext, Scene } from "./sceneManager";
 import { POPUP_COLORS, SHAKE_DUR, LUNGE_DUR, SCREEN_SHAKE_DUR, buildView } from "./battleView";
+import { t } from "../i18n";
 
 /** Held-key camera pan speed (CSS px/s). */
 const PAN_SPEED = 600;
@@ -211,6 +217,10 @@ export class BattleScene implements Scene {
     // so the rewards screen can show net growth, and seat the map's treasure chests.
     for (const u of party) this.startLevels.set(u.id, u.level);
     this.chests = (this.map.chests ?? []).map((c) => ({ pos: { ...c.pos }, loot: c.loot, opened: false }));
+    // Zezé encounter: increment once per battle where a Zezé-named unit is present.
+    if (this.units.some((u) => u.name.toLowerCase().includes("zezé"))) {
+      this.ctx.state.zezeEncounters++;
+    }
   }
 
   /** Initial facing: aim at the centroid of the opposing team (south if none). */
@@ -294,9 +304,9 @@ export class BattleScene implements Scene {
 
   private showIntroBanner(): void {
     this.ui.showBanner({
-      title: `Phase ${this.phaseIndex + 1}: ${this.map.name}`,
+      title: t("battle.banners.phaseTitle", { index: this.phaseIndex + 1, name: this.map.name }),
       body: `${this.map.intro}\n\n${this.objectiveText()}`,
-      buttonLabel: "Begin Battle",
+      buttonLabel: t("battle.banners.beginBattle"),
       onClick: () => {
         this.ui.hideBanner();
         startMusic(battleThemeForPhase(this.phaseIndex));
@@ -315,20 +325,20 @@ export class BattleScene implements Scene {
     const obj = this.map.objective ?? { kind: "rout" };
     switch (obj.kind) {
       case "defeat":
-        return `Objective: defeat ${obj.targetName}`;
+        return t("battle.objectives.defeat", { target: obj.targetName });
       case "survive":
-        return `Objective: survive ${Math.min(this.turnCount, obj.turns)}/${obj.turns} turns`;
+        return t("battle.objectives.survive", { current: Math.min(this.turnCount, obj.turns), total: obj.turns });
       case "seize":
-        return "Objective: seize the marked tile";
+        return t("battle.objectives.seize");
       case "defend":
-        return `Objective: hold the marked tile — ${Math.min(this.turnCount, obj.turns)}/${obj.turns} turns`;
+        return t("battle.objectives.defend", { current: Math.min(this.turnCount, obj.turns), total: obj.turns });
       case "escort": {
         const vip = this.units.find((u) => u.team === "player" && u.name === obj.vipName);
         const hpStr = vip?.alive ? ` (${vip.stats.hp}/${vip.stats.maxHp} HP)` : "";
-        return `Objective: escort ${obj.vipName} to the marked tile${hpStr}`;
+        return t("battle.objectives.escort", { vip: obj.vipName, hp: hpStr });
       }
       default:
-        return "Objective: defeat all enemies";
+        return t("battle.objectives.rout");
     }
   }
 
@@ -363,11 +373,11 @@ export class BattleScene implements Scene {
       () => this.zoomStep(-1),
     );
     this.ui.setRotationLabel(this.rot);
-    this.pushLog(`— ${this.active.name}'s turn —`);
+    this.pushLog(t("battle.log.turnHeader", { name: this.active.name }));
 
     // Frozen in time: the unit forfeits its turn (the Stop status still ticks).
     if (isStopped(this.active)) {
-      this.pushTextPopup(this.active.pos, "Stop", POPUP_COLORS.status);
+      this.pushTextPopup(this.active.pos, t("battle.log.stop"), POPUP_COLORS.status);
       this.phase = "resolving";
       this.ui.hideCombatControls();
       void this.ctx.animator.wait(0.55).then(() => this.endActiveTurn());
@@ -383,13 +393,13 @@ export class BattleScene implements Scene {
         this.active.charging = undefined;
         const skill = getSkill(stored.skillId);
         this.pushTextPopup(this.active.pos, `${skill.name}!`, POPUP_COLORS.damage);
-        this.pushLog(`${this.active.name}'s ${skill.name} crashes down!`);
+        this.pushLog(t("battle.log.skillCrashes", { name: this.active.name, skill: skill.name }));
         this.phase = "resolving";
         this.ui.hideCombatControls();
         this.resolveCast(skill, this.active, stored.target, true);
       } else {
         // Still charging — show a reminder and skip the turn.
-        this.pushTextPopup(this.active.pos, "Charging…", POPUP_COLORS.status);
+        this.pushTextPopup(this.active.pos, t("battle.log.charging"), POPUP_COLORS.status);
         this.phase = "resolving";
         this.ui.hideCombatControls();
         void this.ctx.animator.wait(0.55).then(() => this.endActiveTurn());
@@ -429,6 +439,26 @@ export class BattleScene implements Scene {
         if (r) {
           this.pushPopup(r);
           if (r.killed) this.creditEnvironmentalKill(this.active);
+        }
+      }
+      // Biome rules: passive damage (Vulcão) or confusion (Deserto) apply to
+      // player units at the end of their turn.
+      if (this.active.alive && this.active.team === "player" && this.map.biomeRules) {
+        const br = this.map.biomeRules;
+        if (br.passiveDamage && this.active.stats.hp > 0) {
+          const dmg = Math.min(br.passiveDamage.amount, this.active.stats.hp);
+          this.active.stats.hp -= dmg;
+          this.pushTextPopup(this.active.pos, `-${dmg}`, POPUP_COLORS.damage);
+          if (this.active.stats.hp <= 0) {
+            this.active.alive = false;
+            this.creditEnvironmentalKill(this.active);
+          }
+        }
+        if (br.confusion && this.turnCount % br.confusion.interval === 0 && this.rng.next() < br.confusion.chance) {
+          if (!this.active.statuses.some((s) => s.kind === "confuse")) {
+            this.active.statuses.push({ kind: "confuse", turnsLeft: 2 });
+            this.pushTextPopup(this.active.pos, t("battle.log.confused"), POPUP_COLORS.status);
+          }
         }
       }
       // Poison/terrain damage can drop a still-standing player unit below the
@@ -477,7 +507,7 @@ export class BattleScene implements Scene {
         u.id = `recruit-${u.id}`;
         this.remapLedgers(oldId, u.id);
         this.ctx.state.party.push(u);
-        this.pushLog(`${u.name} has joined the Ashen Banner permanently!`);
+        this.pushLog(t("battle.log.joinedCatirobas", { name: u.name }));
       }
       // Fixed battle-clear XP equally to the whole roster (present, fallen, or
       // benched — and now any fresh recruits), then the victory item drops.
@@ -490,16 +520,29 @@ export class BattleScene implements Scene {
       }
       startMusic("victory");
       const last = this.phaseIndex >= PHASES.length - 1;
+      if (last) {
+        this.ctx.state.reputation = adjustReputation(this.ctx.state.reputation, REPUTATION_VICTORY_GAIN);
+        for (const pair of [{ a: "boleto", b: "porquinho" }, { a: "meleca", b: "caveira" }]) {
+          adjustAffinity(this.ctx.state.affinityProgress, pair.a, pair.b, AFFINITY_VICTORY_GAIN);
+        }
+      }
       this.ui.showBanner({
-        title: "Victory!",
+        title: t("battle.banners.victory"),
         body: last
-          ? "Maldrath falls. The keep is yours — and with it, peace."
-          : `${this.map.name} cleared. Your party regroups and grows stronger.`,
-        buttonLabel: "See Spoils",
+          ? t("battle.banners.victoryLast")
+          : t("battle.banners.victoryCleared", { name: this.map.name }),
+        buttonLabel: t("battle.banners.seeSpoils"),
         onClick: () => {
           this.ui.hideBanner();
           const proceed = () => {
-            if (last) this.ctx.nav.toVictory();
+            if (last) {
+              const endingId = resolveEnding({
+                playerWon: true,
+                lastAttackKind: this.ctx.state.lastAttackKind,
+                zezeEncounters: this.ctx.state.zezeEncounters,
+              });
+              this.ctx.nav.toEnding(endingId);
+            }
             else {
               this.ctx.state.phaseIndex = this.phaseIndex + 1;
               this.ctx.nav.toParty();
@@ -516,12 +559,30 @@ export class BattleScene implements Scene {
         },
       });
     } else {
-      this.ui.showBanner({
-        title: "Defeat",
-        body: "Your party has fallen. Steel yourself and try again.",
-        buttonLabel: "Retry Phase",
-        onClick: () => this.ctx.nav.toBattle(this.phaseIndex),
-      });
+      sfx.playKO();
+      const last = this.phaseIndex >= PHASES.length - 1;
+      this.ctx.state.reputation = adjustReputation(this.ctx.state.reputation, REPUTATION_DEFEAT_LOSS);
+      for (const pair of [{ a: "boleto", b: "porquinho" }, { a: "meleca", b: "caveira" }]) {
+        adjustAffinity(this.ctx.state.affinityProgress, pair.a, pair.b, -AFFINITY_DEFEAT_LOSS);
+      }
+      const niceGuy = this.map.enemies.some((e) => e.name.toLowerCase().includes("nice guy"));
+      if (niceGuy) unlockAchievement(this.ctx.state.achievements, "foramRejeitados");
+      if (last) {
+        const endingId = resolveEnding({ playerWon: false, zezeEncounters: this.ctx.state.zezeEncounters });
+        this.ui.showBanner({
+          title: t("battle.banners.defeat"),
+          body: t("battle.banners.defeatBody"),
+          buttonLabel: t("endings.retry"),
+          onClick: () => this.ctx.nav.toEnding(endingId),
+        });
+      } else {
+        this.ui.showBanner({
+          title: t("battle.banners.defeat"),
+          body: t("battle.banners.defeatBody"),
+          buttonLabel: t("battle.banners.retryPhase"),
+          onClick: () => this.ctx.nav.toBattle(this.phaseIndex),
+        });
+      }
     }
   }
 
@@ -551,7 +612,7 @@ export class BattleScene implements Scene {
       onUndo: () => this.undoMove(),
       onRecruit: () => this.enterRecruit(),
     });
-    this.ui.setHint(`M Move · A Attack · S Skill · I Item · Enter/${formatKey(getBinding("endTurn"))} end turn · Right-click/${formatKey(getBinding("cancel"))} cancel · ${formatKey(getBinding("rotateLeft"))}/${formatKey(getBinding("rotateRight"))} rotate · ＋/－/wheel zoom (zoom in to drag-pan) · ${formatKey(getBinding("recenter"))} recenter`);
+    this.ui.setHint(t("battle.hints.keyboardHint", { endTurn: formatKey(getBinding("endTurn")), cancel: formatKey(getBinding("cancel")), rotateLeft: formatKey(getBinding("rotateLeft")), rotateRight: formatKey(getBinding("rotateRight")), recenter: formatKey(getBinding("recenter")) }));
   }
 
   /**
@@ -643,7 +704,7 @@ export class BattleScene implements Scene {
     if (!this.active || this.hasMoved) return;
     this.phase = "move";
     this.ui.clearActions();
-    this.ui.setHint("Click a highlighted tile to move there.");
+    this.ui.setHint(t("battle.hints.move"));
     const { solid, passThrough } = moveBlockers(this.units, this.active);
     const zoc = zoneOfControl(this.units, this.active.team);
     const reach = reachable(this.grid, this.active.pos, this.active.stats.move, this.active.stats.jump, solid, passThrough, zoc);
@@ -658,7 +719,7 @@ export class BattleScene implements Scene {
     this.phase = "attackTarget";
     this.ui.clearActions();
     const w = getWeapon(this.active.weaponId);
-    this.ui.setHint(`Attack (range ${w.range}). Click an enemy in range.`);
+    this.ui.setHint(t("battle.hints.attack", { range: w.range }));
     let tiles = tilesInRange(this.grid, this.active.pos, w.range, false);
     // Ranged attacks respect line of sight (walls and high ground block).
     if (w.range > 1) tiles = tiles.filter((t) => hasLineOfSight(this.grid, this.active!.pos, t));
@@ -667,14 +728,20 @@ export class BattleScene implements Scene {
 
   private enterSkillMenu(): void {
     if (!this.active || this.hasActed) return;
-    // Usable skills = those learned from the primary class plus the secondary job.
     const usable = new Set(getClass(this.active.classId).skillIds);
     if (this.active.subClassId) for (const id of getClass(this.active.subClassId).skillIds) usable.add(id);
     const skills = this.active.learnedSkillIds
       .filter((id) => usable.has(id))
       .map(getSkill);
+    const aliveHeroIds = this.ctx.state.party.filter((u) => u.alive).map((u) => u.id);
+    const comboIds = getAvailableCombos(this.ctx.state.affinityProgress, aliveHeroIds);
+    for (const cid of comboIds) {
+      if (this.active.team === "player" && !skills.find((s) => s.id === cid)) {
+        skills.push(getSkill(cid));
+      }
+    }
     this.ui.clearActions();
-    this.ui.setHint("Choose a skill.");
+    this.ui.setHint(t("battle.hints.skill"));
     this.ui.showSkillMenu(
       skills,
       this.active,
@@ -693,7 +760,7 @@ export class BattleScene implements Scene {
       return;
     }
     this.phase = "skillTarget";
-    this.ui.setHint(`${skill.name}: click a target tile in range.`);
+    this.ui.setHint(t("battle.hints.skillTarget", { name: skill.name }));
     // Support skills (heal/buff/revive) may target the caster's own tile.
     const offensive = skill.effect === "damage" || skill.effect === "debuff";
     let tiles = tilesInRange(this.grid, this.active.pos, skill.range, !offensive);
@@ -709,7 +776,7 @@ export class BattleScene implements Scene {
       .filter(([, count]) => count > 0)
       .map(([id, count]) => ({ item: getItem(id), count }));
     this.ui.clearActions();
-    this.ui.setHint("Choose an item.");
+    this.ui.setHint(t("battle.hints.item"));
     this.ui.showItemMenu(
       entries,
       (id) => this.selectItem(id),
@@ -723,7 +790,7 @@ export class BattleScene implements Scene {
     const item = getItem(itemId);
     this.ui.hideSubmenu();
     this.phase = "itemTarget";
-    this.ui.setHint(`${item.name}: click an ally in range (or self).`);
+    this.ui.setHint(t("battle.hints.itemTarget", { name: item.name }));
     this.rangeTiles = tilesInRange(this.grid, this.active.pos, item.range, true);
   }
 
@@ -731,7 +798,7 @@ export class BattleScene implements Scene {
     if (!this.active || this.hasActed) return;
     this.phase = "recruitTarget";
     this.ui.clearActions();
-    this.ui.setHint("Recruit: click an adjacent weakened enemy to bring them to your side.");
+    this.ui.setHint(t("battle.hints.recruit"));
     // Only highlight enemies that satisfy canRecruit right now.
     this.rangeTiles = this.units
       .filter((u) => canRecruit(this.active!, u))
@@ -746,8 +813,8 @@ export class BattleScene implements Scene {
     target.team = "player";
     target.recruited = true;
     target.facing = this.active.facing;
-    this.ui.toast(`${target.name} joins your cause!`);
-    this.pushLog(`${target.name} turns and fights for the Ashen Banner!`);
+    this.ui.toast(t("battle.toasts.recruitJoin", { name: target.name }));
+    this.pushLog(t("battle.log.joinedCause", { name: target.name }));
     this.afterAction();
   }
 
@@ -856,14 +923,14 @@ export class BattleScene implements Scene {
     // NOTE: the damage forecast preview still shows the original target — Cover is
     // a reactive interception (like Counter), not previewed before the hit resolves.
     const actual = coverFor(target, this.units) ?? target;
-    if (actual !== target) this.ui.toast(`${actual.name} covers ${target.name}!`);
-    const res = resolveWeaponAttack(this.active, actual, weapon, this.rng, this.posCtx(actual.pos));
+      if (actual !== target) this.ui.toast(t("battle.toasts.covers", { actual: actual.name, target: target.name }));
+      const res = resolveWeaponAttack(this.active, actual, weapon, this.rng, this.posCtx(actual.pos));
     this.pushEffect(actual.pos, vfxKeyForWeapon(weapon));
     this.pushPopup(res);
     // Credit kill-participation against the unit actually struck — Cover may have
     // redirected the hit onto `actual` rather than the originally-aimed `target`.
     this.registerHit(this.active, actual, res.kind === "damage" ? res.amount : 0);
-    if (res.killed) this.awardKill(actual, this.active.id);
+    if (res.killed) { this.awardKill(actual, this.active.id); this.ctx.state.lastAttackKind = "physical"; }
     this.awardForAction(this.active, { offensive: true, killed: res.killed });
     this.awardGold(res.killed ? 1 : 0);
     // A surviving melee-struck defender may strike back.
@@ -938,8 +1005,16 @@ export class BattleScene implements Scene {
       if (!isOffensive && target.team !== this.active!.team) return false;
       return true;
     });
-    if (!hasValidTarget) {
-      this.ui.toast("No valid target there.");
+      if (!hasValidTarget) {
+        this.ui.toast(t("battle.toasts.noValidTarget"));
+        return;
+      }
+
+    const failChance = COMBO_FAIL_CHANCES[skill.id] ?? 0;
+    if (failChance > 0 && this.rng.next() < failChance) {
+      this.ui.toast(t("combos.failed", { name: skill.name }));
+      this.pushTextPopup(this.active.pos, t("combos.failed", { name: skill.name }), POPUP_COLORS.status);
+      this.afterAction();
       return;
     }
 
@@ -947,8 +1022,8 @@ export class BattleScene implements Scene {
     if (skill.chargeTime && skill.chargeTime > 0) {
       this.active.stats.mp = Math.max(0, this.active.stats.mp - skill.mpCost);
       this.active.charging = { skillId: skill.id, target: { ...center }, turnsLeft: skill.chargeTime };
-      this.pushTextPopup(this.active.pos, `Charging ${skill.name}…`, POPUP_COLORS.status);
-      this.pushLog(`${this.active.name} begins charging ${skill.name}!`);
+      this.pushTextPopup(this.active.pos, t("battle.log.chargingSkill", { name: skill.name }), POPUP_COLORS.status);
+      this.pushLog(t("battle.log.beginsCharging", { name: this.active.name, skill: skill.name }));
       this.afterAction();
       return;
     }
@@ -980,7 +1055,7 @@ export class BattleScene implements Scene {
       // NOTE: the damage forecast preview still shows the original target — Cover is
       // a reactive interception (like Counter), not previewed before the hit resolves.
       const actual = (isOffensive && skill.aoe === "single") ? (coverFor(target, this.units) ?? target) : target;
-      if (actual !== target) this.ui.toast(`${actual.name} covers ${target.name}!`);
+      if (actual !== target) this.ui.toast(t("battle.toasts.covers", { actual: actual.name, target: target.name }));
       const ctx: AttackContext = {
         heightDelta: this.grid.heightAt(caster.pos.x, caster.pos.y) - this.grid.heightAt(actual.pos.x, actual.pos.y),
       };
@@ -993,7 +1068,7 @@ export class BattleScene implements Scene {
         // (and credits the kill); a heal on an ally feeds the MVP tally.
         if (isOffensive) {
           this.registerHit(caster, actual, r.kind === "damage" ? r.amount : 0);
-          if (r.killed) this.awardKill(actual, caster.id);
+          if (r.killed) { this.awardKill(actual, caster.id); this.ctx.state.lastAttackKind = skill.scaling === "magical" ? "magical" : "physical"; }
         } else if (r.kind === "heal") {
           this.bumpTally(caster.id, "heals", r.amount);
         }
@@ -1059,13 +1134,14 @@ export class BattleScene implements Scene {
       item.effect === "revive" ? occupants.find((u) => !u.alive) : occupants.find((u) => u.alive);
     if (!target) return;
     const res = resolveItem(target, item.effect, item.amount, item.statusKind, item.statusDuration);
-    if (!res) {
-      this.ui.toast("That has no effect here.");
-      return;
-    }
+      if (!res) {
+        this.ui.toast(t("battle.toasts.noEffect"));
+        return;
+      }
     this.ctx.state.inventory[item.id] = Math.max(0, (this.ctx.state.inventory[item.id] ?? 0) - 1);
     this.pushPopup(res);
     if (res.kind === "heal") this.bumpTally(this.active.id, "heals", res.amount);
+    if (res.kind === "damage" && res.killed) this.ctx.state.lastAttackKind = "item";
     this.awardForAction(this.active, { support: true });
     this.afterAction();
   }
@@ -1087,13 +1163,13 @@ export class BattleScene implements Scene {
     if (!skill.leap || skill.aoe !== "single") return true;
     const victim = this.units.find((u) => u.alive && u.team !== caster.team && samePoint(u.pos, center));
     if (!victim) {
-      if (caster.team === "player") this.ui.toast("No valid target there.");
+      if (caster.team === "player") this.ui.toast(t("battle.toasts.noValidTarget"));
       return false;
     }
     if (manhattan(caster.pos, victim.pos) <= 1) return true; // already adjacent — strike in place
     const land = leapLanding(this.grid, this.units, caster, victim.pos);
     if (!land) {
-      if (caster.team === "player") this.ui.toast("No room to land beside the target.");
+      if (caster.team === "player") this.ui.toast(t("battle.toasts.noRoomToLand"));
       return false;
     }
     void this.ctx.animator.moveAlong(caster.id, [caster.pos, land]);
@@ -1203,7 +1279,7 @@ export class BattleScene implements Scene {
     this.xpEarned.set(unit.id, (this.xpEarned.get(unit.id) ?? 0) + amount);
     const info = grantXpTracked(unit, amount);
     if (info) {
-      this.pushLog(`${unit.name} reaches Lv ${unit.level}!`);
+      this.pushLog(t("battle.log.reachesLevel", { name: unit.name, level: unit.level }));
       if (queueCard) this.levelUps.push(info);
     }
   }
@@ -1244,7 +1320,7 @@ export class BattleScene implements Scene {
     if (drop) {
       this.ctx.state.inventory[drop] = (this.ctx.state.inventory[drop] ?? 0) + 1;
       this.itemsFound.push(drop);
-      this.pushLog(`${enemy.name} dropped ${getItem(drop).name}.`);
+      this.pushLog(t("battle.log.droppedItem", { name: enemy.name, item: getItem(drop).name }));
     }
     this.participants.delete(enemy.id);
   }
@@ -1328,11 +1404,11 @@ export class BattleScene implements Scene {
   /** The most valuable hero this battle (kills first, then damage, then heals). */
   private mvpFrom(): BattleRewards["mvp"] {
     let best: { id: string; score: number; reason: string } | null = null;
-    for (const [id, t] of this.tally) {
-      const score = t.kills * 1000 + t.damage + t.heals;
+    for (const [id, tally] of this.tally) {
+      const score = tally.kills * 1000 + tally.damage + tally.heals;
       if (score <= 0) continue;
       const reason =
-        t.kills > 0 ? `${t.kills} kill${t.kills > 1 ? "s" : ""}` : t.heals > t.damage ? `${t.heals} HP healed` : `${t.damage} damage`;
+        tally.kills > 0 ? t("battle.mvp.kills", { count: tally.kills, s: tally.kills > 1 ? "s" : "" }) : tally.heals > tally.damage ? t("battle.mvp.heals", { count: tally.heals }) : t("battle.mvp.damage", { count: tally.damage });
       if (!best || score > best.score) best = { id, score, reason };
     }
     if (!best) return undefined;
@@ -1378,16 +1454,16 @@ export class BattleScene implements Scene {
       parts.push(getItem(id).name);
     }
     sfx.playTreasure();
-    this.pushTextPopup(chest.pos, "Treasure!", POPUP_COLORS.crit);
-    this.pushLog(`${opener} opens a chest: ${parts.join(", ") || "empty"}.`);
-    this.ui.toast(`Treasure: ${parts.join(" · ") || "empty"}`);
+    this.pushTextPopup(chest.pos, t("battle.log.treasure"), POPUP_COLORS.crit);
+    this.pushLog(t("battle.log.opensChest", { opener, contents: parts.join(", ") || t("battle.log.chestEmpty") }));
+    this.ui.toast(t("battle.toasts.treasure", { contents: parts.join(" · ") || t("battle.log.chestEmpty") }));
   }
 
   /** DEV: open the nearest unopened chest (preview the treasure flow). */
   devOpenChest(): void {
     if (this.phase === "over") return;
     const chest = this.chests.find((c) => !c.opened);
-    if (chest) this.openChest(chest, this.active?.name ?? "Someone");
+    if (chest) this.openChest(chest, this.active?.name ?? t("battle.log.someone"));
   }
 
   // --- Enemy AI ---
@@ -1415,7 +1491,7 @@ export class BattleScene implements Scene {
         // NOTE: the damage forecast preview still shows the original target — Cover is
         // a reactive interception (like Counter), not previewed before the hit resolves.
         const actual = coverFor(target, this.units) ?? target;
-        if (actual !== target) this.ui.toast(`${actual.name} covers ${target.name}!`);
+        if (actual !== target) this.ui.toast(t("battle.toasts.covers", { actual: actual.name, target: target.name }));
         const res = resolveWeaponAttack(unit, actual, weapon, this.rng, heightDelta(actual.pos));
         this.pushEffect(actual.pos, vfxKeyForWeapon(weapon));
         this.pushPopup(res);
@@ -1447,7 +1523,7 @@ export class BattleScene implements Scene {
         // NOTE: the damage forecast preview still shows the original target — Cover is
         // a reactive interception (like Counter), not previewed before the hit resolves.
         const actual = (isOffensive && skill.aoe === "single") ? (coverFor(target, this.units) ?? target) : target;
-        if (actual !== target) this.ui.toast(`${actual.name} covers ${target.name}!`);
+        if (actual !== target) this.ui.toast(t("battle.toasts.covers", { actual: actual.name, target: target.name }));
         const r = resolveSkillOnTarget(unit, actual, skill, this.rng, heightDelta(actual.pos));
         if (r) {
           this.pushEffect(actual.pos, skillVfx);
@@ -1537,16 +1613,16 @@ export class BattleScene implements Scene {
         color = POPUP_COLORS.heal;
         break;
       case "mp":
-        text = `+${res.amount} MP`;
+        text = t("battle.popups.mpGain", { amount: res.amount });
         color = POPUP_COLORS.mp;
         break;
       case "revive":
-        text = `Revive +${res.amount}`;
+        text = t("battle.popups.revive", { amount: res.amount });
         color = POPUP_COLORS.revive;
         break;
       case "status":
         // A status result with no `status` field is a cure (Remedy strips debuffs).
-        text = res.status ?? "Cure";
+        text = res.status ?? t("battle.popups.cure");
         color = POPUP_COLORS.status;
         break;
     }
@@ -1555,7 +1631,10 @@ export class BattleScene implements Scene {
       this.shakeScreen(0.85); // a unit falling thuds — slightly softer than a crit
     }
     this.popups.push({ tile: { ...target.pos }, text, color, age: 0, ttl: 1.1, crit });
-    this.pushLog(formatHit(res, (id) => this.units.find((u) => u.id === id)?.name ?? "Someone"));
+    this.pushLog(formatHit(res, (id) => this.units.find((u) => u.id === id)?.name ?? t("battle.log.someone")));
+
+
+
   }
 
   /**
@@ -1566,11 +1645,11 @@ export class BattleScene implements Scene {
    */
   private recruitHintFor(unit: Unit): string | undefined {
     if (this.active?.team !== "player" || unit.team === "player" || !unit.alive) return undefined;
-    if (canRecruit(this.active, unit)) return "✦ Recruit ready — use Recruit to turn this foe.";
+    if (canRecruit(this.active, unit)) return t("battle.recruitHints.ready");
     if (unit.stats.hp <= RECRUIT_HP_FRACTION * unit.stats.maxHp) {
-      return "✦ Recruitable — step adjacent, then Recruit.";
+      return t("battle.recruitHints.recruitable");
     }
-    return `✦ Can be recruited once worn down to ≤${Math.round(RECRUIT_HP_FRACTION * 100)}% HP & adjacent.`;
+    return t("battle.recruitHints.wornDown", { percent: Math.round(RECRUIT_HP_FRACTION * 100) });
   }
 
   private refreshTurnBar(): void {

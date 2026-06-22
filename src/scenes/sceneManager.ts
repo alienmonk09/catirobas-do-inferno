@@ -17,6 +17,7 @@ export interface Navigation {
   toBattle(phaseIndex: number): void;
   toParty(): void;
   toVictory(): void;
+  toEnding(endingId: string): void;
 }
 
 export interface GameContext {

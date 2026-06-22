@@ -1,5 +1,5 @@
 import type { ClassId, EquipMod, EquipSlot, Reaction, Stats, Unit } from "../core/types";
-import { CLASSES, getClass } from "../data/classes";
+import { CLASSES, getClass, isPrimaryClass } from "../data/classes";
 import { getRace } from "../data/races";
 import { WEAPONS, getWeapon } from "../data/weapons";
 import { equipmentForSlot, EQUIPMENT, getEquipment } from "../data/equipment";
@@ -17,6 +17,7 @@ import {
   MASTERY_SPD_BONUS,
 } from "../core/unit";
 import { saveGame, buyItem, buyEquipment, ownsEquipment, sellItem, sellEquipment, ownsWeapon, buyWeapon, sellWeapon, partyAverageLevel } from "../core/state";
+import { effectivePrice, canShop } from "../core/reputation";
 import { PHASES } from "../data/maps";
 import {
   partyCapForPhase,
@@ -30,6 +31,7 @@ import { el, clear } from "../ui/dom";
 import { iconImg } from "../ui/icons";
 import { startMusic, stopMusic } from "../engine/music";
 import { REACTIONS, reactionName, reactionOptions } from "../data/reactions";
+import { t } from "../i18n";
 import type { GameContext, Scene } from "./sceneManager";
 
 /** Between-phase screen: class change, equipment, and spending SP on skills. */
@@ -150,7 +152,7 @@ export class PartyScene implements Scene {
       row.appendChild(
         el("button", {
           className: "btn small",
-          text: `${labelPrefix}Learn ${skill.name} (${skill.spCost} SP)`,
+          text: t("party.camp.unitCard.learn", { prefix: labelPrefix, name: skill.name, cost: skill.spCost }),
           attrs: affordable ? {} : { disabled: "true" },
           onClick: affordable ? () => this.learnFrom(unit, classId) : undefined,
         }),
@@ -158,11 +160,11 @@ export class PartyScene implements Scene {
       row.appendChild(
         el("span", {
           attrs: { style: `font-size:11px;margin-left:6px;opacity:0.8;color:${affordable ? "#9aa3b2" : "#ff9a9a"}` },
-          text: affordable ? `${remaining} left` : `need ${skill.spCost - unit.sp} more SP`,
+          text: affordable ? t("party.camp.unitCard.remaining", { count: remaining }) : t("party.camp.unitCard.needMore", { amount: skill.spCost - unit.sp }),
         }),
       );
     } else {
-      row.appendChild(el("span", { text: `${labelPrefix}all learned ✓`, attrs: { style: "font-size:12px;opacity:0.6" } }));
+      row.appendChild(el("span", { text: t("party.camp.unitCard.allLearned", { prefix: labelPrefix }), attrs: { style: "font-size:12px;opacity:0.6" } }));
     }
     return row;
   }
@@ -196,7 +198,7 @@ export class PartyScene implements Scene {
     head.appendChild(iconImg(getHeroSprite(hero.id) ?? getCharacterSprite(hero.classId), 44));
     const headText = el("div");
     headText.appendChild(el("h3", { text: hero.name }));
-    headText.appendChild(el("div", { className: "role", text: `${cls.name} · ${race.name} · joins at Lv ${this.recruitLevel()}` }));
+    headText.appendChild(el("div", { className: "role", text: `${cls.name} · ${race.name} · ${t("party.camp.reinforcements.joinsAt", { level: this.recruitLevel() })}` }));
     head.appendChild(headText);
     head.appendChild(el("div", { className: "pick-badge", attrs: { style: "background:#5fbf72" }, text: "+" }));
     card.appendChild(head);
@@ -217,7 +219,7 @@ export class PartyScene implements Scene {
     const headText = el("div");
     headText.appendChild(el("h3", { text: unit.name }));
     headText.appendChild(
-      el("div", { className: "role", text: `${cls.name} · ${getRace(unit.raceId).name} · Lv ${unit.level}` }),
+      el("div", { className: "role", text: `${cls.name} · ${getRace(unit.raceId).name} · ${t("common.lv")} ${unit.level}` }),
     );
     head.appendChild(headText);
     card.appendChild(head);
@@ -247,34 +249,53 @@ export class PartyScene implements Scene {
     const gearStr = fmtMod(equipmentMod(unit));
     if (gearStr) {
       card.appendChild(
-        el("div", { attrs: { style: "font-size:11px;opacity:0.75;margin-top:5px;color:#9fd0a8" }, text: `Gear ${gearStr}` }),
+        el("div", { attrs: { style: "font-size:11px;opacity:0.75;margin-top:5px;color:#9fd0a8" }, text: t("party.camp.unitCard.gear", { mods: gearStr }) }),
       );
     }
 
     // Richer character read-outs: XP progress, affinities, growth, mastery.
     card.appendChild(this.characterSheet(unit));
 
-    // Class change. Each option previews that class's stats AT THIS LEVEL so the
-    // player can compare loadouts before committing (the swap is reversible, but
-    // an up-front preview beats trial-and-error).
-    card.appendChild(el("label", { text: "Class" }));
-    const classSel = el("select");
-    for (const c of Object.values(CLASSES)) {
-      const cs = statsForLevel(c.id, unit.level, unit.raceId);
+    // Class change. Primary classes (Cavaleiro, Mago, Tanque, Assassino) are
+    // locked to the 4 GDD heroes — the selector is disabled and shows a lock
+    // note. Sub-jobs are freely changeable below.
+    const isPrimary = isPrimaryClass(unit.classId);
+    card.appendChild(el("label", { text: isPrimary ? t("party.camp.unitCard.classLocked") : t("party.camp.unitCard.classLabel") }));
+    if (isPrimary) {
+      card.appendChild(
+        el("div", {
+          attrs: { style: "font-size:12px;opacity:0.7;margin:2px 0 4px" },
+          text: t("party.camp.unitCard.classLockedDesc", { name: cls.name, hero: unit.name }),
+        }),
+      );
+      const classSel = el("select");
       const opt = el("option", {
-        text: `${c.name} — HP ${cs.maxHp} ATK ${cs.atk} MAG ${cs.mag} SPD ${cs.spd}`,
-        attrs: { value: c.id },
+        text: `${cls.name} — HP ${statsForLevel(unit.classId, unit.level, unit.raceId).maxHp} ATK ${statsForLevel(unit.classId, unit.level, unit.raceId).atk} MAG ${statsForLevel(unit.classId, unit.level, unit.raceId).mag} SPD ${statsForLevel(unit.classId, unit.level, unit.raceId).spd}`,
+        attrs: { value: unit.classId },
       });
-      if (c.id === unit.classId) opt.selected = true;
+      opt.selected = true;
       classSel.appendChild(opt);
+      classSel.disabled = true;
+      card.appendChild(classSel);
+    } else {
+      const classSel = el("select");
+      for (const c of Object.values(CLASSES)) {
+        const cs = statsForLevel(c.id, unit.level, unit.raceId);
+        const opt = el("option", {
+          text: `${c.name} — HP ${cs.maxHp} ATK ${cs.atk} MAG ${cs.mag} SPD ${cs.spd}`,
+          attrs: { value: c.id },
+        });
+        if (c.id === unit.classId) opt.selected = true;
+        classSel.appendChild(opt);
+      }
+      classSel.addEventListener("change", () => this.changeClass(unit, classSel.value as ClassId));
+      card.appendChild(classSel);
     }
-    classSel.addEventListener("change", () => this.changeClass(unit, classSel.value as ClassId));
-    card.appendChild(classSel);
 
     // Secondary job — a second class's skill set, usable alongside the primary.
-    card.appendChild(el("label", { text: "Sub-job (second skill set)" }));
+    card.appendChild(el("label", { text: t("party.camp.unitCard.subJob") }));
     const subSel = el("select");
-    const noneOpt = el("option", { text: "— none —", attrs: { value: "" } });
+    const noneOpt = el("option", { text: t("common.none"), attrs: { value: "" } });
     if (!unit.subClassId) noneOpt.selected = true;
     subSel.appendChild(noneOpt);
     for (const c of Object.values(CLASSES)) {
@@ -289,8 +310,8 @@ export class PartyScene implements Scene {
       el("div", {
         attrs: { style: "font-size:11px;opacity:0.7;margin:2px 0 2px" },
         text: unit.subClassId
-          ? `Casts ${getClass(unit.subClassId).name}'s skills alongside ${cls.name}'s — spend SP on both below.`
-          : "Pick a second class to learn and use its skills alongside your own.",
+          ? t("party.camp.unitCard.subJobCasts", { subClass: getClass(unit.subClassId).name, primary: cls.name })
+          : t("party.camp.unitCard.subJobPick"),
       }),
     );
 
@@ -299,13 +320,13 @@ export class PartyScene implements Scene {
     // cost) in response to an enemy action.
     const innate = getClass(unit.classId).reactions ?? [];
     const innateNote = innate.length
-      ? `Innate: ${innate.map(reactionName).join(", ")}`
-      : "No innate reactions";
+      ? t("party.camp.unitCard.innateReactions", { reactions: innate.map(reactionName).join(", ") })
+      : t("party.camp.unitCard.noInnateReactions");
     card.appendChild(
-      el("label", { text: `Reaction (${innateNote})` }),
+      el("label", { text: t("party.camp.unitCard.reaction", { innate: innateNote }) }),
     );
     const reactionSel = el("select");
-    const reactionNoneOpt = el("option", { text: "— none —", attrs: { value: "" } });
+    const reactionNoneOpt = el("option", { text: t("common.none"), attrs: { value: "" } });
     if (!unit.reactionId) reactionNoneOpt.selected = true;
     reactionSel.appendChild(reactionNoneOpt);
     for (const [id, label] of reactionOptions()) {
@@ -340,7 +361,7 @@ export class PartyScene implements Scene {
     card.appendChild(
       el("label", {
         className: "wlabel",
-        children: [el("span", { text: "Weapon" }), iconImg(getWeaponSprite(unit.weaponId), 18)],
+        children: [el("span", { text: t("party.camp.unitCard.weapon") }), iconImg(getWeaponSprite(unit.weaponId), 18)],
       }),
     );
     const wSel = el("select");
@@ -355,12 +376,12 @@ export class PartyScene implements Scene {
       const dRng = w.range - curWeapon.range;
       const deltas: string[] = [];
       if (w.id !== unit.weaponId) {
-        if (dPow) deltas.push(`${dPow > 0 ? "+" : "−"}${Math.abs(dPow)} pow`);
-        if (dRng) deltas.push(`${dRng > 0 ? "+" : "−"}${Math.abs(dRng)} rng`);
+        if (dPow) deltas.push(`${dPow > 0 ? "+" : "−"}${Math.abs(dPow)} ${t("common.pow")}`);
+        if (dRng) deltas.push(`${dRng > 0 ? "+" : "−"}${Math.abs(dRng)} ${t("common.rng")}`);
       }
-      const kindTag = w.kind === "magical" ? ", magical" : "";
+      const kindTag = w.kind === "magical" ? `, ${t("common.magical")}` : "";
       const deltaTag = deltas.length ? `  [${deltas.join(", ")}]` : "";
-      const opt = el("option", { text: `${w.name} (pow ${w.power}, rng ${w.range}${kindTag})${deltaTag}`, attrs: { value: w.id } });
+      const opt = el("option", { text: t("party.camp.shop.weaponFormat", { name: w.name, power: w.power, range: w.range, kindTag, deltaTag }), attrs: { value: w.id } });
       if (w.id === unit.weaponId) opt.selected = true;
       wSel.appendChild(opt);
     }
@@ -371,19 +392,19 @@ export class PartyScene implements Scene {
     card.appendChild(
       el("label", {
         className: "wlabel",
-        children: [el("span", { text: "Armor" }), iconImg(getEquipmentSprite("armor"), 18)],
+        children: [el("span", { text: t("party.camp.unitCard.armor") }), iconImg(getEquipmentSprite("armor"), 18)],
       }),
     );
     const armorSel = el("select");
     const curArmorMod = unit.armorId ? getEquipment(unit.armorId).mod : {};
-    const noArmorOpt = el("option", { text: `— none —${unit.armorId ? `  [${fmtMod(modDelta({}, curArmorMod))}]` : ""}`, attrs: { value: "" } });
+    const noArmorOpt = el("option", { text: `${t("common.none")}${unit.armorId ? `  [${fmtMod(modDelta({}, curArmorMod))}]` : ""}`, attrs: { value: "" } });
     if (!unit.armorId) noArmorOpt.selected = true;
     armorSel.appendChild(noArmorOpt);
     for (const a of equipmentForSlot("armor").filter(
       (e) => ownsEquipment(this.ctx.state, e.id) || e.id === unit.armorId,
     )) {
       const delta = a.id === unit.armorId ? "" : fmtMod(modDelta(a.mod, curArmorMod));
-      const opt = el("option", { text: `${a.name} (${fmtMod(a.mod) || "no mods"})${delta ? `  [${delta}]` : ""}`, attrs: { value: a.id } });
+      const opt = el("option", { text: `${a.name} (${fmtMod(a.mod) || t("common.noMods")})${delta ? `  [${delta}]` : ""}`, attrs: { value: a.id } });
       if (a.id === unit.armorId) opt.selected = true;
       armorSel.appendChild(opt);
     }
@@ -394,19 +415,19 @@ export class PartyScene implements Scene {
     card.appendChild(
       el("label", {
         className: "wlabel",
-        children: [el("span", { text: "Accessory" }), iconImg(getEquipmentSprite("accessory"), 18)],
+        children: [el("span", { text: t("party.camp.unitCard.accessory") }), iconImg(getEquipmentSprite("accessory"), 18)],
       }),
     );
     const accSel = el("select");
     const curAccMod = unit.accessoryId ? getEquipment(unit.accessoryId).mod : {};
-    const noAccOpt = el("option", { text: `— none —${unit.accessoryId ? `  [${fmtMod(modDelta({}, curAccMod))}]` : ""}`, attrs: { value: "" } });
+    const noAccOpt = el("option", { text: `${t("common.none")}${unit.accessoryId ? `  [${fmtMod(modDelta({}, curAccMod))}]` : ""}`, attrs: { value: "" } });
     if (!unit.accessoryId) noAccOpt.selected = true;
     accSel.appendChild(noAccOpt);
     for (const acc of equipmentForSlot("accessory").filter(
       (e) => ownsEquipment(this.ctx.state, e.id) || e.id === unit.accessoryId,
     )) {
       const delta = acc.id === unit.accessoryId ? "" : fmtMod(modDelta(acc.mod, curAccMod));
-      const opt = el("option", { text: `${acc.name} (${fmtMod(acc.mod) || "no mods"})${delta ? `  [${delta}]` : ""}`, attrs: { value: acc.id } });
+      const opt = el("option", { text: `${acc.name} (${fmtMod(acc.mod) || t("common.noMods")})${delta ? `  [${delta}]` : ""}`, attrs: { value: acc.id } });
       if (acc.id === unit.accessoryId) opt.selected = true;
       accSel.appendChild(opt);
     }
@@ -420,7 +441,7 @@ export class PartyScene implements Scene {
     card.appendChild(
       el("div", {
         className: "skills",
-        text: `Skills: ${knownIds.length ? knownIds.map((id) => getSkill(id).name).join(", ") : "—"}`,
+        text: t("party.camp.unitCard.skillsLabel", { skills: knownIds.length ? knownIds.map((id) => getSkill(id).name).join(", ") : "—" }),
       }),
     );
     if (knownIds.length) {
@@ -433,13 +454,13 @@ export class PartyScene implements Scene {
     card.appendChild(
       el("div", {
         attrs: { style: "font-size:13px;margin-top:8px;font-weight:700;color:#ffd98a" },
-        text: `◆ ${unit.sp} Skill Points`,
+        text: t("party.camp.unitCard.skillPoints", { amount: unit.sp }),
       }),
     );
     // Learned-vs-locked breakdown for the primary class (and sub-job), so the
     // player sees the full unlock order and which skill SP buys next.
-    card.appendChild(this.skillSheet(unit, unit.classId, "Skills"));
-    if (unit.subClassId) card.appendChild(this.skillSheet(unit, unit.subClassId, `Sub: ${getClass(unit.subClassId).name}`));
+    card.appendChild(this.skillSheet(unit, unit.classId, t("party.camp.unitCard.skillsTitle")));
+    if (unit.subClassId) card.appendChild(this.skillSheet(unit, unit.subClassId, t("party.camp.unitCard.subTitle", { name: getClass(unit.subClassId).name })));
 
     card.appendChild(this.learnRow(unit, unit.classId, ""));
     if (unit.subClassId) card.appendChild(this.learnRow(unit, unit.subClassId, `${getClass(unit.subClassId).name}: `));
@@ -456,7 +477,7 @@ export class PartyScene implements Scene {
     const need = xpForLevel(unit.level);
     const pct = need > 0 ? Math.min(100, Math.round((unit.xp / need) * 100)) : 0;
     const xpSec = el("div", { className: "cs-section" });
-    xpSec.appendChild(el("div", { className: "cs-label", text: "Experience" }));
+    xpSec.appendChild(el("div", { className: "cs-label", text: t("party.camp.characterSheet.experience") }));
     const xpRow = el("div", { className: "cs-xp-row" });
     const xpTrack = el("div", { className: "cs-xp-track" });
     xpTrack.appendChild(el("span", { className: "cs-xp-fill", attrs: { style: `width:${pct}%` } }));
@@ -471,7 +492,7 @@ export class PartyScene implements Scene {
     const resist = race.resist ?? [];
     if (weak.length || resist.length) {
       const affSec = el("div", { className: "cs-section" });
-      affSec.appendChild(el("div", { className: "cs-label", text: "Affinities" }));
+      affSec.appendChild(el("div", { className: "cs-label", text: t("party.camp.characterSheet.affinities") }));
       const chips = el("div", { className: "cs-chips" });
       for (const e of weak) chips.appendChild(el("span", { className: "cs-chip weak", text: `${e} ×1.5` }));
       for (const e of resist) chips.appendChild(el("span", { className: "cs-chip resist", text: `${e} ×0.5` }));
@@ -485,7 +506,7 @@ export class PartyScene implements Scene {
     const growthOrder: (keyof typeof growth)[] = ["hp", "mp", "atk", "def", "mag", "res", "spd"];
     const maxGrowth = Math.max(...growthOrder.map((k) => growth[k]), 0.0001);
     const grSec = el("div", { className: "cs-section" });
-    grSec.appendChild(el("div", { className: "cs-label", text: "Growth / level" }));
+    grSec.appendChild(el("div", { className: "cs-label", text: t("party.camp.characterSheet.growth") }));
     const grGrid = el("div", { className: "cs-growth" });
     for (const k of growthOrder) {
       const v = growth[k];
@@ -502,7 +523,7 @@ export class PartyScene implements Scene {
     // 4. Mastery progress — learned/total per active job, plus the current
     //    party-wide mastery passive (each mastered class adds +HP/+SPD).
     const mastSec = el("div", { className: "cs-section" });
-    mastSec.appendChild(el("div", { className: "cs-label", text: "Mastery" }));
+    mastSec.appendChild(el("div", { className: "cs-label", text: t("party.camp.characterSheet.mastery") }));
     mastSec.appendChild(this.masteryRow(unit, unit.classId, getClass(unit.classId).name));
     if (unit.subClassId) mastSec.appendChild(this.masteryRow(unit, unit.subClassId, getClass(unit.subClassId).name));
     const masteredCount = masteredClasses(unit).length;
@@ -510,7 +531,7 @@ export class PartyScene implements Scene {
       mastSec.appendChild(
         el("div", {
           className: "cs-mastery-bonus",
-          text: `${masteredCount} mastered → +${masteredCount * MASTERY_HP_BONUS} HP, +${masteredCount * MASTERY_SPD_BONUS} SPD`,
+          text: t("party.camp.characterSheet.mastered", { count: masteredCount, hp: masteredCount * MASTERY_HP_BONUS, spd: masteredCount * MASTERY_SPD_BONUS }),
         }),
       );
     }
@@ -591,23 +612,23 @@ export class PartyScene implements Scene {
 
     // --- Header: title, status, gold, and the section tab bar (all fixed). ---
     const head = el("div", { className: "party-head" });
-    head.appendChild(el("h1", { text: "Party Camp" }));
+    head.appendChild(el("h1", { text: t("party.camp.title") }));
     if (this.ctx.state.permadeath) {
-      head.appendChild(el("div", { className: "diff-desc", attrs: { style: "color:#ff9a9a;font-weight:700;margin:0" }, text: "⚑ Classic mode — fallen heroes are lost for good." }));
+      head.appendChild(el("div", { className: "diff-desc", attrs: { style: "color:#ff9a9a;font-weight:700;margin:0" }, text: t("party.camp.classicMode") }));
     }
     head.appendChild(
       el("div", {
         className: "sub",
-        text: `Next: Phase ${idx + 1} — ${nextMap.name}. Units are fully restored before each battle.`,
+        text: t("party.camp.next", { index: idx + 1, name: nextMap.name }),
       }),
     );
-    head.appendChild(el("div", { className: "camp-gold", text: `Gold: ${this.ctx.state.gold}` }));
+    head.appendChild(el("div", { className: "camp-gold", text: t("party.camp.gold", { amount: this.ctx.state.gold }) }));
 
     const tabs = el("div", { className: "camp-tabs" });
     const tabDef: { id: CampTab; label: string; badge?: string }[] = [
-      { id: "party", label: "Party" },
-      ...(showReinforce ? [{ id: "reinforcements" as CampTab, label: "Reinforcements", badge: String(this.openSlots()) }] : []),
-      { id: "shop", label: "Shop" },
+      { id: "party", label: t("party.camp.tabs.party") },
+      ...(showReinforce ? [{ id: "reinforcements" as CampTab, label: t("party.camp.tabs.reinforcements"), badge: String(this.openSlots()) }] : []),
+      { id: "shop", label: t("party.camp.tabs.shop") },
     ];
     for (const t of tabDef) {
       const btn = el("button", {
@@ -633,7 +654,7 @@ export class PartyScene implements Scene {
     footer.appendChild(
       el("button", {
         className: "btn",
-        text: `March to Phase ${idx + 1} →`,
+        text: t("party.camp.march", { index: idx + 1 }),
         onClick: () => this.ctx.nav.toBattle(idx),
       }),
     );
@@ -658,11 +679,11 @@ export class PartyScene implements Scene {
     body.appendChild(
       el("div", {
         className: "section-title",
-        text: `Reinforcements — ${open} slot${open !== 1 ? "s" : ""} open`,
+        text: t("party.camp.reinforcements.title", { open }),
       }),
     );
     body.appendChild(
-      el("div", { className: "sub", attrs: { style: "margin-bottom:14px" }, text: "Word of the banner spreads. Choose a hero to join your march." }),
+      el("div", { className: "sub", attrs: { style: "margin-bottom:14px" }, text: t("party.camp.reinforcements.desc") }),
     );
     const rgrid = el("div", { className: "party-grid" });
     for (const h of recruits) rgrid.appendChild(this.recruitCard(h));
@@ -676,14 +697,16 @@ export class PartyScene implements Scene {
       .filter(([, c]) => c > 0)
       .map(([id, c]) => `${ITEMS[id]?.name ?? id} ×${c}`)
       .join("   ");
-    screen.appendChild(el("div", { className: "inv-line", text: `Inventory: ${inv || "empty"}` }));
+    screen.appendChild(el("div", { className: "inv-line", text: t("party.camp.shop.inventory", { items: inv || t("common.empty") }) }));
 
     // Shop section.
-    screen.appendChild(el("div", { className: "section-title", text: "Camp Supply" }));
+    screen.appendChild(el("div", { className: "section-title", text: t("party.camp.shop.campSupply") }));
     const shopGrid = el("div", { className: "shop-grid" });
     for (const item of Object.values(ITEMS)) {
       const owned = this.ctx.state.inventory[item.id] ?? 0;
-      const canAfford = this.ctx.state.gold >= item.price;
+      const shopOpen = canShop(this.ctx.state.reputation);
+      const price = effectivePrice(item.price, this.ctx.state.reputation);
+      const canAfford = shopOpen && this.ctx.state.gold >= price;
       const row = el("div", { className: "shop-row" });
       row.appendChild(
         el("div", {
@@ -700,28 +723,28 @@ export class PartyScene implements Scene {
         el("div", {
           className: "shop-item-meta",
           children: [
-            el("span", { className: "shop-item-price", text: `${item.price} gold` }),
+            el("span", { className: "shop-item-price", text: shopOpen ? `${price} ${t("common.gold")}` : t("reputation.refused") }),
             el("span", { className: "shop-item-owned", text: `×${owned}` }),
             el("button", {
               className: "btn small",
-              text: "Buy",
+              text: t("common.buy"),
               attrs: canAfford ? {} : { disabled: "true" },
               onClick: canAfford
                 ? () => {
                     buyItem(this.ctx.state, item.id);
-                    saveGame(this.ctx.state);
+                    this.toastSave();
                     this.render();
                   }
                 : undefined,
             }),
             el("button", {
               className: "btn small",
-              text: `Sell +${sellValue}`,
+              text: t("party.camp.shop.sellValue", { value: sellValue }),
               attrs: canSell ? {} : { disabled: "true" },
               onClick: canSell
                 ? () => {
                     sellItem(this.ctx.state, item.id);
-                    saveGame(this.ctx.state);
+                    this.toastSave();
                     this.render();
                   }
                 : undefined,
@@ -734,14 +757,16 @@ export class PartyScene implements Scene {
     screen.appendChild(shopGrid);
 
     // Gear shop section.
-    screen.appendChild(el("div", { className: "section-title", text: "Gear Shop" }));
+    screen.appendChild(el("div", { className: "section-title", text: t("party.camp.shop.gearShop") }));
     screen.appendChild(
-      el("div", { className: "inv-line", attrs: { style: "margin-bottom:10px" }, text: "Buy equipment once — any unit can equip it." }),
+      el("div", { className: "inv-line", attrs: { style: "margin-bottom:10px" }, text: t("party.camp.shop.buyEquipment") }),
     );
     const gearGrid = el("div", { className: "shop-grid" });
     for (const equip of Object.values(EQUIPMENT)) {
       const owned = ownsEquipment(this.ctx.state, equip.id);
-      const canAfford = this.ctx.state.gold >= equip.price;
+      const shopOpen = canShop(this.ctx.state.reputation);
+      const price = effectivePrice(equip.price, this.ctx.state.reputation);
+      const canAfford = shopOpen && this.ctx.state.gold >= price;
       const modHint = Object.entries(equip.mod)
         .map(([k, v]) => `${(v as number) >= 0 ? "+" : ""}${v as number} ${k.toUpperCase()}`)
         .join(", ");
@@ -752,7 +777,7 @@ export class PartyScene implements Scene {
           children: [
             el("span", {
               className: "shop-item-name",
-              text: `${equip.name} (${equip.slot === "armor" ? "Armor" : "Accessory"})`,
+              text: t("party.camp.shop.equipFormat", { name: equip.name, slot: equip.slot === "armor" ? t("party.camp.shop.armor") : t("party.camp.shop.accessory") }),
             }),
             el("span", { className: "shop-item-desc", text: `${modHint} — ${equip.description}` }),
           ],
@@ -763,30 +788,30 @@ export class PartyScene implements Scene {
         el("div", {
           className: "shop-item-meta",
           children: [
-            el("span", { className: "shop-item-price", text: `${equip.price} gold` }),
+            el("span", { className: "shop-item-price", text: shopOpen ? `${price} ${t("common.gold")}` : t("reputation.refused") }),
             el("span", {
               className: "shop-item-owned",
-              text: owned ? "owned" : "",
+              text: owned ? t("common.owned") : "",
               attrs: owned ? { style: "color:#5fbf72;font-size:12px" } : {},
             }),
             owned
               ? el("button", {
                   className: "btn small",
-                  text: `Sell +${gearSellValue}`,
+                  text: t("party.camp.shop.sellValue", { value: gearSellValue }),
                   onClick: () => {
                     sellEquipment(this.ctx.state, equip.id);
-                    saveGame(this.ctx.state);
+                    this.toastSave();
                     this.render();
                   },
                 })
               : el("button", {
                   className: "btn small",
-                  text: "Buy",
+                  text: t("common.buy"),
                   attrs: canAfford ? {} : { disabled: "true" },
                   onClick: canAfford
                     ? () => {
                         buyEquipment(this.ctx.state, equip.id);
-                        saveGame(this.ctx.state);
+                        this.toastSave();
                         this.render();
                       }
                     : undefined,
@@ -799,16 +824,17 @@ export class PartyScene implements Scene {
     screen.appendChild(gearGrid);
 
     // Weapon shop section.
-    screen.appendChild(el("div", { className: "section-title", text: "Weapon Shop" }));
+    screen.appendChild(el("div", { className: "section-title", text: t("party.camp.shop.weaponShop") }));
     screen.appendChild(
-      el("div", { className: "inv-line", attrs: { style: "margin-bottom:10px" }, text: "Buy upgrade weapons — class-locked; a unit can never be left unarmed." }),
+      el("div", { className: "inv-line", attrs: { style: "margin-bottom:10px" }, text: t("party.camp.shop.buyWeapons") }),
     );
     const weaponGrid = el("div", { className: "shop-grid" });
     for (const weapon of Object.values(WEAPONS)) {
-      // Only show weapons with a positive price (starter weapons are free / default-owned).
       if (weapon.price <= 0) continue;
       const owned = ownsWeapon(this.ctx.state, weapon.id);
-      const canAfford = this.ctx.state.gold >= weapon.price;
+      const shopOpen = canShop(this.ctx.state.reputation);
+      const price = effectivePrice(weapon.price, this.ctx.state.reputation);
+      const canAfford = shopOpen && this.ctx.state.gold >= price;
       const isEquipped = this.ctx.state.party.some((u) => u.weaponId === weapon.id);
       const classNames = weapon.classes.map((c) => CLASSES[c].name).join(", ");
       const row = el("div", { className: "shop-row" });
@@ -817,7 +843,7 @@ export class PartyScene implements Scene {
           className: "shop-item-info",
           children: [
             el("span", { className: "shop-item-name", text: weapon.name }),
-            el("span", { className: "shop-item-desc", text: `POW ${weapon.power}, RNG ${weapon.range} — ${classNames}` }),
+            el("span", { className: "shop-item-desc", text: t("party.camp.shop.weaponDesc", { power: weapon.power, range: weapon.range, classes: classNames }) }),
           ],
         }),
       );
@@ -826,33 +852,33 @@ export class PartyScene implements Scene {
         el("div", {
           className: "shop-item-meta",
           children: [
-            el("span", { className: "shop-item-price", text: `${weapon.price} gold` }),
+            el("span", { className: "shop-item-price", text: shopOpen ? `${price} ${t("common.gold")}` : t("reputation.refused") }),
             el("span", {
               className: "shop-item-owned",
-              text: owned ? "owned" : "",
+              text: owned ? t("common.owned") : "",
               attrs: owned ? { style: "color:#5fbf72;font-size:12px" } : {},
             }),
             owned
               ? el("button", {
                   className: "btn small",
-                  text: `Sell +${weaponSellValue}`,
+                  text: t("party.camp.shop.sellValue", { value: weaponSellValue }),
                   attrs: isEquipped ? { disabled: "true" } : {},
                   onClick: isEquipped
                     ? undefined
                     : () => {
                         sellWeapon(this.ctx.state, weapon.id);
-                        saveGame(this.ctx.state);
+                        this.toastSave();
                         this.render();
                       },
                 })
               : el("button", {
                   className: "btn small",
-                  text: "Buy",
+                  text: t("common.buy"),
                   attrs: canAfford ? {} : { disabled: "true" },
                   onClick: canAfford
                     ? () => {
                         buyWeapon(this.ctx.state, weapon.id);
-                        saveGame(this.ctx.state);
+                        this.toastSave();
                         this.render();
                       }
                     : undefined,
@@ -863,6 +889,17 @@ export class PartyScene implements Scene {
       weaponGrid.appendChild(row);
     }
     screen.appendChild(weaponGrid);
+  }
+
+  private toastSave(): void {
+    saveGame(this.ctx.state);
+    const toast = el("div", {
+      className: "panel toast show",
+      text: t("save.toast"),
+      attrs: { style: "position:fixed;bottom:20px;left:50%;transform:translateX(-50%);z-index:9999;padding:10px 20px;background:#2a2a3a;color:#e8e8f2;border-radius:8px;border:1px solid #5a5a7a;font-size:14px" },
+    });
+    this.ctx.uiParent.appendChild(toast);
+    setTimeout(() => toast.remove(), 2500);
   }
 
   update(_dt: number): void {

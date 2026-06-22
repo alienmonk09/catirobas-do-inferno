@@ -11,6 +11,7 @@ import { getCharacterSprite, getItemSprite, getSkillSprite, getWeaponSprite, spe
 import { isMuted, toggleMuted, sfx } from "../engine/audio";
 import { el, clear } from "./dom";
 import { iconImg, portraitImg } from "./icons";
+import { t } from "../i18n";
 
 export interface ActionState {
   canMove: boolean;
@@ -77,7 +78,7 @@ export class BattleUI {
     this.rotateCtl = el("div", { className: "panel rotate-ctl" });
     this.battleLogLines = el("div", { className: "battle-log-lines" });
     this.battleLogPanel = el("div", { className: "panel battle-log" });
-    this.battleLogPanel.appendChild(el("div", { className: "battle-log-title", text: "Battle Log" }));
+    this.battleLogPanel.appendChild(el("div", { className: "battle-log-title", text: t("battle.battleLog") }));
     this.battleLogPanel.appendChild(this.battleLogLines);
     for (const n of [
       this.turnBar,
@@ -122,15 +123,15 @@ export class BattleUI {
       const need = xpForLevel(unit.level);
       const xpBar = el("div", { className: "bar xp" });
       xpBar.appendChild(el("span", { attrs: { style: `width:${Math.min(100, (unit.xp / need) * 100)}%` } }));
-      xpEls.push(el("div", { text: `XP ${unit.xp}/${need}`, attrs: { style: "font-size:12px" } }), xpBar);
+      xpEls.push(el("div", { text: t("battle.unitPanel.xp", { xp: unit.xp, need }), attrs: { style: "font-size:12px" } }), xpBar);
       const nextId = nextLearnableSkill(unit);
       if (nextId && unit.sp >= getSkill(nextId).spCost) {
-        xpEls.push(el("div", { className: "new-skill-cue", text: `★ New skill ready: ${getSkill(nextId).name}` }));
+        xpEls.push(el("div", { className: "new-skill-cue", text: t("battle.newSkillReady", { name: getSkill(nextId).name }) }));
       }
     }
     return [
       el("h3", { text: `${unit.name}` }),
-      el("div", { className: "sub", text: `${cls.name} · Lv ${unit.level} · ${unit.team === "player" ? "Ally" : "Enemy"}` }),
+      el("div", { className: "sub", text: `${cls.name} · ${t("common.lv")} ${unit.level} · ${unit.team === "player" ? t("battle.ally") : t("battle.enemy")}` }),
       el("div", { text: `HP ${unit.stats.hp}/${unit.stats.maxHp}`, attrs: { style: "font-size:12px" } }),
       hpBar,
       el("div", { text: `MP ${unit.stats.mp}/${unit.stats.maxMp}`, attrs: { style: "font-size:12px" } }),
@@ -144,19 +145,13 @@ export class BattleUI {
         className: "sub weapon-line",
         children: [
           iconImg(getWeaponSprite(unit.weaponId), 16),
-          el("span", { text: `${weapon.name} (pow ${weapon.power}, rng ${weapon.range})` }),
+          el("span", { text: t("battle.unitPanel.weapon", { name: weapon.name, power: weapon.power, range: weapon.range }) }),
         ],
       }),
       el("div", {
         className: "skills-line",
         text: unit.learnedSkillIds.length
-          ? "Skills: " +
-            unit.learnedSkillIds
-              .map((id) => {
-                const s = getSkill(id);
-                return `${s.name} (${describeSkill(s)})`;
-              })
-              .join(", ")
+          ? t("battle.unitPanel.skills", { skills: unit.learnedSkillIds.map((id) => { const s = getSkill(id); return `${s.name} (${describeSkill(s)})`; }).join(", ") })
           : "",
       }),
       reactionLine(unit, cls.reactions),
@@ -190,12 +185,12 @@ export class BattleUI {
   setTurnOrder(units: Unit[]): void {
     clear(this.turnBar);
     this.turnBar.setAttribute("role", "list");
-    this.turnBar.setAttribute("aria-label", "Turn order");
-    this.turnBar.appendChild(el("span", { className: "label", text: "Turn order", attrs: { "aria-hidden": "true" } }));
+    this.turnBar.setAttribute("aria-label", t("battle.turnOrder"));
+    this.turnBar.appendChild(el("span", { className: "label", text: t("battle.turnOrder"), attrs: { "aria-hidden": "true" } }));
     units.forEach((u, i) => {
       const cls = getClass(u.classId);
       const isEnemy = u.team === "enemy";
-      const side = isEnemy ? "Enemy" : "Ally";
+      const side = isEnemy ? t("battle.enemy") : t("battle.ally");
       const chip = el("div", {
         className: `turn-chip${i === 0 ? " first" : ""}${isEnemy ? " enemy" : ""}`,
         attrs: {
@@ -203,7 +198,7 @@ export class BattleUI {
           // Full status/charge list in the tooltip; the badge below shows the headline one.
           title: turnChipTitle(u, cls.name),
           role: "listitem",
-          "aria-label": `${u.name}, ${cls.name}, ${side}${i === 0 ? ", next up" : ""}`,
+          "aria-label": `${u.name}, ${cls.name}, ${side}${i === 0 ? `, ${t("battle.nextUp")}` : ""}`,
         },
         children: [portraitImg(getCharacterSprite(u.classId))],
       });
@@ -266,30 +261,30 @@ export class BattleUI {
     clear(this.rotateCtl);
     const muteBtn = this.audioButton();
     this.rotateCtl.appendChild(
-      el("button", { className: "btn small rbtn zoom-btn", text: "＋", attrs: { title: "Zoom in (+ / mouse wheel) — zoom in to pan the map", "aria-label": "Zoom in" }, onClick: onZoomIn }),
+      el("button", { className: "btn small rbtn zoom-btn", text: "＋", attrs: { title: t("battle.rotate.zoomIn"), "aria-label": t("battle.rotate.zoomIn") }, onClick: onZoomIn }),
     );
     this.rotateCtl.appendChild(
-      el("button", { className: "btn small rbtn zoom-btn", text: "－", attrs: { title: "Zoom out (- / mouse wheel)", "aria-label": "Zoom out" }, onClick: onZoomOut }),
+      el("button", { className: "btn small rbtn zoom-btn", text: "－", attrs: { title: t("battle.rotate.zoomOut"), "aria-label": t("battle.rotate.zoomOut") }, onClick: onZoomOut }),
     );
     this.rotateCtl.appendChild(
-      el("button", { className: "btn small rbtn", text: "⟲", attrs: { title: "Rotate view left (,)" }, onClick: onLeft }),
+      el("button", { className: "btn small rbtn", text: "⟲", attrs: { title: t("battle.rotate.rotateLeft") }, onClick: onLeft }),
     );
     this.rotateCtl.appendChild(this.rotLabel);
     this.rotateCtl.appendChild(
-      el("button", { className: "btn small rbtn", text: "⟳", attrs: { title: "Rotate view right (.)" }, onClick: onRight }),
+      el("button", { className: "btn small rbtn", text: "⟳", attrs: { title: t("battle.rotate.rotateRight") }, onClick: onRight }),
     );
     this.rotateCtl.appendChild(
-      el("button", { className: "btn small rbtn recenter-btn", text: "⊙", attrs: { title: "Recenter on the active unit (c)", "aria-label": "Recenter camera" }, onClick: onRecenter }),
+      el("button", { className: "btn small rbtn recenter-btn", text: "⊙", attrs: { title: t("battle.rotate.recenter"), "aria-label": t("battle.rotate.recenter") }, onClick: onRecenter }),
     );
     this.rotateCtl.appendChild(muteBtn);
     this.rotateCtl.style.display = "flex";
   }
 
   private audioButton(): HTMLButtonElement {
-    const btn = el("button", { className: "btn small rbtn audio-btn", attrs: { title: "Toggle combat sound" } });
+    const btn = el("button", { className: "btn small rbtn audio-btn", attrs: { title: t("battle.rotate.toggleSound") } });
     const sync = () => {
       btn.textContent = isMuted() ? "🔇" : "🔊";
-      btn.setAttribute("aria-label", isMuted() ? "Unmute combat sound" : "Mute combat sound");
+      btn.setAttribute("aria-label", isMuted() ? t("battle.rotate.unmute") : t("battle.rotate.mute"));
     };
     btn.addEventListener("click", () => {
       toggleMuted();
@@ -411,19 +406,19 @@ export class BattleUI {
       if (opts.key) b.appendChild(el("span", { className: "key-hint", text: opts.key }));
       return b;
     };
-    this.actionMenu.appendChild(mk("Move", state.canMove, state.onMove, { accent: "a-move", key: "M", tip: "Walk to a highlighted tile (respects range, terrain & jump) — press M" }));
+    this.actionMenu.appendChild(mk(t("battle.actionMenu.move"), state.canMove, state.onMove, { accent: "a-move", key: "M", tip: t("battle.actionMenu.moveTip") }));
     if (state.canUndo) {
-      this.actionMenu.appendChild(mk("Undo Move", true, state.onUndo ?? (() => {}), { accent: "a-undo", tip: "Take back your move — resets position so you can move again or choose elsewhere" }));
+      this.actionMenu.appendChild(mk(t("battle.actionMenu.undoMove"), true, state.onUndo ?? (() => {}), { accent: "a-undo", tip: t("battle.actionMenu.undoMoveTip") }));
     }
-    this.actionMenu.appendChild(mk("Attack", state.canAct, state.onAttack, { accent: "a-attack", key: "A", tip: "Strike an enemy in weapon range — flank or rear for bonus damage — press A" }));
-    this.actionMenu.appendChild(mk("Skill", state.canAct, state.onSkill, { accent: "a-skill", key: "S", tip: "Cast a learned class skill (costs MP) — press S" }));
-    this.actionMenu.appendChild(mk("Item", state.canAct, state.onItem, { accent: "a-item", key: "I", tip: "Use a shared consumable — press I" }));
+    this.actionMenu.appendChild(mk(t("battle.actionMenu.attack"), state.canAct, state.onAttack, { accent: "a-attack", key: "A", tip: t("battle.actionMenu.attackTip") }));
+    this.actionMenu.appendChild(mk(t("battle.actionMenu.skill"), state.canAct, state.onSkill, { accent: "a-skill", key: "S", tip: t("battle.actionMenu.skillTip") }));
+    this.actionMenu.appendChild(mk(t("battle.actionMenu.item"), state.canAct, state.onItem, { accent: "a-item", key: "I", tip: t("battle.actionMenu.itemTip") }));
     if (state.canRecruit) {
-      this.actionMenu.appendChild(mk("Recruit", true, state.onRecruit ?? (() => {}), { accent: "a-recruit", tip: "Recruit an adjacent weakened enemy — they join your cause and follow you into future battles" }));
+      this.actionMenu.appendChild(mk(t("battle.actionMenu.recruit"), true, state.onRecruit ?? (() => {}), { accent: "a-recruit", tip: t("battle.actionMenu.recruitTip") }));
     }
     // "End Turn" (genre-standard "Wait"), detached from the offensive actions to
     // avoid a reflex misclick forfeiting the whole turn.
-    this.actionMenu.appendChild(mk("End Turn", true, state.onWait, { accent: "a-end", extra: "end-turn", key: "E", tip: "Finish this unit's turn (Enter / E)" }));
+    this.actionMenu.appendChild(mk(t("battle.actionMenu.endTurn"), true, state.onWait, { accent: "a-end", extra: "end-turn", key: "E", tip: t("battle.actionMenu.endTurnTip") }));
     this.actionMenu.style.display = "flex";
     this.placeFloating(this.actionMenu);
   }
@@ -439,11 +434,11 @@ export class BattleUI {
     this.submenu.appendChild(
       el("div", {
         className: "submenu-title",
-        text: `Skills — ${unit.stats.mp}/${unit.stats.maxMp} MP`,
+        text: t("battle.submenu.skills", { mp: unit.stats.mp, maxMp: unit.stats.maxMp }),
       }),
     );
     if (skills.length === 0) {
-      this.submenu.appendChild(el("div", { text: "No skills learned. Spend Skill Points at the Party Camp.", attrs: { style: "opacity:0.7;font-size:12px" } }));
+      this.submenu.appendChild(el("div", { text: t("battle.submenu.noSkills"), attrs: { style: "opacity:0.7;font-size:12px" } }));
     }
     for (const s of skills) {
       const affordable = unit.stats.mp >= s.mpCost;
@@ -459,7 +454,7 @@ export class BattleUI {
       card.appendChild(head);
       if (!affordable) {
         card.appendChild(
-          el("div", { className: "sk-short-note", text: `Not enough MP — need ${s.mpCost - unit.stats.mp} more` }),
+          el("div", { className: "sk-short-note", text: t("battle.submenu.notEnoughMP", { amount: s.mpCost - unit.stats.mp }) }),
         );
       }
       const tags = el("div", { className: "sk-tags" });
@@ -468,7 +463,7 @@ export class BattleUI {
       card.appendChild(el("div", { className: "sk-desc", text: s.description }));
       this.submenu.appendChild(card);
     }
-    this.submenu.appendChild(el("button", { className: "btn small", text: "← Back", onClick: onBack }));
+    this.submenu.appendChild(el("button", { className: "btn small", text: t("battle.submenu.back"), onClick: onBack }));
     this.submenu.style.display = "flex";
     this.placeFloating(this.submenu);
   }
@@ -477,7 +472,7 @@ export class BattleUI {
     clear(this.submenu);
     const usable = entries.filter((e) => e.count > 0);
     if (usable.length === 0) {
-      this.submenu.appendChild(el("div", { text: "No items left.", attrs: { style: "opacity:0.7" } }));
+      this.submenu.appendChild(el("div", { text: t("battle.submenu.noItems"), attrs: { style: "opacity:0.7" } }));
     }
     for (const e of usable) {
       const row = el("div", { className: "row" });
@@ -490,7 +485,7 @@ export class BattleUI {
       row.appendChild(el("span", { className: "cost", text: e.item.description }));
       this.submenu.appendChild(row);
     }
-    this.submenu.appendChild(el("button", { className: "btn small", text: "← Back", onClick: onBack }));
+    this.submenu.appendChild(el("button", { className: "btn small", text: t("battle.submenu.back"), onClick: onBack }));
     this.submenu.style.display = "flex";
     this.placeFloating(this.submenu);
   }
@@ -581,7 +576,7 @@ export class BattleUI {
       }
       speakerRow.style.display = isNarrator ? "none" : "flex";
       textEl.textContent = line.text;
-      nextBtn.textContent = i >= lines.length - 1 ? "Begin ▸" : "Next ▸";
+      nextBtn.textContent = i >= lines.length - 1 ? t("battle.dialogue.begin") : t("battle.dialogue.next");
       progressEl.textContent = `${i + 1} / ${lines.length}`;
     };
     // The box itself advances on click; the explicit buttons don't double-fire.
@@ -591,7 +586,7 @@ export class BattleUI {
     const bar = el("div", { className: "dlg-bar" });
     const skipBtn = el("button", {
       className: "btn small dlg-skip",
-      text: "Skip",
+      text: t("battle.dialogue.skip"),
       onClick: (e) => {
         e.stopPropagation();
         finish();
@@ -599,7 +594,7 @@ export class BattleUI {
     });
     const nextBtn = el("button", {
       className: "btn small dlg-next",
-      text: "Next ▸",
+      text: t("battle.dialogue.next"),
       onClick: (e) => {
         e.stopPropagation();
         advance();
@@ -647,14 +642,14 @@ export class BattleUI {
       clear(this.levelUpEl);
       sfx.playLevelUp();
       const card = el("div", { className: "level-up-card", attrs: { role: "dialog", "aria-label": "Level up" } });
-      card.appendChild(el("div", { className: "lu-flash", text: "LEVEL UP!" }));
+      card.appendChild(el("div", { className: "lu-flash", text: t("battle.levelUp.title") }));
       card.appendChild(el("div", { className: "lu-name", text: c.unitName }));
       card.appendChild(el("div", {
         className: "lu-level",
         children: [
-          el("span", { className: "lu-lv-from", text: `Lv ${c.fromLevel}` }),
+          el("span", { className: "lu-lv-from", text: `${t("common.lv")} ${c.fromLevel}` }),
           el("span", { className: "lu-arrow", text: "→" }),
-          el("span", { className: "lu-lv-to", text: `Lv ${c.toLevel}` }),
+          el("span", { className: "lu-lv-to", text: `${t("common.lv")} ${c.toLevel}` }),
         ],
       }));
       const grid = el("div", { className: "lu-stats" });
@@ -670,12 +665,12 @@ export class BattleUI {
       }
       card.appendChild(grid);
       if (c.newSkillName) {
-        card.appendChild(el("div", { className: "lu-skill", text: `New skill ready: ${c.newSkillName}` }));
+        card.appendChild(el("div", { className: "lu-skill", text: t("battle.levelUp.newSkill", { name: c.newSkillName }) }));
       }
       const more = cards.length - i - 1;
       card.appendChild(el("button", {
         className: "btn",
-        text: more > 0 ? `Next (${more} more) ▸` : "Continue",
+        text: more > 0 ? t("battle.levelUp.nextMore", { count: more }) : t("battle.levelUp.continue"),
         onClick: () => {
           i += 1;
           if (i >= cards.length) finish();
@@ -700,14 +695,14 @@ export class BattleUI {
    */
   showRewards(rewards: BattleRewards, onDone: () => void): void {
     clear(this.rewardsEl);
-    const card = el("div", { className: "rewards-card", attrs: { role: "dialog", "aria-label": "Battle rewards" } });
-    card.appendChild(el("h1", { className: "rewards-title", text: "Spoils of Battle" }));
+    const card = el("div", { className: "rewards-card", attrs: { role: "dialog", "aria-label": t("battle.rewards.title") } });
+    card.appendChild(el("h1", { className: "rewards-title", text: t("battle.rewards.title") }));
 
     // Gold — animated count-up for a little payoff.
     const goldAmt = el("span", { className: "reward-gold-amt", text: "+0" });
     card.appendChild(el("div", {
       className: "reward-section reward-gold",
-      children: [el("span", { className: "reward-label", text: "Gold" }), goldAmt],
+      children: [el("span", { className: "reward-label", text: t("battle.rewards.gold") }), goldAmt],
     }));
     this.countUp(goldAmt, rewards.gold);
 
@@ -715,7 +710,7 @@ export class BattleUI {
     const counts = new Map<string, number>();
     for (const id of rewards.items) counts.set(id, (counts.get(id) ?? 0) + 1);
     const itemsSection = el("div", { className: "reward-section reward-items" });
-    itemsSection.appendChild(el("span", { className: "reward-label", text: "Items" }));
+    itemsSection.appendChild(el("span", { className: "reward-label", text: t("battle.rewards.items") }));
     if (counts.size === 0) {
       itemsSection.appendChild(el("span", { className: "reward-none", text: "—" }));
     } else {
@@ -735,7 +730,7 @@ export class BattleUI {
 
     // Per-hero XP.
     const xpSection = el("div", { className: "reward-section reward-xp" });
-    xpSection.appendChild(el("span", { className: "reward-label", text: "Party XP" }));
+    xpSection.appendChild(el("span", { className: "reward-label", text: t("battle.rewards.partyXp") }));
     const heroList = el("div", { className: "reward-hero-list" });
     for (const h of rewards.heroes) {
       const leveled = h.toLevel > h.fromLevel;
@@ -744,7 +739,7 @@ export class BattleUI {
       row.appendChild(el("span", { className: "reward-hero-xp", text: `+${h.xpGained} XP` }));
       row.appendChild(el("span", {
         className: leveled ? "reward-hero-lv up" : "reward-hero-lv",
-        text: leveled ? `Lv ${h.fromLevel} → ${h.toLevel}` : `Lv ${h.toLevel}`,
+        text: leveled ? `${t("common.lv")} ${h.fromLevel} → ${h.toLevel}` : `${t("common.lv")} ${h.toLevel}`,
       }));
       heroList.appendChild(row);
     }
@@ -754,13 +749,13 @@ export class BattleUI {
     if (rewards.mvp) {
       card.appendChild(el("div", {
         className: "reward-mvp",
-        text: `MVP: ${rewards.mvp.name} — ${rewards.mvp.reason}`,
+        text: t("battle.rewards.mvp", { name: rewards.mvp.name, reason: rewards.mvp.reason }),
       }));
     }
 
     card.appendChild(el("button", {
       className: "btn",
-      text: "Continue",
+      text: t("battle.rewards.continue"),
       onClick: () => {
         this.hideRewards();
         onDone();
