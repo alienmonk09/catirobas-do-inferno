@@ -131,6 +131,11 @@ const STATUS_UI: Record<StatusKind, { letter: string; color: string }> = {
   stop: { letter: "X", color: "#c8ccd6" },
   poison: { letter: "T", color: "#8fe39a" },
   regen: { letter: "R", color: "#5fff9a" },
+  confuse: { letter: "?", color: "#ff77a8" },
+  critUp: { letter: "C", color: "#ffaa00" },
+  reflect: { letter: "↺", color: "#00ffff" },
+  atkUp: { letter: "↑", color: "#ff4d4d" },
+  defDown: { letter: "↓", color: "#99aaff" },
 };
 
 function key(p: Point): string {

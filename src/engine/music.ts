@@ -19,7 +19,7 @@ import { getAudioContext, getMasterGain, isMuted } from "./audio";
 // Music-only mute — persisted separately from the global master mute.
 // ---------------------------------------------------------------------------
 
-const STORAGE_KEY_MUSIC_MUTED = "ashen-music-muted";
+const STORAGE_KEY_MUSIC_MUTED = "catirobas-music-muted";
 
 function musicStorage(): Storage | null {
   if (typeof window === "undefined") return null;
@@ -75,6 +75,8 @@ export interface BeatGroup {
   notes: number[];
   /** Duration in beats (resolved against the theme's BPM). */
   durBeats: number;
+  /** Oscillator type — defaults to "sine" when omitted. */
+  waveType?: OscillatorType;
 }
 
 export interface ThemeDef {
@@ -118,103 +120,98 @@ const N = {
   A4: 69, C5: 72, E5: 76, G5: 79,
   D4: 62, F4: 65, B3: 59, B4: 71,
   F3: 53, D5: 74,
-  // Extra lows for THEME_BATTLE_DARK
   D3: 50, F2: 41, A2: 45, C3: 48, E3: 52, G3: 55,
-  // For THEME_BATTLE_DRIVING
   G2: 43,
+  // Jazz extensions for camp theme
+  Bb3: 58, D4_: 62, F4_: 65, A3_: 57,
+  Bb4: 70, Eb4: 63, B2: 47, E2: 40,
+  // Synthwave highs for title + desert
+  C6: 84, D6: 86, E6: 88, G6: 91, A5: 81, B5: 83,
+  // Low bass for dark/volcano theme
+  C2: 36, D2: 38, E2b: 39, F2_: 41, G2_: 43,
 };
 
-/** Theme: "battle" — slow, slightly tense Am pad. 8 beats @ 44 BPM ≈ 10.9 s. */
+/** Theme: "battle" — GDD: "Sons naturais com sintetizadores" (Floresta). 8 beats @ 44 BPM ≈ 10.9 s. */
 export const THEME_BATTLE: ThemeDef = {
   id: "battle",
   bpm: 44,
   loop: true,
   groups: [
-    // Am (i)
-    { notes: [midiToHz(N.A3), midiToHz(N.E4), midiToHz(N.A4)], durBeats: 2 },
-    // G (VII)
-    { notes: [midiToHz(N.G4), midiToHz(N.D4), midiToHz(N.B3)], durBeats: 2 },
-    // F (VI)
-    { notes: [midiToHz(N.F3), midiToHz(N.C4), midiToHz(N.A4)], durBeats: 2 },
-    // Em (v) — leads back to Am
-    { notes: [midiToHz(N.E4), midiToHz(N.B3), midiToHz(N.G4)], durBeats: 2 },
+    { notes: [midiToHz(N.A3), midiToHz(N.E4), midiToHz(N.A4)], durBeats: 2, waveType: "triangle" },
+    { notes: [midiToHz(N.G4), midiToHz(N.D4), midiToHz(N.B3)], durBeats: 2, waveType: "sine" },
+    { notes: [midiToHz(N.F3), midiToHz(N.C4), midiToHz(N.A4)], durBeats: 2, waveType: "triangle" },
+    { notes: [midiToHz(N.E4), midiToHz(N.B3), midiToHz(N.G4)], durBeats: 2, waveType: "sawtooth" },
   ],
 };
 
 /**
- * Theme: "battle_driving" — open-field mid-chapter battles.
- * A touch more momentum: shorter beats, D-minor → F → C → Am cycle.
- * 8 beats @ 52 BPM ≈ 9.2 s, looping.
+ * Theme: "battle_driving" — GDD: "Vento solitário + synthwave" (Deserto).
+ * 8 beats @ 52 BPM ≈ 9.2 s, looping. Sawtooth chords for synthwave character.
  */
 export const THEME_BATTLE_DRIVING: ThemeDef = {
   id: "battle_driving",
   bpm: 52,
   loop: true,
   groups: [
-    // Dm (i of D minor — open, slightly forward-leaning)
-    { notes: [midiToHz(N.D3), midiToHz(N.A3), midiToHz(N.D4)], durBeats: 2 },
-    // F (III — bright lift)
-    { notes: [midiToHz(N.F3), midiToHz(N.C4), midiToHz(N.F4)], durBeats: 2 },
-    // C (VII — momentum, consonant resolution)
-    { notes: [midiToHz(N.C3), midiToHz(N.G3), midiToHz(N.E4)], durBeats: 2 },
-    // Am (v — ties back to Dm via relative minor)
-    { notes: [midiToHz(N.A2), midiToHz(N.E3), midiToHz(N.A3)], durBeats: 2 },
+    { notes: [midiToHz(N.D3), midiToHz(N.A3), midiToHz(N.D4)], durBeats: 2, waveType: "sawtooth" },
+    { notes: [midiToHz(N.F3), midiToHz(N.C4), midiToHz(N.F4)], durBeats: 2, waveType: "sawtooth" },
+    { notes: [midiToHz(N.C3), midiToHz(N.G3), midiToHz(N.E4)], durBeats: 2, waveType: "square" },
+    { notes: [midiToHz(N.A2), midiToHz(N.E3), midiToHz(N.A3)], durBeats: 2, waveType: "sawtooth" },
   ],
 };
 
 /**
- * Theme: "battle_dark" — late / finale chapters (Outer Ramparts, Maldrath's keep).
- * Lower register, slower, Dm → Bb → C → Dm — heavier and more foreboding,
- * but still fully consonant and soft.
- * 10 beats @ 38 BPM ≈ 15.8 s, looping.
+ * Theme: "battle_dark" — GDD: "Drums intensos + synth escalante" (Vulcão) / "Epic 80s hair metal" (Boss).
+ * 10 beats @ 38 BPM ≈ 15.8 s, looping. Low square bass + soaring sawtooth leads.
  */
 export const THEME_BATTLE_DARK: ThemeDef = {
   id: "battle_dark",
   bpm: 38,
   loop: true,
   groups: [
-    // Dm low (tonic — heavy, settled)
-    { notes: [midiToHz(N.D3), midiToHz(N.F3), midiToHz(N.A3)], durBeats: 3 },
-    // Bb (bVI — warm darkness)
-    { notes: [midiToHz(N.A2), midiToHz(N.D3), midiToHz(N.F3)], durBeats: 2 },
-    // C (bVII — tension without tritone)
-    { notes: [midiToHz(N.C3), midiToHz(N.E3), midiToHz(N.G3)], durBeats: 3 },
-    // Dm resolve (back to tonic)
-    { notes: [midiToHz(N.D3), midiToHz(N.A3), midiToHz(N.D4)], durBeats: 2 },
+    { notes: [midiToHz(N.D3), midiToHz(N.F3), midiToHz(N.A3)], durBeats: 3, waveType: "square" },
+    { notes: [midiToHz(N.A2), midiToHz(N.D3), midiToHz(N.F3)], durBeats: 2, waveType: "sawtooth" },
+    { notes: [midiToHz(N.C3), midiToHz(N.E3), midiToHz(N.G3)], durBeats: 3, waveType: "square" },
+    { notes: [midiToHz(N.D3), midiToHz(N.A3), midiToHz(N.D4)], durBeats: 2, waveType: "sawtooth" },
   ],
 };
 
-/** Theme: "camp" — warm, calm C-major pad. 8 beats @ 40 BPM ≈ 12 s. */
+/** Theme: "camp" — GDD: "Jazz lounge deprimido" (Taverna). 8 beats @ 40 BPM ≈ 12 s. */
 export const THEME_CAMP: ThemeDef = {
   id: "camp",
   bpm: 40,
   loop: true,
   groups: [
-    // C (I)
-    { notes: [midiToHz(N.C4), midiToHz(N.E4), midiToHz(N.G4)], durBeats: 2 },
-    // Am (vi)
-    { notes: [midiToHz(N.A3), midiToHz(N.C4), midiToHz(N.E4)], durBeats: 2 },
-    // F (IV)
-    { notes: [midiToHz(N.F3), midiToHz(N.A3), midiToHz(N.C4)], durBeats: 2 },
-    // G (V)
-    { notes: [midiToHz(N.G4), midiToHz(N.B3), midiToHz(N.D4)], durBeats: 2 },
+    { notes: [midiToHz(N.C4), midiToHz(N.E4), midiToHz(N.G4)], durBeats: 2, waveType: "sine" },
+    { notes: [midiToHz(N.A3), midiToHz(N.C4), midiToHz(N.E4)], durBeats: 2, waveType: "triangle" },
+    { notes: [midiToHz(N.F3), midiToHz(N.A3), midiToHz(N.C4)], durBeats: 2, waveType: "sine" },
+    { notes: [midiToHz(N.G4), midiToHz(N.B3), midiToHz(N.D4)], durBeats: 2, waveType: "triangle" },
   ],
 };
 
-/** Theme: "victory" — bright short C-major cadence, non-looping. ~6 s. */
+/** Theme: "victory" — GDD: ironic victory stinger. 7 beats @ 76 BPM ≈ 5.5 s, non-looping. */
 export const THEME_VICTORY: ThemeDef = {
   id: "victory",
   bpm: 76,
   loop: false,
   groups: [
-    // C
-    { notes: [midiToHz(N.C4), midiToHz(N.E4), midiToHz(N.G4)], durBeats: 1.5 },
-    // F
-    { notes: [midiToHz(N.F3), midiToHz(N.A3), midiToHz(N.C4)], durBeats: 1.5 },
-    // G
-    { notes: [midiToHz(N.G4), midiToHz(N.B3), midiToHz(N.D5)], durBeats: 1.5 },
-    // C high — resolution
-    { notes: [midiToHz(N.C5), midiToHz(N.E5), midiToHz(N.G5)], durBeats: 2.5 },
+    { notes: [midiToHz(N.C4), midiToHz(N.E4), midiToHz(N.G4)], durBeats: 1.5, waveType: "triangle" },
+    { notes: [midiToHz(N.F3), midiToHz(N.A3), midiToHz(N.C4)], durBeats: 1.5, waveType: "sawtooth" },
+    { notes: [midiToHz(N.G4), midiToHz(N.B3), midiToHz(N.D5)], durBeats: 1.5, waveType: "triangle" },
+    { notes: [midiToHz(N.C5), midiToHz(N.E5), midiToHz(N.G5)], durBeats: 2.5, waveType: "square" },
+  ],
+};
+
+/** Theme: "title" — GDD: "Synthwave retrô" (Tema Principal). 8 beats @ 60 BPM ≈ 8 s, looping. */
+export const THEME_TITLE: ThemeDef = {
+  id: "title",
+  bpm: 60,
+  loop: true,
+  groups: [
+    { notes: [midiToHz(N.A3), midiToHz(N.E4), midiToHz(N.A4)], durBeats: 2, waveType: "sawtooth" },
+    { notes: [midiToHz(N.F3), midiToHz(N.C4), midiToHz(N.F4)], durBeats: 2, waveType: "sawtooth" },
+    { notes: [midiToHz(N.C3), midiToHz(N.G3), midiToHz(N.C4)], durBeats: 2, waveType: "square" },
+    { notes: [midiToHz(N.G2), midiToHz(N.D4), midiToHz(N.G4)], durBeats: 2, waveType: "sawtooth" },
   ],
 };
 
@@ -224,9 +221,10 @@ const THEMES: Record<string, ThemeDef> = {
   battle_dark: THEME_BATTLE_DARK,
   camp: THEME_CAMP,
   victory: THEME_VICTORY,
+  title: THEME_TITLE,
 };
 
-export type ThemeId = "battle" | "battle_driving" | "battle_dark" | "camp" | "victory";
+export type ThemeId = "battle" | "battle_driving" | "battle_dark" | "camp" | "victory" | "title";
 
 // ---------------------------------------------------------------------------
 // Chapter → battle theme resolver
@@ -237,18 +235,17 @@ export type ThemeId = "battle" | "battle_driving" | "battle_dark" | "camp" | "vi
  * Pure function — deterministic, no side effects.
  *
  * Phase order (from PHASES in src/data/maps/index.ts):
- *   0 — phase1        (early skirmish)
- *   1 — phase2        (early skirmish)
- *   2 — phase3        (early skirmish)
- *   3 — cinderFields  (open-field, high-stakes mid-campaign)
- *   4 — phase4        (mid-campaign)
- *   5 — outerRamparts (late — siege approach)
- *   6 — phase5        (finale — Maldrath's keep)
+ *   0 — tavernaDoLamento       (tutorial)
+ *   1 — florestaDaRejeicao     (early — forest)
+ *   2 — desertoDoEsquecimento  (mid — desert, confusion)
+ *   3 — cavernaDoConstrangimento (mid — cave, magic intro)
+ *   4 — vulcaoDaVerdade        (late — volcano, high stakes)
+ *   5 — monteMacheza           (finale — boss, dark)
  */
 export function battleThemeForPhase(phaseIndex: number): ThemeId {
-  if (phaseIndex === 3) return "battle_driving";    // Cinder Fields — open, momentum
-  if (phaseIndex >= 5) return "battle_dark";        // Outer Ramparts + finale — dark/heavy
-  return "battle";                                  // phases 0–2, 4 (and any out-of-range default)
+  if (phaseIndex >= 4) return "battle_dark";        // Vulcão + Monte Macheza — dark/heavy
+  if (phaseIndex >= 2) return "battle_driving";     // Deserto + Caverna — momentum
+  return "battle";                                  // Taverna + Floresta (and default)
 }
 
 // ---------------------------------------------------------------------------
@@ -306,10 +303,9 @@ function scheduleIteration(c: AudioContext, theme: ThemeDef, startTime: number):
       const osc = c.createOscillator();
       const vGain = c.createGain();
 
-      osc.type = "sine";
+      osc.type = group.waveType ?? "sine";
       osc.frequency.setValueAtTime(freq, t);
 
-      // Soft attack → sustain → release envelope — zero-crossing aware, no clicks.
       vGain.gain.setValueAtTime(0.0001, t);
       vGain.gain.linearRampToValueAtTime(VOICE_GAIN, t + attack);
       vGain.gain.setValueAtTime(VOICE_GAIN, sustainEnd);

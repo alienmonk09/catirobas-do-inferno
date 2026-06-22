@@ -1,5 +1,5 @@
-const STORAGE_KEY = "ashen-audio-muted";
-const STORAGE_KEY_VOLUME = "ashen-audio-volume";
+const STORAGE_KEY = "catirobas-audio-muted";
+const STORAGE_KEY_VOLUME = "catirobas-audio-volume";
 /** Physical gain value when the user's volume is at 1.0 (100 %). */
 const BASE_MASTER = 0.25;
 const DEFAULT_VOLUME = 0.7;
@@ -215,12 +215,16 @@ function playHeal(): void {
 }
 
 function playMagic(): void {
-  tone({ freq: noteToFreq("A3"), slideTo: noteToFreq("E5"), dur: 0.2, type: "triangle", gain: 0.022 });
-  tone({ freq: noteToFreq("C5"), slideTo: noteToFreq("G4"), dur: 0.18, type: "sine", gain: 0.014, delay: 0.035 });
+  // GDD: "Poof patético" — a deflating downward sweep, like a sad trombone fart.
+  tone({ freq: noteToFreq("E5"), slideTo: noteToFreq("A3"), dur: 0.28, type: "sawtooth", gain: 0.018 });
+  tone({ freq: noteToFreq("C5"), slideTo: noteToFreq("F3"), dur: 0.22, type: "triangle", gain: 0.014, delay: 0.04 });
 }
 
 function playKO(): void {
-  tone({ freq: noteToFreq("D3"), slideTo: noteToFreq("D2"), dur: 0.22, type: "sine", gain: 0.04 });
+  // GDD: "Som pior possível (tipo Windows 95 error)" — a harsh discordant thunk.
+  tone({ freq: noteToFreq("G2"), slideTo: noteToFreq("F#2"), dur: 0.35, type: "square", gain: 0.05 });
+  tone({ freq: noteToFreq("C3"), slideTo: noteToFreq("B2"), dur: 0.3, type: "sawtooth", gain: 0.035, delay: 0.06 });
+  tone({ freq: noteToFreq("E2"), dur: 0.5, type: "square", gain: 0.03, delay: 0.15 });
 }
 
 function playDeath(): void {
@@ -249,11 +253,13 @@ function playTreasure(): void {
 }
 
 function playFanfare(): void {
-  // A short triumphant flourish for the end-of-battle spoils screen.
-  tone({ freq: noteToFreq("C5"), dur: 0.16, type: "triangle", gain: 0.034 });
-  tone({ freq: noteToFreq("E5"), dur: 0.16, type: "triangle", gain: 0.032, delay: 0.12 });
-  tone({ freq: noteToFreq("G5"), dur: 0.16, type: "triangle", gain: 0.032, delay: 0.24 });
-  tone({ freq: noteToFreq("C6"), slideTo: noteToFreq("E6"), dur: 0.3, type: "triangle", gain: 0.03, delay: 0.36 });
+  // GDD: "Fanfarra irónica curta" — rises like a victory, then deflates.
+  tone({ freq: noteToFreq("C5"), dur: 0.12, type: "triangle", gain: 0.034 });
+  tone({ freq: noteToFreq("E5"), dur: 0.12, type: "triangle", gain: 0.032, delay: 0.1 });
+  tone({ freq: noteToFreq("G5"), dur: 0.12, type: "triangle", gain: 0.032, delay: 0.2 });
+  tone({ freq: noteToFreq("C6"), dur: 0.1, type: "triangle", gain: 0.03, delay: 0.3 });
+  tone({ freq: noteToFreq("C6"), slideTo: noteToFreq("G4"), dur: 0.4, type: "sawtooth", gain: 0.022, delay: 0.42 });
+  tone({ freq: noteToFreq("A4"), slideTo: noteToFreq("F4"), dur: 0.35, type: "sine", gain: 0.016, delay: 0.5 });
 }
 
 export const sfx = {

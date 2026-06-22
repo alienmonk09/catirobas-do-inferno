@@ -1,12 +1,14 @@
 /**
- * Persisted key-binding map for Ashen Banner.
+ * Persisted key-binding map for Catirobas do Inferno.
  *
  * Only actions that the keyboard actually drives in handleKey are listed here.
  * Node-safe: all localStorage access is guarded behind typeof window checks and
  * wrapped in try/catch so tests can import this module without a DOM.
  */
 
-const STORAGE_KEY = "ashen-keybindings";
+import { t } from "../i18n";
+
+const STORAGE_KEY = "catirobas-keybindings";
 
 export type Action = "rotateLeft" | "rotateRight" | "recenter" | "endTurn" | "cancel";
 
@@ -21,13 +23,9 @@ export const DEFAULT_BINDINGS: Record<Action, string> = {
 };
 
 /** Human-readable label for display in the Controls settings section. */
-export const ACTION_LABELS: Record<Action, string> = {
-  rotateLeft: "Rotate Left",
-  rotateRight: "Rotate Right",
-  recenter: "Recenter",
-  endTurn: "End Turn",
-  cancel: "Cancel",
-};
+export function actionLabel(action: Action): string {
+  return t(`controls.${action}`);
+}
 
 // In-memory overrides (only keys that differ from the defaults are stored here).
 let overrides: Partial<Record<Action, string>> = readStoredOverrides();

@@ -1,6 +1,6 @@
-const STORAGE_KEY_TEXT_SCALE = "ashen-text-scale";
-const STORAGE_KEY_HIGH_CONTRAST = "ashen-high-contrast";
-const STORAGE_KEY_REDUCED_MOTION = "ashen-reduced-motion";
+const STORAGE_KEY_TEXT_SCALE = "catirobas-text-scale";
+const STORAGE_KEY_HIGH_CONTRAST = "catirobas-high-contrast";
+const STORAGE_KEY_REDUCED_MOTION = "catirobas-reduced-motion";
 
 export type TextScale = "normal" | "large" | "larger";
 
