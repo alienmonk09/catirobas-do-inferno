@@ -1,4 +1,4 @@
-# Contributing to Ashen Banner
+# Contributing to Catirobas do Inferno
 
 Thanks for your interest. This is a TypeScript + Canvas 2D tactics game with
 **no asset pipeline** — every sprite, sound, and bit of "art" is defined in code.
@@ -62,7 +62,7 @@ and PR.
 The suite can't render. To check UI/rendering, drive the dev server headlessly:
 `npm i puppeteer-core --no-save` in a temp dir and point `executablePath` at an
 installed Chromium/Edge/Brave. Use `npm run dev` (not `preview` — `preview` serves
-under a `/ashen-banner/` base and 404s at `/`).
+under a `/catirobas-do-inferno/` base and 404s at `/`).
 
 ## Commits
 

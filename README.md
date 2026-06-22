@@ -1,118 +1,117 @@
-# Ashen Banner
+# Catirobas do Inferno
 
-A Final Fantasy Tactics–style game: isometric, turn-based grid battles with
-class progression, magic, weapons, and items. Built in **TypeScript + HTML5
-Canvas**, no game engine, no art assets — every sprite is code-defined pixel art.
+Um RPG tático isométrico estilo Final Fantasy Tactics: batalhas em grid
+turn-based com progressão de classes, magia, armas e itens. Construído em
+**TypeScript + HTML5 Canvas 2D**, sem game engine, sem art assets — cada sprite
+é pixel art definida em código.
 
-> *The old kingdom burned. All that's left of it is a scorched banner, and five
-> who still carry it.* — A band of survivors carries the Ashen Banner from the
-> border wilds to the tyrant Maldrath's shattered throne, across a seven-chapter
-> campaign. Full story → **[STORY.md](STORY.md)**.
+> *No reino de Testosteria, tudo era diversão até que as mulheres se cansaram.
+> Quatro heróis rejeitados precisam salvar o mundo devolvendo a "macheza" e o
+> estilo dos anos 80. Sátira de masculinidade tóxica com humor absurdo.* —
+> História completa → **[STORY.md](STORY.md)**.
 
-Eight classes (one unlockable via class change) across five races, seven
-playable phases, a charge-time turn system, and an enemy AI that heals, focuses,
-flanks, and pursues. At the start you **choose a party of four** from a roster of
-seven named heroes, then gather **reinforcements** as the campaign opens
-deployment slots.
+Quatro heróis fixos (Boleto, Porquinho, Meleca, Caveira) com classes primárias
+travadas e sub-jobs equipáveis, seis biomas temáticos, sistema de turnos por
+charge-time, e uma IA que cura, foca, flanqueia e persegue. O party cresce
+durante a campanha via recrutamento de inimigos e aliados convidados.
 
-## Run it
+## Rodar
 
 ```bash
 npm install
-npm run dev        # open the printed localhost URL
+npm run dev        # abre a URL localhost impressa
 ```
 
-Other scripts:
+Outros scripts:
 
 ```bash
-npm run build      # typecheck + production build to dist/
-npm test           # run the Vitest suite
+npm run build      # typecheck + build de produção para dist/
+npm test           # roda a suite Vitest
 ```
 
-## How to play
+## Como jogar
 
-- **New Game** opens the **party select** — pick four of the seven heroes (each a
-  fixed class and race) to carry the banner, then march into Chapter I.
-- On your unit's turn, use the action menu (it pops up next to the active unit):
-  - **Move** — click a highlighted tile (blue). The path preview (yellow) shows
-    the route; movement respects range, terrain height, and your unit's Jump.
-    You may move **through** allied units, but can't stop on an occupied tile;
-    enemy-held tiles block the path.
-  - **Attack** — click an enemy inside weapon range (red).
-  - **Skill** — pick a learned class skill (costs MP); click a target tile.
-    Area skills show an AoE preview (orange). Support skills can target allies
-    or yourself.
-  - **Item** — use a shared consumable (Potion, Hi-Potion, Ether, Phoenix Down,
-    Hourglass — grants Haste).
-  - **Wait** — end the turn.
-- **Right-click** cancels back to the menu. **Enter** / **E** ends the turn.
-- **Rotate the camera** to see the map from another angle: the **⟲ / ⟳**
-  buttons (top-right) or the **,** / **.** keys spin the board in 90° steps.
-  Works any time, including the enemy's turn.
-- Turn order (top bar) is driven by Speed (a charge-time system).
-- **Position matters.** Striking a foe from the flank or rear, or from higher
-  ground, hits harder and crits more often (a small ground arrow shows each unit's
-  facing). Ranged attacks and offensive spells need **line of sight** — walls and
-  tall terrain block the shot. Watch for **status pips** above a unit: Poison and
-  Regen tick HP each turn, Stop costs turns, Protect/Shell blunt physical/magical
-  damage, Haste/Slow bend turn speed.
-- **Reactions.** Melee bruisers — **Knight** and **Monk** — strike back at any
-  adjacent foe that hits them in melee, so charging a held line has a price.
-- Each battle shows its **objective** (top center). Most are won by routing the
-  enemy, but some differ — the finale is won by **defeating the tyrant** himself,
-  his guard optional. Between phases, the **Party Camp** screen lets
-  you change classes, swap weapons, spend Skill Points to learn new skills, and **recruit
-  reinforcements** from the rest of the roster as the campaign opens deployment
-  slots (a fifth hero mid-campaign, a sixth for the finale). Progress is saved
-  automatically (localStorage); **Continue** resumes from the camp.
+- **New Game** começa o jogo com os 4 heróis fixos (Boleto, Porquinho, Meleca,
+  Caveira), cada um com classe primária travada.
+- No turno da sua unidade, use o menu de ação (aparece ao lado da unidade ativa):
+  - **Mover** — clique em um tile destacado (azul). O preview do caminho
+    (amarelo) mostra a rota; movimento respeita alcance, altura do terreno, e
+    Jump da unidade. Pode mover **através** de aliados, mas não parar em tile
+    ocupado; inimigos bloqueiam o caminho.
+  - **Atacar** — clique em um inimigo dentro do alcance da arma (vermelho).
+  - **Skill** — escolha uma skill aprendida (custa MP); clique em um tile alvo.
+    Skills de área mostram preview da AoE (laranja). Skills de suporte podem
+    alar aliados ou você mesmo.
+  - **Item** — use um consumível compartilhado (Cerveja, Pizza Fria, Doritos,
+    Energético Misterioso, Foto do Boleto, Espelho Quebrado, Manual de
+    Conversação, Maconha de Zezé).
+  - **Aguardar** — encerra o turno.
+- **Botão direito** cancela de volta ao menu. **Enter** / **E** encerra o turno.
+- **Rotacionar a câmera** para ver o mapa de outro ângulo: botões **⟲ / ⟳**
+  (canto superior direito) ou teclas **,** / **.** giram o tabuleiro em passos
+  de 90°. Funciona a qualquer momento, inclusive no turno inimigo.
+- Ordem de turnos (barra superior) é guiada por Speed (sistema de charge-time).
+- **Posição importa.** Atacar pelo flanco ou pela retaguarda, ou de terreno
+  mais alto, causa mais dano e crítica mais frequente. Ataques à distância e
+  magias ofensivas precisam de **linha de visão** — paredes e terreno alto
+  bloqueiam o tiro.
+- **Reações.** Cavaleiro e Tanque contra-atacam inimigos adjacentes que os
+  atingem em melee.
+- Cada batalha mostra seu **objetivo** (topo centro). A maioria é vencida
+  derrotando todos os inimigos, mas algumas diferem — a final é vencida
+  **derrotando a Senhora Razão**. Entre fases, a **Taverna do Lamento** permite
+  trocar sub-jobs, trocar armas, gastar Skill Points para aprender novas
+  skills, e **recrutar reforços** (inimigos recrutáveis e aliados convidados
+  como Zezé) conforme a campanha abre slots de deploy. Progresso é salvo
+  automaticamente (localStorage); **Continue** resume da taverna.
 
 ## Classes
 
-| Class | Role | Skills |
-|-------|------|--------|
-| Knight | Melee tank | Power Strike, Guard |
-| Archer | Ranged physical | Aimed Shot, Cripple |
-| Black Mage | Offensive magic | Fire, Bolt, Fireball (AoE), Poison, Stop |
-| White Mage | Support / heal | Cure, Cura (AoE), Raise, Protect, Shell, Haste |
-| Monk | Melee bruiser | Palm Strike, Chakra (heal), Earth Shake (AoE) |
-| Thief | Fast skirmisher | Backstab, Hamstring (slow), Fan of Knives (AoE) |
-| Druid | Nature hybrid | Regrowth (heal), Thorn Lash, Entangle (slow), Rejuvenate (Regen) |
-| Time Mage | Control caster | Comet (non-elemental), Slow, Haste, Stop |
+Os 4 heróis têm classes primárias fixas. As ~10 classes restantes existem
+como sub-jobs equipáveis na Taverna.
 
-Knight and Monk also carry the **Counter** reaction (they strike back at melee
-attackers). **Time Mage** has no default hero — retrain any unit into it at the
-Party Camp. Each unit can also equip a **secondary job** (a second class's skill
-set), so its learned skills from both jobs are usable in battle.
+| Classe Primária | Herói | Role | Skills |
+|-----------------|-------|------|--------|
+| Cavaleiro | Boleto | DPS físico | Golpe Brilhoso, Guarda |
+| Mago | Porquinho | Suporte mágico | Abracadabrum Sexicus (cura), Incantum Confusus (confund), Magicus Ridiculum (debuff), Levitatus Penosos (escape) |
+| Tanque | Meleca | Defesa / absorver dano | Soco Viscoso, Abraço Mortal |
+| Assassino | Caveira | Crítico / agilidade | Apunhalar, Crítico frequente |
 
-### Races
+Sub-jobs disponíveis (equipáveis na Taverna): Mestre do Mulet, Mago de Latim
+Errado, Slime Lord, Emo Necromante, e mais — cada uma com seu próprio kit de
+skills, armas, e sprite.
 
-Each hero also has a race, applying a small flat stat modifier **and an elemental
-affinity** (weakness ×1.5 / resistance ×0.5 to that element's spells): **Human**
-(balanced, no affinity), **Elf** (+MAG/RES/SPD, −HP; weak fire, resists nature),
-**Dwarf** (+HP/DEF, −SPD; weak nature, resists fire), **Halfling** (+SPD/MOVE/JUMP,
-−HP/ATK; weak fire, resists bolt), **Orc** (+ATK/HP, −MAG/RES; weak bolt, resists
-nature). The damage forecast flags **weak/resist** so you can aim spells where they bite.
+### Espécies
 
-The seven heroes: Garan (Knight, Dwarf), Lyra (Archer, Elf), Vex (Black Mage,
-Human), Mira (White Mage, Human), Bron (Monk, Orc), **Enzo** (Thief, Halfling),
-and **Penelope** (Druid, Elf).
+Cada herói tem uma espécie, aplicando modificadores flat de stats **e uma
+afinidade elemental** (fraqueza ×1.5 / resistência ×0.5 para spells daquele
+elemento): **Cavalo** (Boleto), **Porco** (Porquinho), **Slime** (Meleca),
+**Esqueleto** (Caveira). Inimigos têm suas próprias espécies: Nice Guy, Troll
+Incel, Homem Caverna, Corporate Bro.
 
-## The campaign
+## A campanha
 
-Seven phases of rising difficulty, from a border skirmish to the tyrant's keep.
-See **[STORY.md](STORY.md)** for the full narrative.
+Seis biomas de dificuldade crescente, da taverna ao topo do Monte Macheza.
+Veja **[STORY.md](STORY.md)** para a narrativa completa.
 
-| # | Chapter | Setting |
-|---|---------|---------|
-| I | Tutorial Skirmish | Grassy field, brigand camp — learn the basics |
-| II | Ambush in the Hills | Enemies on high ground, a sorcerer behind them |
-| III | The Bridge | A river chasm crossed by one narrow stone bridge |
-| IV | The Cinder Fields | Open burned farmland — a roving company tries to surround you |
-| V | Sorcerer's Court | Tiered terraces, a mage cabal and a healer |
-| VI | The Outer Ramparts | The keep's fortified wall — archers and a mage on the high stone |
-| VII | The Tyrant's Stand | Maldrath the Unbowed and his throne-guard |
+| # | Bioma | Cenário |
+|---|-------|---------|
+| 1 | Taverna do Lamento | Casa base — tutorial, shop, save, descansar |
+| 2 | Floresta da Rejeição | Árvores que riem — primeiras batalhas, Nice Guys |
+| 3 | Deserto do Esquecimento | Calor e esquecimento — confusão a cada 3 turnos |
+| 4 | Caverna do Constrangimento | Flashbacks constrangedores — tutorial de magia |
+| 5 | Vulcão da Verdade | Dano passivo por temperatura — todos os inimigos |
+| 6 | Monte Macheza | Topo — Senhora Razão, endings múltiplos |
 
-## Project layout
+## Endings
+
+Quatro endings baseados em como o jogador chegou ao boss final:
+- **A — Coragem da Burrice:** Derrotou Senhora Razão com ataque físico.
+- **B — Sabedoria da Aceitação:** Derrotou com magia/itens.
+- **C — Final Honesto:** Perdeu a batalha final.
+- **D — Pirueta Absurda (secreto):** Encontrou Zezé 10 vezes.
+
+## Layout do projeto
 
 ```
 src/
@@ -121,35 +120,26 @@ src/
   engine/   isometric projection + picking, canvas renderer, input, loop, animator
   ui/       DOM battle HUD, menus, party screen styles
   scenes/   battle scene (turn state machine), party camp, title/victory
-  data/     classes, skills, weapons, items, party, maps/ (seven chapters), sprites
+  data/     classes, skills, weapons, items, party, maps/ (seis biomas), sprites
 tests/      unit tests per module + a full AI-vs-AI battle simulation
-docs/superpowers/specs/  design spec
+docs/      design spec + refactoring plan
 ```
 
 ## Tests
 
-`npm test` runs **499 tests across 21 files**: per-module unit tests (RNG,
-pathfinding, targeting, combat, facing/back-attacks, line of sight, elevation /
-status / elemental / counter modifiers, turn order, AI, grid, movement/pass-through,
-iso projection, save/load, races, hero roster & reinforcements) plus map-data
-invariants and a **full battle simulation** that auto-plays all seven phases to a
-decisive winner while asserting HP/stat invariants every turn.
-
-## Roadmap
-
-See **[ROADMAP.md](ROADMAP.md)** and the working backlog in **[TASKS.md](TASKS.md)**.
-Short version: v0.2 tactics depth and most of v0.3 have shipped (facing/back-attacks,
-line of sight, elevation, the full status kit, elemental affinities, party-size
-progression, the Time Mage, the secondary-job system, counters, objective variety,
-two larger maps) — next is equipment, more classes, terrain effects, then audio.
-
-## Known minor limitations
-
-- The turn-order preview bar snapshots Speed, so it can briefly mispredict the
-  order right as a Slow/Haste status expires (cosmetic).
-- Tile picking hit-tests tile tops; clicking the vertical face of a tall cliff
-  may select the tile behind it. Click the tile's top surface to be precise.
+`npm test` roda a suite Vitest: testes unitários por módulo (RNG, pathfinding,
+targeting, combat, facing/back-attacks, line of sight, elevation / status /
+elemental / counter modifiers, turn order, AI, grid, movement/pass-through,
+iso projection, save/load, races, hero roster & reinforcements) mais
+invariantes de mapa e uma **simulação de batalha completa** que auto-joga
+todos os biomas até um vencedor decisivo enquanto asserta invariantes de
+HP/stat todo turno.
 
 ## Tech stack
 
-TypeScript (strict), Vite 5, Vitest 2, Canvas 2D. No runtime dependencies.
+TypeScript (strict), Vite 5, Vitest 2, Canvas 2D. Sem dependências de runtime.
+
+## Roadmap
+
+Veja **[docs/refactoring-plan.md](docs/refactoring-plan.md)** para o plano de
+refatoração do fork Ashen Banner → Catirobas do Inferno.
