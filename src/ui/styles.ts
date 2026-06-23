@@ -225,6 +225,7 @@ const CSS = `
     radial-gradient(120% 80% at 50% 118%, rgba(255, 42, 0, 0.4), rgba(255, 0, 128, 0.2) 40%, transparent 62%),
     linear-gradient(0deg, rgba(255, 42, 0, 0.15) 0%, transparent 25%),
     repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(255, 0, 128, 0.08) 3px, rgba(255, 0, 128, 0.08) 4px),
+    url(/title-screen.png) center/cover no-repeat,
     rgba(10, 5, 15, 0.95);
 }
 .banner-card {
